@@ -1,0 +1,45 @@
+{
+  "name": "solgradetradebot",
+  "version": "1.0.0",
+  "description": "growtrade bot on the top of growsol project",
+  "main": "serve.ts",
+  "scripts": {
+    "serve": "nodemon ./serve.ts",
+    "start": "npx ts-node serve.ts",
+    "build": "npm run clean && tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@jup-ag/api": "^6.0.19",
+    "@metaplex-foundation/js": "^0.20.1",
+    "@solana/spl-token": "^0.4.3",
+    "@solana/spl-token-metadata": "^0.1.2",
+    "@solana/web3.js": "^1.91.2",
+    "axios": "^1.6.8",
+    "bech32": "^2.0.0",
+    "bs58": "^5.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.2.3",
+    "node-cron": "^3.0.3",
+    "node-telegram-bot-api": "^0.65.1",
+    "nodemon": "^3.1.0",
+    "promise-retry": "^2.0.1",
+    "redis": "^4.6.13",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.11.30",
+    "@types/node-cron": "^3.0.11",
+    "@types/node-telegram-bot-api": "^0.64.6",
+    "@types/promise-retry": "^1.1.6"
+  }
+}
