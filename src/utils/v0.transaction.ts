@@ -61,6 +61,5 @@ export async function sendTransactionV0(
     return null;
   }
 
-  console.log(`https://solscan.io/tx/${signature}`);
   return signature;
 }

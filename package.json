@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@jup-ag/api": "^6.0.19",
+    "@jup-ag/referral-sdk": "^0.1.6",
     "@metaplex-foundation/js": "^0.20.1",
     "@solana/spl-token": "^0.4.3",
     "@solana/spl-token-metadata": "^0.1.2",

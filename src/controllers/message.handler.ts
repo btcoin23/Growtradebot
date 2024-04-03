@@ -29,13 +29,11 @@ export const messageHandler = async (
       if (isNumber) {
         const amount = Number(messageText);
         if (text === BUY_XSOL_TEXT.replace(/<[^>]*>/g, '')) {
-          await buyHandler(bot, msg, amount, undefined, reply_message_id);
+          await buyHandler(bot, msg, amount, reply_message_id);
         } else if (text === SELL_XPRO_TEXT.replace(/<[^>]*>/g, '')) {
-          console.log(reply_to_message);
-          await sellHandler(bot, msg, amount, undefined, reply_message_id);
+          await sellHandler(bot, msg, amount, reply_message_id);
         } else if (text === SET_SLIPPAGE_TEXT.replace(/<[^>]*>/g, '')) {
-          console.log(reply_to_message);
-          await setSlippageHandler(bot, msg, amount);
+          await setSlippageHandler(bot, msg, amount, reply_message_id);
         }
       }
     }

@@ -13,6 +13,19 @@ export function formatNumber(number: bigint | string | number) {
   return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+export function formatKMB(number: bigint | string | number) {
+  if (!number) return "0";
+  if (Number(number) > 1000) {
+    return `${(Number(number) / 1000).toFixed(1)}k`;
+  }
+  if (Number(number) > 1000000) {
+    return `${(Number(number) / 1000000).toFixed(1)}M`;
+  }
+  if (Number(number) > 1000000000) {
+    return `${(Number(number) / 1000000).toFixed(1)}B`;
+  }
+}
+
 export const contractLink = (mint: string) => {
   return `<a href="https://solscan.io/token/${mint}">Contract</a>`;
 }

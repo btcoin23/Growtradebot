@@ -8,17 +8,24 @@ import { TradeService } from "../services/trade.service";
 import { PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { amount } from "@metaplex-foundation/js";
-import { GasFeeService } from "../services/gas.fee.service";
+import { UserTradeSettingService } from "../services/user.trade.setting.service";
+import { MsgLogService } from "../services/msglog.service";
+import { inline_keyboards } from "./contract.info.screen";
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
     const chat_id = msg.chat.id;
-    const caption = msg.text;
     const username = msg.chat.username;
+    if (!username) return;
     const user = await UserService.findOne({ username });
     if (!user) return;
-    if (!caption || !username) return;
-    const mint = getTokenMintFromCallback(caption);
+
+    const msglog = await MsgLogService.findOne({
+      username,
+      msg_id: msg.message_id
+    });
+    if (!msglog) return;
+    const { mint } = msglog;
     if (!mint) return;
 
     const sentMessage = await bot.sendMessage(
@@ -32,11 +39,14 @@ export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: Telegr
       }
     );
 
-    await TradeService.storeCustomTradeInfo(
-      mint,
+    await MsgLogService.create({
       username,
-      sentMessage.message_id
-    );
+      mint,
+      wallet_address: user.wallet_address,
+      chat_id,
+      msg_id: sentMessage.message_id,
+      parent_msgid: msg.message_id
+    });
   } catch (e) {
     console.log("~buyCustomAmountScreenHandler~", e);
   }
@@ -63,11 +73,15 @@ export const sellCustomAmountScreenHandler = async (bot: TelegramBot, msg: Teleg
         }
       }
     );
-    await TradeService.storeCustomTradeInfo(
-      mint,
+
+    await MsgLogService.create({
       username,
-      sentMessage.message_id
-    );
+      mint,
+      wallet_address: user.wallet_address,
+      chat_id,
+      msg_id: sentMessage.message_id,
+      parent_msgid: msg.message_id
+    });
   } catch (e) {
     console.log("~sellCustomAmountScreenHandler~", e);
   }
@@ -76,12 +90,18 @@ export const sellCustomAmountScreenHandler = async (bot: TelegramBot, msg: Teleg
 export const setSlippageScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
     const chat_id = msg.chat.id;
-    const caption = msg.text;
     const username = msg.chat.username;
+    if (!username) return;
     const user = await UserService.findOne({ username });
     if (!user) return;
-    if (!caption || !username) return;
-    const mint = getTokenMintFromCallback(caption);
+
+    const msglog = await MsgLogService.findOne({
+      username,
+      msg_id: msg.message_id
+    });
+    if (!msglog) return;
+    const { mint } = msglog;
+
     if (!mint) return;
 
     const sentMessage = await bot.sendMessage(
@@ -95,11 +115,14 @@ export const setSlippageScreenHandler = async (bot: TelegramBot, msg: TelegramBo
       }
     );
 
-    await TradeService.storeCustomTradeInfo(
-      mint,
+    await MsgLogService.create({
       username,
-      sentMessage.message_id
-    );
+      mint,
+      wallet_address: user.wallet_address,
+      chat_id,
+      msg_id: sentMessage.message_id,
+      parent_msgid: msg.message_id
+    });
   } catch (e) {
     console.log("~buyCustomAmountScreenHandler~", e);
   }
@@ -109,7 +132,6 @@ export const buyHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
   amount: number,
-  caption?: string,
   reply_message_id?: number
 ) => {
   const chat_id = msg.chat.id;
@@ -119,24 +141,18 @@ export const buyHandler = async (
   const user = await UserService.findOne({ username });
   if (!user) return;
 
-  // Get mint
-  let mint: any;
-  if (caption) {
-    mint = getTokenMintFromCallback(caption);
-  } else if (reply_message_id) {
-    const info = await TradeService.getCustomTradeInfo(
-      username,
-      reply_message_id
-    );
-    if (!info) return;
-    mint = info;
-  }
+  const msglog = await MsgLogService.findOne({
+    username,
+    msg_id: reply_message_id ?? msg.message_id
+  });
+  if (!msglog) return;
+  const { mint, sol_amount } = msglog;
+  // const solbalance = sol_amount ?? await TokenService.getSOLBalance(user.wallet_address);
+
   if (!mint) return;
 
-  // Insufficient check
-  const sol = await TokenService.getSOLBalance(user.wallet_address);
-  // check if enough includes fee
-  if (sol <= amount + 0.005) {
+  // Insufficient check check if enough includes fee
+  if (sol_amount && sol_amount <= amount + 0.005) {
     bot.sendMessage(
       chat_id,
       "<b>⚠️ Insufficient SOL balance!</b>",
@@ -149,23 +165,20 @@ export const buyHandler = async (
     return;
   }
 
+  const mintinfo = await TokenService.getMintInfo(mint);
+  if (!mintinfo || mintinfo === "NONE") return;
+  const { name, symbol, price } = mintinfo.overview;
+  const { isToken2022 } = mintinfo.secureinfo;
   const solprice = await TokenService.getSOLPrice();
-
   // send Notification
   const getcaption = async (status: string, suffix: string = "") => {
-    if (!caption || caption === "") {
-      const metadata = await TokenService.fetchMetadataInfo(new PublicKey(mint ?? ""));
+    const securecaption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+      `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
+      `<i>${mint}</i>\n` + status +
+      `💲 <b>Value: ${amount} SOL ($ ${(amount * solprice).toFixed(3)})</b>\n` +
+      `💴 Fee: 0.75%\n` + suffix;
 
-      const { tokenName, tokenSymbol } = metadata;
-
-      const securecaption = `🌳 Token: ` + (tokenName ? `<b>${tokenName ?? ""} (${tokenSymbol ?? ""})</b>\n` : "\n") +
-        `<i>${mint}</i>\n`;
-
-      return `${securecaption}` + status + `💲 <b>Value: ${amount} SOL ($ ${(amount * solprice).toFixed(3)})</b>\n` + suffix;
-    }
-
-    return `${caption.split('\n')[0]}\n${caption.split('\n')[1]}\n` + status +
-      `💲 <b>Value: ${amount} SOL ($ ${(amount * solprice).toFixed(3)})</b>\n` + suffix;
+    return securecaption;
   }
   const buycaption = await getcaption(`🕒 <b>Buy in progress</b>\n`);
 
@@ -175,7 +188,7 @@ export const buyHandler = async (
     closeReplyMarkup
   )
 
-  const gas = await GasFeeService.getGasSetting(username);
+  const { gas, slippage } = await UserTradeSettingService.get(username, mint);
   // buy token
   const quoteResult = await JupiterService.swapToken(
     user.private_key,
@@ -183,7 +196,7 @@ export const buyHandler = async (
     mint,
     9, // SOL decimal
     amount,
-    5,
+    slippage,
     gas
   );
   if (quoteResult) {
@@ -210,7 +223,6 @@ export const sellHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
   percent: number,
-  caption?: string,
   reply_message_id?: number
 ) => {
   const chat_id = msg.chat.id;
@@ -220,26 +232,22 @@ export const sellHandler = async (
   const user = await UserService.findOne({ username });
   if (!user) return;
 
-  let mint: any;
-  if (caption) {
-    mint = getTokenMintFromCallback(caption);
-  } else if (!mint && reply_message_id) {
-    const info = await TradeService.getCustomTradeInfo(
-      username,
-      reply_message_id
-    );
-    if (!info) return;
-    mint = info;
-  }
+
+  const msglog = await MsgLogService.findOne({
+    username,
+    msg_id: reply_message_id ?? msg.message_id
+  });
+
+  if (!msglog) return;
+  const { mint, spl_amount, sol_amount } = msglog;
+  console.log("==>", mint, sol_amount)
+
   if (!mint) return;
-
-  const sol = await TokenService.getSOLBalance(user.wallet_address);
-
   // check if enough includes fee
-  if (sol <= 0.005) {
+  if (sol_amount && sol_amount <= 0.005) {
     bot.sendMessage(
       chat_id,
-      "<b>⚠️ Insufficient SOL balance!</b>",
+      "<b>⚠️ Insufficient SOL balance for gas fee!</b>",
       closeReplyMarkup
     ).then(sentMessage => {
       setTimeout(() => {
@@ -249,28 +257,24 @@ export const sellHandler = async (
     return;
   }
 
-  const splBalance = await TokenService.getSPLBalance(
-    mint,
-    user.wallet_address,
-    true,
-    true
-  );
-  const sellAmount = splBalance * percent / 100;
-  const splPrice = await TokenService.getSPLPrice(mint);
+  const mintinfo = await TokenService.getMintInfo(mint);
+
+  if (!mintinfo || mintinfo === "NONE") return;
+  const { name, symbol, price, decimals } = mintinfo.overview;
+  const { isToken2022 } = mintinfo.secureinfo;
+
+  const splbalance = (!spl_amount || spl_amount === 0) ? await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022) : spl_amount;
+  const sellAmount = splbalance * percent / 100;
 
   // send Notification
   const getcaption = async (status: string, suffix: string = "") => {
-    if (!caption || caption === "") {
 
-      const metadata = await TokenService.fetchMetadataInfo(new PublicKey(mint ?? ""));
-      const { tokenName, tokenSymbol } = metadata;
-
-      const securecaption = `🌳 Token: ` + (tokenName ? `<b>${tokenName ?? ""} (${tokenSymbol ?? ""})</b>\n` : "\n") +
-        `<i>${mint}</i>\n`;
-      return `${securecaption}` + status + `💲 <b>Value: ${sellAmount} SOL ($ ${(sellAmount * splPrice).toFixed(3)})</b>\n` + suffix;
-    }
-    return `${caption.split('\n')[0]}\n${caption.split('\n')[1]}\n` + status +
-      `💲 <b>Value: ${sellAmount} Token ($ ${(sellAmount * splPrice).toFixed(3)})</b>\n` + suffix;
+    const securecaption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+      `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
+      `<i>${mint}</i>\n` + status +
+      `💲 <b>Value: ${sellAmount} ${symbol} ($ ${(sellAmount * price).toFixed(3)})</b>\n` +
+      `💴 Fee: 0.75%\n` + suffix;
+    return securecaption;
   }
 
   const buycaption = await getcaption(`🕒 <b>Sell in progress</b>\n`);
@@ -281,18 +285,17 @@ export const sellHandler = async (
   )
 
   // buy token
-  const gas = await GasFeeService.getGasSetting(username);
-  const decimal = await TradeService.getMintDecimal(mint);
-  if (!decimal) return;
-  const quoteResult = true; // await JupiterService.swapToken(
-  //   user.private_key,
-  //   mint,
-  //   NATIVE_MINT.toBase58(),
-  //   decimal,
-  //   sellAmount,
-  //   5,
-  //   gas
-  // );
+  const { gas, slippage } = await UserTradeSettingService.get(username, mint);
+
+  const quoteResult = await JupiterService.swapToken(
+    user.private_key,
+    mint,
+    NATIVE_MINT.toBase58(),
+    decimals,
+    sellAmount,
+    slippage,
+    gas
+  );
   if (quoteResult) {
     const txn = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${txn}">${txn}</a>\n`;
@@ -312,19 +315,56 @@ export const sellHandler = async (
   }
 }
 
-
 export const setSlippageHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
   percent: number,
+  reply_message_id: number
 ) => {
   const chat_id = msg.chat.id;
   const username = msg.chat.username;
   if (!username) return;
-  await GasFeeService.setSlippageSetting(
+
+  const msglog = await MsgLogService.findOne({
     username,
-    percent,
-  )
+    msg_id: reply_message_id
+  });
+  if (!msglog) return;
+  const { mint, parent_msgid, msg_id } = msglog;
+
+  if (!mint) return;
+
+  const oldone = await UserTradeSettingService.get(username, mint);
+  const newone = oldone;
+  newone.slippage = percent;
+  await UserTradeSettingService.set(
+    username,
+    mint,
+    newone,
+  );
+
+  const { gas: gasfee, slippage } = newone;
+  const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gasfee);
+  const gasvalue = await UserTradeSettingService.getGasValue(gasfee);
+
+  inline_keyboards[0][0].text = gasvalue;
+  inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
+
+  await bot.editMessageReplyMarkup({
+    inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
+      return {
+        text: item.text,
+        callback_data: JSON.stringify({
+          'command': item.command ?? "dummy_button"
+        })
+      }
+    }))
+  }, {
+    message_id: parent_msgid,
+    chat_id
+  });
+  bot.deleteMessage(chat_id, msg_id);
+  bot.deleteMessage(chat_id, msg.message_id);
 }
 
 const getTokenMintFromCallback = (caption: string | undefined) => {

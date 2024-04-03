@@ -5,8 +5,9 @@ import bs58 from "bs58";
 
 const MAX_RETRIES = 5;
 const welcomeKeyboardList = [
-  [{ text: '🎯 Sniper', command: 'snipe_token' }, { text: '📊 Position', command: 'my_position' }],
-  [{ text: '🫳 Buy', command: 'buy_token' }, { text: '🫴 Sell', command: 'sell_token' }],
+  // snipe_token, my_position
+  [{ text: '🎯 Sniper [soon]', command: 'dummy_button' }, { text: '📊 Position [soon]', command: 'dummy_button' }],
+  // [{ text: '🫳 Buy', command: 'buy_token' }, { text: '🫴 Sell', command: 'sell_token' }],
   [{ text: '🚀 Transfer funds', command: 'transfer_token' }, { text: '🔧 Setting', command: 'setting' }],
   [{ text: '❌ Close', command: 'dismiss_message' }],
 ];

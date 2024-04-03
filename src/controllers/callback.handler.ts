@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
-import { changeGasFeeHandler, switchToBuyHandler, switchToSellHandler } from "../screens/contract.info.screen";
-import { GasFeeEnum } from "../services/gas.fee.service";
+import { changeGasFeeHandler } from "../screens/contract.info.screen";
+import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 
 export const callbackQueryHandler = async (
@@ -25,21 +25,6 @@ export const callbackQueryHandler = async (
       return;
     }
 
-
-    if (data.command.includes('switch_buy')) {
-      await switchToBuyHandler(
-        bot,
-        callbackMessage,
-      )
-      return;
-    }
-    if (data.command.includes('switch_sell')) {
-      await switchToSellHandler(
-        bot,
-        callbackMessage,
-      )
-      return;
-    }
     if (data.command === 'low_gas') {
       await changeGasFeeHandler(bot, callbackMessage, GasFeeEnum.LOW);
       return;
@@ -55,13 +40,13 @@ export const callbackQueryHandler = async (
     const buyTokenStr = 'buytoken_';
     if (data.command.includes(buyTokenStr)) {
       const buyAmount = Number(data.command.slice(buyTokenStr.length));
-      await buyHandler(bot, callbackMessage, buyAmount, callbackMessage.text);
+      await buyHandler(bot, callbackMessage, buyAmount);
       return;
     }
     const sellTokenStr = 'selltoken_';
     if (data.command.includes(sellTokenStr)) {
       const sellPercent = Number(data.command.slice(sellTokenStr.length));
-      await sellHandler(bot, callbackMessage, sellPercent, callbackMessage.text);
+      await sellHandler(bot, callbackMessage, sellPercent);
       return;
     }
     if (data.command.includes("buy_custom")) {

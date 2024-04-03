@@ -43,4 +43,4 @@ const Token = new Schema({
 // Create compound index for username, wallet_address, and nonce
 Token.index({ username: 1, wallet_address: 1, nonce: 1 }, { unique: true });
 
-export default mongoose.model("user", Token);
+export default mongoose.model("token", Token);
