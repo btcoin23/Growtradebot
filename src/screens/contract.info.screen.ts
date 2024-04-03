@@ -34,8 +34,6 @@ export const ContractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
 
     // check token metadata
     const tokeninfo = await TokenService.getMintInfo(mint);
-    console.log("end", Date.now())
-
     if (!tokeninfo || tokeninfo === "NONE") {
       await sendNoneExistTokenNotification(bot, msg);
       return;

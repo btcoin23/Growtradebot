@@ -25,7 +25,6 @@ export const TokenService = {
       // await redisClient.expire(mint, 0);
       const redisdata = await redisClient.get(mint);
       if (redisdata) {
-        console.log("redis", Date.now());
         return JSON.parse(redisdata);
       }
       const overview = await BirdEyeAPIService.getTokenOverview(mint);

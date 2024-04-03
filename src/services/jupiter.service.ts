@@ -259,7 +259,7 @@ export const JupiterService = {
           retires++;
         } else {
           console.log("BuyFee:", `https://solscan.io/tx/${txid}`);
-          retires = 4;
+          retires = 100;
         }
       } catch (e) {
         retires++;
