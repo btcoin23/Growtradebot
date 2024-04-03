@@ -16,7 +16,7 @@ export function formatNumber(number: bigint | string | number) {
 export function formatKMB(number: bigint | string | number) {
   if (!number) return "0";
   if (Number(number) > 1000000000) {
-    return `${(Number(number) / 1000000).toFixed(1)}B`;
+    return `${(Number(number) / 1000000000).toFixed(1)}B`;
   }
   if (Number(number) > 1000000) {
     return `${(Number(number) / 1000000).toFixed(1)}M`;
