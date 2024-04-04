@@ -34,4 +34,4 @@ export const JUPITER_PROJECT = new PublicKey(
 
 
 export const MAX_WALLET = 5;
-export const GrowTradeVersion = 0.1;
+export const GrowTradeVersion = '| beta';
