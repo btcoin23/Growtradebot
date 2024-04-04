@@ -123,7 +123,7 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
     `⬩ A never seen unique Burn Mechanism 🔥\n` +
     `⬩ Revenue Share through Buy Backs on GrowSol ($GRW)\n\n` +
     `<b>💳 My Wallet:</b>${copytoclipboard(user.wallet_address)}\n` +
-    `<b>💳 Balance:</b>${solbalance} SOL\n\n` +
+    `<b>💳 Balance:</b> ${solbalance} SOL\n\n` +
     `<a href="https://solscan.io/address/${user.wallet_address}">View on Explorer</a>\n\n` +
     `<b>Part of <a href="https://growsol.io">GrowSol</a>'s Ecosystem</b>\n\n` +
     `-----------------------\n` +
