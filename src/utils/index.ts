@@ -77,3 +77,9 @@ export const getPrice = async (mint: string) => {
   await redisClient.expire(key, 5); // 5 seconds
   return price;
 };
+
+export const copytoclipboard = (
+  text: string
+) => {
+  return `<code class="text-entity-code clickable" role="textbox" tabindex="0" data-entity-type="MessageEntityCode">${text}</code>`;
+}

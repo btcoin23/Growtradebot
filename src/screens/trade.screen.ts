@@ -1,4 +1,4 @@
-import TelegramBot from "node-telegram-bot-api";
+import TelegramBot, { InlineKeyboardMarkup } from "node-telegram-bot-api";
 import { JupiterService } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
 import { closeReplyMarkup, deleteDelayMessage } from "./common.screen";
@@ -11,6 +11,7 @@ import { amount } from "@metaplex-foundation/js";
 import { UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { inline_keyboards } from "./contract.info.screen";
+import { copytoclipboard } from "../utils";
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
@@ -166,7 +167,7 @@ export const buyHandler = async (
   }
 
   const mintinfo = await TokenService.getMintInfo(mint);
-  if (!mintinfo || mintinfo === "NONE") return;
+  if (!mintinfo) return;
   const { name, symbol, price } = mintinfo.overview;
   const { isToken2022 } = mintinfo.secureinfo;
   const solprice = await TokenService.getSOLPrice();
@@ -174,18 +175,19 @@ export const buyHandler = async (
   const getcaption = async (status: string, suffix: string = "") => {
     const securecaption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${mint}</i>\n` + status +
-      `💲 <b>Value: ${amount} SOL ($ ${(amount * solprice).toFixed(3)})</b>\n` +
-      `💴 Fee: 0.75%\n` + suffix;
+      `<i>${copytoclipboard(mint)}</i>\n` + status +
+      `💲 <b>Value: ${amount} SOL ($ ${(amount * solprice).toFixed(3)})</b>\n` + suffix;
 
     return securecaption;
   }
   const buycaption = await getcaption(`🕒 <b>Buy in progress</b>\n`);
 
-  bot.sendMessage(
+  const pendingMessage = await bot.sendMessage(
     chat_id,
     buycaption,
-    closeReplyMarkup
+    {
+      parse_mode: 'HTML'
+    }
   )
 
   const { gas, slippage } = await UserTradeSettingService.get(username, mint);
@@ -203,18 +205,28 @@ export const buyHandler = async (
     const txn = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${txn}">${txn}</a>\n`;
     const successCaption = await getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
-    bot.sendMessage(
-      chat_id,
+
+    bot.editMessageText(
       successCaption,
-      closeReplyMarkup
+      {
+        message_id: pendingMessage.message_id,
+        chat_id,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      }
     )
   } else {
-
     const failedCaption = await getcaption(`🔴 <b>Buy Failed</b>\n`);
-    bot.sendMessage(
-      chat_id,
+    bot.editMessageText(
       failedCaption,
-      closeReplyMarkup
+      {
+        message_id: pendingMessage.message_id,
+        chat_id,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      }
     )
   }
 }
@@ -240,7 +252,6 @@ export const sellHandler = async (
 
   if (!msglog) return;
   const { mint, spl_amount, sol_amount } = msglog;
-  console.log("==>", mint, sol_amount)
 
   if (!mint) return;
   // check if enough includes fee
@@ -259,7 +270,7 @@ export const sellHandler = async (
 
   const mintinfo = await TokenService.getMintInfo(mint);
 
-  if (!mintinfo || mintinfo === "NONE") return;
+  if (!mintinfo) return;
   const { name, symbol, price, decimals } = mintinfo.overview;
   const { isToken2022 } = mintinfo.secureinfo;
 
@@ -271,17 +282,18 @@ export const sellHandler = async (
 
     const securecaption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${mint}</i>\n` + status +
-      `💲 <b>Value: ${sellAmount} ${symbol} ($ ${(sellAmount * price).toFixed(3)})</b>\n` +
-      `💴 Fee: 0.75%\n` + suffix;
+      `<i>${copytoclipboard(mint)}</i>\n` + status +
+      `💲 <b>Value: ${sellAmount} ${symbol} ($ ${(sellAmount * price).toFixed(3)})</b>\n` + suffix;
     return securecaption;
   }
 
   const buycaption = await getcaption(`🕒 <b>Sell in progress</b>\n`);
-  bot.sendMessage(
+  const pendingMessage = await bot.sendMessage(
     chat_id,
     buycaption,
-    closeReplyMarkup
+    {
+      parse_mode: 'HTML'
+    }
   )
 
   // buy token
@@ -300,17 +312,27 @@ export const sellHandler = async (
     const txn = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${txn}">${txn}</a>\n`;
     const successCaption = await getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
-    bot.sendMessage(
-      chat_id,
+    bot.editMessageText(
       successCaption,
-      closeReplyMarkup
+      {
+        message_id: pendingMessage.message_id,
+        chat_id,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      }
     )
   } else {
     const failedCaption = await getcaption(`🔴 <b>Sell Failed</b>\n`);
-    bot.sendMessage(
-      chat_id,
+    bot.editMessageText(
       failedCaption,
-      closeReplyMarkup
+      {
+        message_id: pendingMessage.message_id,
+        chat_id,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      }
     )
   }
 }

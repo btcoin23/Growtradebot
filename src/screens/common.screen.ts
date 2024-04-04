@@ -37,7 +37,21 @@ export const sendNoneExistTokenNotification = async (bot: TelegramBot, msg: Tele
   const sentMsg = await bot.sendMessage(
     chat_id,
     '⚠︎ Error\n<b>This token does not exist. Please check mint address again. or Try it later.</b>',
-    closeReplyMarkup
+    {
+      parse_mode: 'HTML'
+    }
+  );
+  deleteDelayMessage(bot, chat_id, sentMsg.message_id, 5000);
+}
+
+export const sendInsufficientNotification = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  const { id: chat_id } = msg.chat;
+  const sentMsg = await bot.sendMessage(
+    chat_id,
+    '⚠︎ Error\n<b>Insufficient amount.</b>',
+    {
+      parse_mode: 'HTML'
+    }
   );
   deleteDelayMessage(bot, chat_id, sentMsg.message_id, 5000);
 }
@@ -49,8 +63,6 @@ export const sendUsernameRequiredNotification = async (bot: TelegramBot, msg: Te
     '⚠︎ Error\n<b>You have no telegram username yourself. Please edit your profile and try it again.</b>',
     closeReplyMarkup
   );
-  deleteDelayMessage(bot, chat_id, sentMsg.message_id, 5000);
-
 }
 
 // delay: ms

@@ -12,8 +12,8 @@ export const UserTradeSettingService = {
     const data = await redisClient.get(key);
     if (data) return JSON.parse(data) as IUserTradeSetting;
     return {
-      slippage: 5,
-      slippagebps: 500,
+      slippage: 20,
+      slippagebps: 2000,
       gas: GasFeeEnum.MEDIUM
     } as IUserTradeSetting
   },
@@ -31,13 +31,13 @@ export const UserTradeSettingService = {
   },
   getGasValue: async (gasfee: GasFeeEnum) => {
     if (gasfee === GasFeeEnum.LOW) {
-      // Micro Lamports: 460085
+      // Micro Lamports: 460085 auto
       return `Gas: 0.000105 SOL`;
     } else if (gasfee === GasFeeEnum.MEDIUM) {
-      // Micro Lamports: 702044
+      // Micro Lamports: 702044 2 multiplier
       return `Gas: 0.000139 SOL`;
     } else if (gasfee === GasFeeEnum.HIGH) {
-      // Micro Lamports -1582762
+      // Micro Lamports -1582762 . multiplier
       return `Gas: 0.000305 SOL`;
     }
     return `Gas: 0.000105 SOL`;

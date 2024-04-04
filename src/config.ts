@@ -31,3 +31,7 @@ export const WK = 7 * DAY;
 export const JUPITER_PROJECT = new PublicKey(
   "45ruCyfdRkWpRNGEqWzjCiXRHkZs8WXCLQ67Pnpye7Hp",
 );
+
+
+export const MAX_WALLET = 5;
+export const GrowTradeVersion = 0.1;

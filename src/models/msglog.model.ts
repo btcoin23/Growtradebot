@@ -41,6 +41,9 @@ const MsgLog = new Schema({
     type: Number,
     default: 0,
   },
+  extra_id: {
+    type: Number,
+  },
   creation_time: {
     type: Number,
     default: 0,

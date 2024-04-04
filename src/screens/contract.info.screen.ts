@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api"
 import { TokenService } from "../services/token.metadata";
-import { birdeyeLink, contractLink, dexscreenerLink, dextoolLink, formatKMB, formatNumber, formatPrice, getPrice } from "../utils";
+import { birdeyeLink, contractLink, copytoclipboard, dexscreenerLink, dextoolLink, formatKMB, formatNumber, formatPrice, getPrice } from "../utils";
 import { UserService } from "../services/user.service";
 import { sendNoneExistTokenNotification, sendNoneUserNotification, sendUsernameRequiredNotification } from "./common.screen";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
@@ -13,7 +13,7 @@ export const inline_keyboards = [
   [{ text: "Buy 0.01 SOL", command: 'buytoken_0.01' }, { text: "Buy 5 SOL", command: 'buytoken_5' }, { text: "Buy X SOL", command: 'buy_custom' }],
   [{ text: "-------------Sell-----------------", command: null }],
   [{ text: "Sell 50%", command: 'selltoken_50' }, { text: "Sell 100%", command: 'selltoken_100' }, { text: "Sell X %", command: 'sell_custom' }],
-  [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'close' }],
+  [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }],
 ]
 
 export const ContractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string) => {
@@ -34,7 +34,7 @@ export const ContractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
 
     // check token metadata
     const tokeninfo = await TokenService.getMintInfo(mint);
-    if (!tokeninfo || tokeninfo === "NONE") {
+    if (!tokeninfo) {
       await sendNoneExistTokenNotification(bot, msg);
       return;
     }
@@ -44,7 +44,7 @@ export const ContractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
 
     const caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${mint}</i>\n\n` +
+      `<i>${copytoclipboard(mint)}</i>\n\n` +
       `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
       `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
@@ -161,8 +161,61 @@ export const changeGasFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
   })
 }
 
-const getTokenMintFromCallback = (caption: string) => {
-  return caption.split("\n")[1];
+export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  try {
+    const chat_id = msg.chat.id;
+    const username = msg.chat.username;
+    const reply_markup = msg.reply_markup
+    if (!username || !reply_markup) return;
+
+    // user
+    const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendNoneUserNotification(bot, msg);
+      return;
+    }
+
+    const msglog = await MsgLogService.findOne({
+      username,
+      msg_id: msg.message_id
+    });
+    if (!msglog) return;
+    const { mint } = msglog;
+
+    // check token metadata
+    const tokeninfo = await TokenService.getMintInfo(mint);
+    if (!tokeninfo) {
+      await sendNoneExistTokenNotification(bot, msg);
+      return;
+    }
+
+    const { overview, secureinfo } = tokeninfo;
+    const { symbol, name, price, mc } = overview;
+    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData } = secureinfo;
+
+    const solbalance = await TokenService.getSOLBalance(user.wallet_address, true);
+    const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
+
+    const caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+      `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
+      `<i>${copytoclipboard(mint)}</i>\n\n` +
+      `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
+      `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
+      `💲 Price: <b>$${formatPrice(price)}</b>\n` +
+      `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
+      `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
+      `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +
+      `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
+
+    await bot.editMessageText(caption, {
+      message_id: msg.message_id,
+      chat_id, parse_mode: 'HTML',
+      disable_web_page_preview: true,
+      reply_markup
+    });
+  } catch (e) {
+    console.log("~ refresh handler ~", e)
+  }
 }
 // FPymkKgpg1sLFbVao4JMk4ip8xb8C8uKqfMdARMobHaw
 // DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263

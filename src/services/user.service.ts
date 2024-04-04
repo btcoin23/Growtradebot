@@ -22,7 +22,7 @@ export const UserService = {
   findOne: async (props: any) => {
     try {
       const filter = props;
-      const result = await UserSchema.findOne(filter);
+      const result = await UserSchema.findOne({ ...filter, retired: false });
 
       return result;
     } catch (err: any) {
@@ -49,10 +49,29 @@ export const UserService = {
       throw new Error(err.message);
     }
   },
+  findAndSort: async (props: any) => {
+    const filter = props;
+    try {
+      const result = await UserSchema.find(filter).sort({ retired: 1, nonce: 1 })
+        .exec();
+
+      return result;
+    } catch (err: any) {
+      throw new Error(err.message);
+    }
+  },
   updateOne: async (props: any) => {
     const { id } = props;
     try {
       const result = await UserSchema.findByIdAndUpdate(id, props);
+      return result;
+    } catch (err: any) {
+      throw new Error(err.message);
+    }
+  },
+  findAndUpdateOne: async (filter: any, props: any) => {
+    try {
+      const result = await UserSchema.findOneAndUpdate(filter, props);
       return result;
     } catch (err: any) {
       throw new Error(err.message);

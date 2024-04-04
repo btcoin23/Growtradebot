@@ -1,8 +1,9 @@
 import TelegramBot from "node-telegram-bot-api";
 import { isValidWalletAddress } from "../utils";
 import { ContractInfoScreenHandler } from "../screens/contract.info.screen";
-import { BUY_XSOL_TEXT, SELL_XPRO_TEXT, SET_SLIPPAGE_TEXT } from "../bot.opts";
+import { BUY_XSOL_TEXT, SELL_XPRO_TEXT, SET_SLIPPAGE_TEXT, WITHDRAW_TOKEN_AMT_TEXT, WITHDRAW_XTOKEN_TEXT } from "../bot.opts";
 import { buyHandler, sellHandler, setSlippageHandler } from "../screens/trade.screen";
+import { withdrawAddressHandler, withdrawHandler } from "../screens/transfer.funds";
 
 export const messageHandler = async (
   bot: TelegramBot,
@@ -14,11 +15,6 @@ export const messageHandler = async (
 
     if (!messageText) return;
 
-    // wallet address
-    if (isValidWalletAddress(messageText)) {
-      await ContractInfoScreenHandler(bot, msg, messageText);
-      return;
-    }
 
     if (reply_to_message && reply_to_message.text) {
       const { text } = reply_to_message;
@@ -26,16 +22,33 @@ export const messageHandler = async (
       const regex = /^[0-9]+(\.[0-9]+)?$/;
       const isNumber = regex.test(messageText) === true;
       const reply_message_id = reply_to_message.message_id;
+
+      console.log("Withdraw Text", isNumber);
       if (isNumber) {
         const amount = Number(messageText);
         if (text === BUY_XSOL_TEXT.replace(/<[^>]*>/g, '')) {
           await buyHandler(bot, msg, amount, reply_message_id);
         } else if (text === SELL_XPRO_TEXT.replace(/<[^>]*>/g, '')) {
           await sellHandler(bot, msg, amount, reply_message_id);
+        } else if (text === WITHDRAW_XTOKEN_TEXT.replace(/<[^>]*>/g, '')) {
+          await withdrawHandler(bot, msg, messageText, reply_message_id);
         } else if (text === SET_SLIPPAGE_TEXT.replace(/<[^>]*>/g, '')) {
           await setSlippageHandler(bot, msg, amount, reply_message_id);
         }
+      } else {
+        if (text === WITHDRAW_TOKEN_AMT_TEXT.replace(/<[^>]*>/g, '')) {
+          console.log("Withdraw Text", messageText);
+          await withdrawAddressHandler(bot, msg, messageText, reply_message_id);
+        }
       }
+      return;
+    }
+
+
+    // wallet address
+    if (isValidWalletAddress(messageText)) {
+      await ContractInfoScreenHandler(bot, msg, messageText);
+      return;
     }
   } catch (e) {
     console.log("~messageHandler~", e);

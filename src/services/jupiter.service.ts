@@ -1,9 +1,9 @@
-import { NATIVE_MINT } from "@solana/spl-token";
-import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, Account, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, createAssociatedTokenAccountInstruction, createTransferCheckedInstruction, createTransferInstruction, getAccount, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { QuoteGetRequest, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
 import { ReferralProvider } from "@jup-ag/referral-sdk";
-import { JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_KEY, connection } from "../config";
+import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_KEY, connection } from "../config";
 import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
 import { GasFeeEnum } from "./user.trade.setting.service";
@@ -45,8 +45,14 @@ export const JupiterService = {
         quoteResponse: quote,
         userPublicKey: wallet.publicKey.toBase58(),
         dynamicComputeUnitLimit: true,
-        prioritizationFeeLamports: "auto",
+        // prioritizationFeeLamports: "auto",
+        prioritizationFeeLamports: {
+          autoMultiplier: 10,
+        }
       }
+      // - Low 0.005
+      // - Medium 0.02
+      // - High 0.05
       if (outputMint === NATIVE_MINT.toBase58()) {
         const [feeAccount] = PublicKey.findProgramAddressSync(
           [Buffer.from("referral_ata"), new PublicKey(REFERRAL_ACCOUNT).toBuffer(), NATIVE_MINT.toBuffer()],
@@ -57,11 +63,11 @@ export const JupiterService = {
       }
       if (gasFee === GasFeeEnum.MEDIUM) {
         swapReqOpts.prioritizationFeeLamports = {
-          autoMultiplier: 2,
+          autoMultiplier: 15,
         }
       } else if (gasFee === GasFeeEnum.HIGH) {
         swapReqOpts.prioritizationFeeLamports = {
-          autoMultiplier: 3,
+          autoMultiplier: 25,
         }
       }
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: swapReqOpts });
@@ -190,44 +196,40 @@ export const JupiterService = {
   },
   claimAll: async () => {
     try {
-      console.log("ClaimAll started");
       // This method will returns a list of transactions for all claims batched by 5 claims for each transaction.
-      const txs = await provider.claimAll({
+      const tx = await provider.claim({
         payerPubKey: reserveWallet.publicKey,
         referralAccountPubKey: new PublicKey(
           REFERRAL_ACCOUNT,
         ), // Referral Key. You can create this with createReferralAccount.ts.
+        mint: NATIVE_MINT
       });
-      console.log("claimall txn", txs.length, txs);
 
       // Send each claim transaction one by one.
-      for (const tx of txs) {
-        console.log("claimall:", tx);
-        let retires = 0;
-        do {
-          try {
-            tx.sign([reserveWallet]);
-            const { blockhash, lastValidBlockHeight } =
-              await connection.getLatestBlockhash();
-            const txid = await connection.sendTransaction(tx);
-            const { value } = await connection.confirmTransaction({
-              signature: txid,
-              blockhash,
-              lastValidBlockHeight,
-            });
+      let retires = 0;
+      do {
+        try {
+          // tx.sign([reserveWallet]);
+          const { blockhash, lastValidBlockHeight } =
+            await connection.getLatestBlockhash();
+          const txid = await connection.sendTransaction(tx, [reserveWallet]);
+          const { value } = await connection.confirmTransaction({
+            signature: txid,
+            blockhash,
+            lastValidBlockHeight,
+          });
 
-            if (value.err) {
-              console.log({ value, txid });
-              retires++;
-            } else {
-              console.log(`ClaimAll: https://solscan.io/tx/${txid}`);
-              retires = 10;
-            }
-          } catch (e) {
+          if (value.err) {
+            console.log({ value, txid });
             retires++;
+          } else {
+            console.log(`ClaimAll: https://solscan.io/tx/${txid}`);
+            retires = 10;
           }
-        } while (retires < 5);
-      }
+        } catch (e) {
+          retires++;
+        }
+      } while (retires < 5);
     } catch (e) {
       console.log("ClaimAll Failed", e);
     }
@@ -264,6 +266,145 @@ export const JupiterService = {
       } catch (e) {
         retires++;
         console.log(`Take BuyFee Failed ${retires}/5`);
+      }
+    } while (retires < 5);
+  },
+  transferSOL: async (fundAmount: number, decimals: number, toPubkey: string, pk: string) => {
+    if (fundAmount <= 0) return;
+    let retires = 0;
+    const wallet = Keypair.fromSecretKey(bs58.decode(pk));
+
+    do {
+      try {
+        const amount = Number((fundAmount * 10 ** decimals).toFixed(0));
+        const txid = await sendTransactionV0(
+          connection,
+          [
+            ComputeBudgetProgram.setComputeUnitPrice({
+              microLamports: 5000,
+            }),
+            ComputeBudgetProgram.setComputeUnitLimit({
+              units: 20_000,
+            }),
+            SystemProgram.transfer({
+              fromPubkey: wallet.publicKey,
+              toPubkey: new PublicKey(toPubkey),
+              lamports: amount,
+            })
+          ],
+          [wallet]
+        )
+        if (!txid) {
+          retires++;
+        } else {
+          console.log("WithdrawSOL:", `https://solscan.io/tx/${txid}`);
+          retires = 100;
+          return txid;
+        }
+      } catch (e) {
+        retires++;
+        console.log(`Take Withdraw Failed ${retires}/5`);
+      }
+    } while (retires < 5);
+    return null;
+  },
+  transferSPL: async (mint: string, fundAmount: number, decimals: number, toPubkey: string, pk: string, isToken2022: boolean) => {
+    if (fundAmount <= 0) return null;
+    const wallet = Keypair.fromSecretKey(bs58.decode(pk));
+
+    const sourceAta = getAssociatedTokenAddressSync(
+      new PublicKey(mint),
+      wallet.publicKey,
+      true,
+      isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    const destAta = getAssociatedTokenAddressSync(
+      new PublicKey(mint),
+      new PublicKey(toPubkey),
+      true,
+      isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const instructions: TransactionInstruction[] = [];
+    // This is the optimal logic, considering TX fee, client-side computation, RPC roundtrips and guaranteed idempotent.
+    // Sadly we can't do this atomically.
+    let account: Account;
+    try {
+      account = await getAccount(connection, destAta, COMMITMENT_LEVEL, isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID);
+    } catch (error: unknown) {
+      // TokenAccountNotFoundError can be possible if the associated address has already received some lamports,
+      // becoming a system account. Assuming program derived addressing is safe, this is the only case for the
+      // TokenInvalidAccountOwnerError in this code path.
+      if (error instanceof TokenAccountNotFoundError || error instanceof TokenInvalidAccountOwnerError) {
+        // As this isn't atomic, it's possible others can create associated accounts meanwhile.
+        instructions.push(
+          createAssociatedTokenAccountInstruction(
+            wallet.publicKey,
+            destAta,
+            new PublicKey(toPubkey),
+            new PublicKey(mint),
+            isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
+        )
+      } else {
+        return null;
+      }
+    }
+    const amount = Number((fundAmount * 10 ** decimals).toFixed(0));
+
+    if (isToken2022) {
+      instructions.push(
+        createTransferCheckedInstruction(
+          sourceAta,
+          new PublicKey(mint),
+          destAta,
+          wallet.publicKey,
+          amount,
+          decimals,
+          [],
+          TOKEN_2022_PROGRAM_ID
+        )
+      )
+    } else {
+      instructions.push(
+        createTransferInstruction(
+          sourceAta,
+          destAta,
+          wallet.publicKey,
+          amount
+        )
+      )
+    }
+
+    let retires = 0;
+    do {
+      try {
+        const txid = await sendTransactionV0(
+          connection,
+          [
+            ComputeBudgetProgram.setComputeUnitPrice({
+              microLamports: 100000,
+            }),
+            ComputeBudgetProgram.setComputeUnitLimit({
+              units: 200_000,
+            }),
+            ...instructions
+          ],
+          [wallet]
+        )
+        if (!txid) {
+          retires++;
+        } else {
+          console.log("Transfer SPL:", `https://solscan.io/tx/${txid}`);
+          retires = 100;
+          return txid;
+        }
+      } catch (e) {
+        retires++;
+        console.log(`Take Transfer SPL Failed ${retires}/5`);
       }
     } while (retires < 5);
   }

@@ -1,10 +1,20 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout, ExtensionType, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, getExtensionData, getExtensionTypes, getMetadataPointerState, getMint } from "@solana/spl-token";
-import { COMMITMENT_LEVEL, connection } from "../config";
+import { COMMITMENT_LEVEL, MAINNET_RPC, connection } from "../config";
 import { Metaplex } from "@metaplex-foundation/js";
-import { PublicKey } from "@solana/web3.js";
+import { GetProgramAccountsFilter, PublicKey } from "@solana/web3.js";
 import redisClient from "./redis";
-import { getPrice } from "../utils";
+import { formatNumber, getPrice } from "../utils";
 import { BirdEyeAPIService, TokenOverviewDataType, TokenSecurityInfoDataType } from "./birdeye.api.service";
+
+export interface ITokenAccountInfo {
+  address: string,
+  mint: string,
+  owner: string,
+  amount: number,
+  delegated_amount: number,
+  frozen: boolean,
+  symbol?: string
+}
 const knownMints = [
   {
     mint: "FPymkKgpg1sLFbVao4JMk4ip8xb8C8uKqfMdARMobHaw",
@@ -22,13 +32,10 @@ const knownMints = [
 export const TokenService = {
   getMintInfo: async (mint: string) => {
     try {
-      // await redisClient.expire(mint, 0);
-      const redisdata = await redisClient.get(mint);
-      if (redisdata) {
-        return JSON.parse(redisdata);
-      }
-      const overview = await BirdEyeAPIService.getTokenOverview(mint);
-      const secureinfo = await BirdEyeAPIService.getTokenSecurity(mint);
+      const overview = await TokenService.getTokenOverview(mint);
+      if (!overview) return null;
+
+      const secureinfo = await TokenService.getTokenSecurity(mint);
       const resdata = {
         overview,
         secureinfo
@@ -36,17 +43,40 @@ export const TokenService = {
         overview: TokenOverviewDataType,
         secureinfo: TokenSecurityInfoDataType
       }
-      if (!resdata.overview.address) {
-        await redisClient.set(mint, "NONE")
-        await redisClient.expire(mint, 86400);
-        return null;
-      }
 
-      await redisClient.set(mint, JSON.stringify(resdata));
       return resdata;
     } catch (e) {
       return null;
     }
+  },
+  getTokenSecurity: async (mint: string) => {
+    const key = `${mint}_security`;
+    const redisdata = await redisClient.get(key);
+    if (redisdata) {
+      return JSON.parse(redisdata);
+    }
+
+    const secureinfo = await BirdEyeAPIService.getTokenSecurity(mint);
+
+    await redisClient.set(key, JSON.stringify(secureinfo))
+    await redisClient.expire(key, 86400);
+    return secureinfo;
+  },
+  getTokenOverview: async (mint: string) => {
+    const key = `${mint}_overview`;
+    const redisdata = await redisClient.get(key);
+    if (redisdata) {
+      return JSON.parse(redisdata);
+    }
+
+    const overview = await BirdEyeAPIService.getTokenOverview(mint) as TokenOverviewDataType;
+    if (!overview || !overview.address) {
+      return null;
+    }
+
+    await redisClient.set(key, JSON.stringify(overview))
+    await redisClient.expire(key, 30);
+    return overview;
   },
   fetchSecurityInfo: async (mint: PublicKey) => {
     try {
@@ -209,5 +239,70 @@ export const TokenService = {
   },
   getSPLPrice: async (mint: string) => {
     return getPrice(mint);
+  },
+  getTokenAccounts: async (wallet: string): Promise<Array<ITokenAccountInfo>> => {
+    try {
+      const key = `${wallet}_tokenaccounts`;
+      const data = await redisClient.get(key);
+      if (data) return JSON.parse(data);
+
+      const results: Array<ITokenAccountInfo> = await getaccounts(wallet);
+
+      await redisClient.set(key, JSON.stringify(results));
+      await redisClient.expire(key, 30);
+      return results;
+    } catch (e) { return [] }
   }
+}
+
+const getaccounts = async (owner: string) => {
+  const results: Array<ITokenAccountInfo> = [];
+  const response = await fetch(MAINNET_RPC, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "getTokenAccounts",
+      id: "helius-test",
+      params: {
+        page: 1,
+        limit: 100,
+        "displayOptions": {
+          "showZeroBalance": false,
+        },
+        owner: owner,
+      },
+    }),
+  });
+  const data = await response.json();
+
+  if (!data.result) {
+    console.error("No result in the response", data);
+    return [];
+  }
+
+
+  for (const account of data.result.token_accounts as Array<ITokenAccountInfo>) {
+    const { mint, amount } = account;
+    const tokeninfo = await TokenService.getMintInfo(mint);
+    if (!tokeninfo) {
+      results.push(account);
+    } else {
+      const symbol = tokeninfo.overview.symbol;
+      const decimals = tokeninfo.overview.decimals;
+      if (decimals && amount) {
+        const balance = amount / (10 ** decimals);
+        const temp = account;
+        temp.symbol = symbol;
+        temp.amount = balance;
+        results.push(temp);
+      } else {
+        results.push({ symbol, ...account });
+      }
+    }
+
+  }
+  return results;
 }

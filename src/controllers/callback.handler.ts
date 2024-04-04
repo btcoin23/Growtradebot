@@ -1,7 +1,10 @@
 import TelegramBot from "node-telegram-bot-api";
-import { changeGasFeeHandler } from "../screens/contract.info.screen";
+import { changeGasFeeHandler, refreshHandler } from "../screens/contract.info.screen";
 import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
+import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
+import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
+import { generateNewWalletHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler } from "../screens/settings.screen";
 
 export const callbackQueryHandler = async (
   bot: TelegramBot,
@@ -21,8 +24,63 @@ export const callbackQueryHandler = async (
       return;
     }
 
+    if (data.command.includes('cancel_withdraw')) {
+      await cancelWithdrawHandler(bot, callbackMessage);
+      return;
+    }
+
     if (data.command.includes('dummy_button')) {
       return;
+    }
+
+    if (data.command.includes('transfer_funds')) {
+      const replaceId = callbackMessage.message_id;
+      await transferFundScreenHandler(bot, callbackMessage, replaceId);
+      return;
+    }
+
+    if (data.command.includes('TF_')) {
+      const mint = data.command.slice(3);
+      await withdrawButtonHandler(bot, callbackMessage, mint);
+      return;
+    }
+
+    if (data.command.includes('withdrawtoken_custom')) {
+      await withdrawCustomAmountScreenHandler(bot, callbackMessage);
+      return;
+    }
+
+    const withdrawstr = 'withdraw_';
+    if (data.command.includes(withdrawstr)) {
+      const percent = data.command.slice(withdrawstr.length);
+      await withdrawHandler(bot, callbackMessage, percent);
+      return;
+    }
+
+    if (data.command.includes('settings')) {
+      const replaceId = callbackMessage.message_id;
+      await settingScreenHandler(bot, callbackMessage, replaceId)
+    }
+
+    if (data.command.includes('generate_wallet')) {
+      await generateNewWalletHandler(bot, callbackMessage)
+    }
+
+    const pkstr = 'revealpk_';
+    if (data.command.includes(pkstr)) {
+      const nonce = Number(data.command.slice(pkstr.length));
+      await revealWalletPrivatekyHandler(bot, callbackMessage, nonce);
+    }
+
+    const usewalletstr = 'usewallet_';
+    if (data.command.includes(usewalletstr)) {
+      const nonce = Number(data.command.slice(usewalletstr.length));
+      await switchWalletHandler(bot, callbackMessage, nonce);
+    }
+
+    if (data.command.includes('back_home')) {
+      const replaceId = callbackMessage.message_id;
+      await welcomeGuideHandler(bot, callbackMessage, replaceId)
     }
 
     if (data.command === 'low_gas') {
@@ -59,6 +117,11 @@ export const callbackQueryHandler = async (
     }
     if (data.command.includes("set_slippage")) {
       await setSlippageScreenHandler(bot, callbackMessage);
+      return;
+    }
+
+    if (data.command === 'refresh') {
+      await refreshHandler(bot, callbackMessage);
       return;
     }
   } catch (e) {
