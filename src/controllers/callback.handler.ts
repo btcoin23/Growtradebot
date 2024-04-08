@@ -35,8 +35,8 @@ export const callbackQueryHandler = async (
     }
 
     if (data.command.includes('buysell')) {
-      const replaceId = callbackMessage.message_id;
-      await buySellScreenHandler(bot, callbackMessage, replaceId);
+      // const replaceId = callbackMessage.message_id;
+      await buySellScreenHandler(bot, callbackMessage);
       return;
     }
 

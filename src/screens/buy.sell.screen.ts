@@ -9,7 +9,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 export const buySellScreenHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
-  replaceId: number
+  // replaceId: number
 ) => {
   try {
     const { chat, } = msg;
@@ -30,28 +30,32 @@ export const buySellScreenHandler = async (
     const reply_markup = {
       inline_keyboard: [
         [{
-          text: 'Loading...', callback_data: JSON.stringify({
-            'command': 'dummy_button'
-          })
-        },
-        {
-          text: '↩️ Back', callback_data: JSON.stringify({
-            'command': 'back_home'
+          text: '❌ Close', callback_data: JSON.stringify({
+            'command': 'dismiss_message'
           })
         }]
       ]
     }
 
-    bot.editMessageText(
+    // bot.editMessageText(
+    //   temp,
+    //   {
+    //     message_id: replaceId,
+    //     chat_id,
+    //     parse_mode: 'HTML',
+    //     disable_web_page_preview: true,
+    //     reply_markup
+    //   }
+    // );
+    const sentMessage = await bot.sendMessage(
+      chat_id,
       temp,
       {
-        message_id: replaceId,
-        chat_id,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
         reply_markup
       }
-    );
+    )
 
     const tokenaccounts = await TokenService.getTokenAccounts(user.wallet_address);
 
@@ -82,8 +86,16 @@ export const buySellScreenHandler = async (
 
       idx++;
     });
+    if (tokenaccounts.length <= 0) {
+      transferInlineKeyboards.push([]);
+      caption += '<i>You have no any token</i>';
+    }
     transferInlineKeyboards[Math.floor(tokenaccounts.length / 3)].push(
-      { text: '↩️ Back', callback_data: JSON.stringify({ 'command': 'back_home' }) }
+      {
+        text: '❌ Close', callback_data: JSON.stringify({
+          'command': 'dismiss_message'
+        })
+      }
     );
 
     const new_reply_markup = {
@@ -92,7 +104,7 @@ export const buySellScreenHandler = async (
     bot.editMessageText(
       caption,
       {
-        message_id: replaceId,
+        message_id: sentMessage.message_id,
         chat_id,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
