@@ -4,6 +4,7 @@ import { BotMenu } from "./bot.opts";
 import { WelcomeScreenHandler } from "./screens/welcome.screen";
 import { callbackQueryHandler } from "./controllers/callback.handler";
 import { messageHandler } from "./controllers/message.handler";
+import { buySellScreenHandler } from "./screens/buy.sell.screen";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -32,6 +33,10 @@ const startTradeBot = () => {
   bot.onText(/\/start/, async (msg: TelegramBot.Message) => {
     console.log("start comand");
     await WelcomeScreenHandler(bot, msg);
+  });
+  bot.onText(/\/buysell/, async (msg: TelegramBot.Message) => {
+    console.log("start comand");
+    await buySellScreenHandler(bot, msg);
   });
 }
 

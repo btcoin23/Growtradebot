@@ -4,7 +4,6 @@ import { copytoclipboard } from "../utils";
 import { UserService } from "../services/user.service";
 import { sendUsernameRequiredNotification } from "./common.screen";
 import { GrowTradeVersion } from "../config";
-import { NATIVE_MINT } from "@solana/spl-token";
 
 export const buySellScreenHandler = async (
   bot: TelegramBot,
