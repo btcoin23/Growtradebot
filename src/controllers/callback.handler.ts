@@ -1,10 +1,11 @@
 import TelegramBot from "node-telegram-bot-api";
-import { changeGasFeeHandler, refreshHandler } from "../screens/contract.info.screen";
+import { contractInfoScreenHandler, changeGasFeeHandler, refreshHandler } from "../screens/contract.info.screen";
 import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
 import { generateNewWalletHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler } from "../screens/settings.screen";
+import { buySellScreenHandler } from "../screens/buy.sell.screen";
 
 export const callbackQueryHandler = async (
   bot: TelegramBot,
@@ -30,6 +31,18 @@ export const callbackQueryHandler = async (
     }
 
     if (data.command.includes('dummy_button')) {
+      return;
+    }
+
+    if (data.command.includes('buysell')) {
+      const replaceId = callbackMessage.message_id;
+      await buySellScreenHandler(bot, callbackMessage, replaceId);
+      return;
+    }
+
+    if (data.command.includes('BS_')) {
+      const mint = data.command.slice(3);
+      await contractInfoScreenHandler(bot, callbackMessage, mint);
       return;
     }
 

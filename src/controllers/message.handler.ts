@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { isValidWalletAddress } from "../utils";
-import { ContractInfoScreenHandler } from "../screens/contract.info.screen";
+import { contractInfoScreenHandler } from "../screens/contract.info.screen";
 import { BUY_XSOL_TEXT, SELL_XPRO_TEXT, SET_SLIPPAGE_TEXT, WITHDRAW_TOKEN_AMT_TEXT, WITHDRAW_XTOKEN_TEXT } from "../bot.opts";
 import { buyHandler, sellHandler, setSlippageHandler } from "../screens/trade.screen";
 import { withdrawAddressHandler, withdrawHandler } from "../screens/transfer.funds";
@@ -23,7 +23,6 @@ export const messageHandler = async (
       const isNumber = regex.test(messageText) === true;
       const reply_message_id = reply_to_message.message_id;
 
-      console.log("Withdraw Text", isNumber);
       if (isNumber) {
         const amount = Number(messageText);
         if (text === BUY_XSOL_TEXT.replace(/<[^>]*>/g, '')) {
@@ -47,7 +46,7 @@ export const messageHandler = async (
 
     // wallet address
     if (isValidWalletAddress(messageText)) {
-      await ContractInfoScreenHandler(bot, msg, messageText);
+      await contractInfoScreenHandler(bot, msg, messageText);
       return;
     }
   } catch (e) {

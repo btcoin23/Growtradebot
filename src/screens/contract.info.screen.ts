@@ -16,7 +16,7 @@ export const inline_keyboards = [
   [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }],
 ]
 
-export const ContractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string) => {
+export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string) => {
   try {
     const { id: chat_id, username } = msg.chat;
 
@@ -116,7 +116,7 @@ export const ContractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       spl_amount: splbalance,
     });
   } catch (e) {
-    console.log("~ ContractInfoScreenHandler ~", e);
+    console.log("~ contractInfoScreenHandler ~", e);
   }
 }
 
