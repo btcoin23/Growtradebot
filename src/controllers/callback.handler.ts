@@ -40,7 +40,7 @@ export const callbackQueryHandler = async (
       return;
     }
 
-    if (data.command === 'positionrefresh') {
+    if (data.command === 'pos_ref') {
       const replaceId = callbackMessage.message_id;
       await positionScreenHandler(bot, callbackMessage, replaceId);
       return;

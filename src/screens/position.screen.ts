@@ -39,7 +39,7 @@ export const positionScreenHandler = async (
 
     let replaceIdtemp = replaceId;
     if (replaceId) {
-      bot.editMessageText(
+      await bot.editMessageText(
         temp,
         {
           message_id: replaceId,
@@ -117,7 +117,7 @@ export const positionScreenHandler = async (
     transferInlineKeyboards[Math.ceil(tokenaccounts.length / 3)].push(...[
       {
         text: '🔄 Refresh', callback_data: JSON.stringify({
-          'command': 'positionrefresh'
+          'command': 'pos_ref'
         })
       },
       {
@@ -130,7 +130,7 @@ export const positionScreenHandler = async (
     const new_reply_markup = {
       inline_keyboard: transferInlineKeyboards
     }
-    bot.editMessageText(
+    const sentmessage = await bot.editMessageText(
       caption,
       {
         message_id: replaceIdtemp,
