@@ -126,7 +126,10 @@ export const JupiterService = {
         // fee
         JupiterService.transferFeeSOL(fee, wallet);
       }
-      return signature;
+      return {
+        quote,
+        signature
+      };
     } catch (e) {
       console.log("SwapToken Failed", e);
       return null;

@@ -5,6 +5,7 @@ import { UserService } from "../services/user.service";
 import { sendNoneExistTokenNotification, sendNoneUserNotification, sendUsernameRequiredNotification } from "./common.screen";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
+import { PositionService } from "../services/position.service";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -38,14 +39,33 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       await sendNoneExistTokenNotification(bot, msg);
       return;
     }
+
     const { overview, secureinfo } = tokeninfo;
     const { symbol, name, price, mc } = overview;
     const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData } = secureinfo;
 
-    const caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+    let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${copytoclipboard(mint)}</i>\n\n` +
-      `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
+      `<i>${copytoclipboard(mint)}</i>\n\n`;
+
+    console.log(transferFeeData, transferFeeEnable);
+    const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
+    if (position) {
+      const { amount, volume } = position;
+      let pnl = (price * amount * 100) / volume;
+      if (transferFeeEnable && transferFeeData) {
+        const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+        pnl *= feerate;
+      }
+
+      if (pnl >= 100) {
+        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟩\n\n`
+      } else {
+        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟥\n\n`
+      }
+    }
+
+    caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
       `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
@@ -196,10 +216,27 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     const solbalance = await TokenService.getSOLBalance(user.wallet_address, true);
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
 
-    const caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+    let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${copytoclipboard(mint)}</i>\n\n` +
-      `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
+      `<i>${copytoclipboard(mint)}</i>\n\n`;
+
+    const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
+    if (position) {
+      const { amount, volume } = position;
+      let pnl = (price * amount * 100) / volume;
+
+      if (transferFeeEnable && transferFeeData) {
+        const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+        pnl *= feerate;
+      }
+      if (pnl >= 100) {
+        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟩\n\n`
+      } else {
+        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟥\n\n`
+      }
+    }
+
+    caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
       `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +

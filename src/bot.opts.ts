@@ -1,6 +1,6 @@
 export const BotMenu = [
   { command: 'start', description: 'Welcome' },
-  { command: 'buysell', description: 'Buy/Sell' },
+  { command: 'position', description: 'Position' },
 ];
 
 export const BUY_XSOL_TEXT = `🌳Buy X SOL\n\n<i>💲 Enter SOL Value in format "0.05"</i>`;

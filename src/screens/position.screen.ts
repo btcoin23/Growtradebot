@@ -4,11 +4,12 @@ import { copytoclipboard } from "../utils";
 import { UserService } from "../services/user.service";
 import { sendUsernameRequiredNotification } from "./common.screen";
 import { GrowTradeVersion } from "../config";
+import { PositionService } from "../services/position.service";
 
-export const buySellScreenHandler = async (
+export const positionScreenHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
-  // replaceId: number
+  replaceId?: number
 ) => {
   try {
     const { chat, } = msg;
@@ -36,40 +37,62 @@ export const buySellScreenHandler = async (
       ]
     }
 
-    // bot.editMessageText(
-    //   temp,
-    //   {
-    //     message_id: replaceId,
-    //     chat_id,
-    //     parse_mode: 'HTML',
-    //     disable_web_page_preview: true,
-    //     reply_markup
-    //   }
-    // );
-    const sentMessage = await bot.sendMessage(
-      chat_id,
-      temp,
-      {
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup
-      }
-    )
+    let replaceIdtemp = replaceId;
+    if (replaceId) {
+      bot.editMessageText(
+        temp,
+        {
+          message_id: replaceId,
+          chat_id,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup
+        }
+      );
+    } else {
+      const sentMessage = await bot.sendMessage(
+        chat_id,
+        temp,
+        {
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup
+        }
+      )
+      replaceIdtemp = sentMessage.message_id;
+    }
 
     const tokenaccounts = await TokenService.getTokenAccounts(user.wallet_address);
 
     let caption = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
-      `<b>Please choose a token to buy/sell.</b>\n\n`;
+      `<b>Please choose a token to buy/sell.</b>\n`;
 
     // Initialize the transferInlineKeyboards array with an empty array
     const transferInlineKeyboards: InlineKeyboardButton[][] = [];
-
+    const positions = await PositionService.find({ wallet_address: user.wallet_address });
     let idx = 0;
-    tokenaccounts.forEach(item => {
-      const { mint: mintAddress, amount: tokenBalance, symbol } = item;
-      caption += `\n- <b>Token: ${tokenBalance} ${symbol}</b>\n<i>${copytoclipboard(mintAddress)}</i>\n`;
+    for (const item of tokenaccounts) {
+      const { mint: mintAddress, amount: tokenBalance, symbol, price, transferFeeData, transferFeeEnable } = item;
+      caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
+      const position = positions.filter(ps => ps.mint === mintAddress);
+      if (position.length > 0) {
+        const { amount, volume } = position[0];
 
+        let pnl = (price * amount * 100) / volume;
+
+        if (transferFeeEnable && transferFeeData) {
+          const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+          pnl *= feerate;
+        }
+
+        if (pnl >= 100) {
+          caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟩`
+        } else {
+          caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟥`
+        }
+      }
+      caption += `<i>${copytoclipboard(mintAddress)}</i>\n`;
       // Check if the current nested array exists
       if (!transferInlineKeyboards[Math.floor(idx / 3)]) {
         transferInlineKeyboards.push([]);
@@ -84,18 +107,25 @@ export const buySellScreenHandler = async (
       });
 
       idx++;
-    });
+    }
+
     if (tokenaccounts.length <= 0) {
       transferInlineKeyboards.push([]);
-      caption += '<i>You have no any token</i>';
+      caption += '\n<i>You have no any token</i>';
     }
-    transferInlineKeyboards[Math.floor(tokenaccounts.length / 3)].push(
+    transferInlineKeyboards.push([]);
+    transferInlineKeyboards[Math.ceil(tokenaccounts.length / 3)].push(...[
+      {
+        text: '🔄 Refresh', callback_data: JSON.stringify({
+          'command': 'positionrefresh'
+        })
+      },
       {
         text: '❌ Close', callback_data: JSON.stringify({
           'command': 'dismiss_message'
         })
       }
-    );
+    ]);
 
     const new_reply_markup = {
       inline_keyboard: transferInlineKeyboards
@@ -103,7 +133,7 @@ export const buySellScreenHandler = async (
     bot.editMessageText(
       caption,
       {
-        message_id: sentMessage.message_id,
+        message_id: replaceIdtemp,
         chat_id,
         parse_mode: 'HTML',
         disable_web_page_preview: true,

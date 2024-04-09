@@ -13,7 +13,32 @@ export interface ITokenAccountInfo {
   amount: number,
   delegated_amount: number,
   frozen: boolean,
-  symbol?: string
+  symbol?: string,
+  price: number,
+  transferFeeEnable?: boolean,
+  transferFeeData?: {
+    withdraw_withheld_authority: string,
+    transfer_fee_config_authority: string,
+    older_transfer_fee: {
+      epoch: number,
+      maximum_fee: number,
+      transfer_fee_basis_points: number
+    },
+    newer_transfer_fee: {
+      epoch: number,
+      maximum_fee: number,
+      transfer_fee_basis_points: number
+    },
+    fee_withdrawable: boolean,
+    fee_editable: boolean,
+    current_transfer_fee: {
+      epoch: number,
+      maximum_fee: number,
+      transfer_fee_basis_points: number
+    },
+    withheld_amount?: boolean,
+    withheld_amount_ratio: number
+  },
 }
 const knownMints = [
   {
@@ -297,6 +322,9 @@ const getaccounts = async (owner: string) => {
         const temp = account;
         temp.symbol = symbol;
         temp.amount = balance;
+        temp.price = tokeninfo.overview.price;
+        temp.transferFeeEnable = tokeninfo.secureinfo.transferFeeEnable;
+        temp.transferFeeData = tokeninfo.secureinfo.transferFeeData;
         results.push(temp);
       } else {
         results.push({ symbol, ...account });

@@ -5,7 +5,7 @@ import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
 import { generateNewWalletHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler } from "../screens/settings.screen";
-import { buySellScreenHandler } from "../screens/buy.sell.screen";
+import { positionScreenHandler } from "../screens/position.screen";
 
 export const callbackQueryHandler = async (
   bot: TelegramBot,
@@ -34,9 +34,15 @@ export const callbackQueryHandler = async (
       return;
     }
 
-    if (data.command.includes('buysell')) {
+    if (data.command.includes('position')) {
       // const replaceId = callbackMessage.message_id;
-      await buySellScreenHandler(bot, callbackMessage);
+      await positionScreenHandler(bot, callbackMessage);
+      return;
+    }
+
+    if (data.command === 'positionrefresh') {
+      const replaceId = callbackMessage.message_id;
+      await positionScreenHandler(bot, callbackMessage, replaceId);
       return;
     }
 
@@ -132,7 +138,6 @@ export const callbackQueryHandler = async (
       await setSlippageScreenHandler(bot, callbackMessage);
       return;
     }
-
     if (data.command === 'refresh') {
       await refreshHandler(bot, callbackMessage);
       return;

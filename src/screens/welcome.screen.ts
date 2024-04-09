@@ -8,9 +8,9 @@ import { TokenService } from "../services/token.metadata";
 
 const MAX_RETRIES = 5;
 const welcomeKeyboardList = [
-  [{ text: '🏦 Buy/Sell', command: 'buysell' }],
+  // [{ text: '🏦 Buy/Sell', command: 'buysell' }],
   // snipe_token, my_position
-  [{ text: '🎯 Sniper [soon]', command: 'dummy_button' }, { text: '📊 Position [soon]', command: 'dummy_button' }],
+  [{ text: '🎯 Sniper [soon]', command: 'dummy_button' }, { text: '📊 Position', command: 'position' }],
   // [{ text: '🫳 Buy', command: 'buy_token' }, { text: '🫴 Sell', command: 'sell_token' }],
   [{ text: '♻️ Transfer funds', command: 'transfer_funds' }, { text: '⚙️ Setting', command: 'settings' }],
   [{ text: '❌ Close', command: 'dismiss_message' }],

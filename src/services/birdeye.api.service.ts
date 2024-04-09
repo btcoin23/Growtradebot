@@ -394,8 +394,30 @@ export interface TokenSecurityInfoDataType {
   "lockInfo"?: string,
   "freezeable"?: string,
   "freezeAuthority"?: string,
-  "transferFeeEnable"?: string,
-  "transferFeeData"?: string,
+  "transferFeeEnable"?: boolean,
+  "transferFeeData"?: {
+    withdraw_withheld_authority: string,
+    transfer_fee_config_authority: string,
+    older_transfer_fee: {
+      epoch: number,
+      maximum_fee: number,
+      transfer_fee_basis_points: number
+    },
+    newer_transfer_fee: {
+      epoch: number,
+      maximum_fee: number,
+      transfer_fee_basis_points: number
+    },
+    fee_withdrawable: boolean,
+    fee_editable: boolean,
+    current_transfer_fee: {
+      epoch: number,
+      maximum_fee: number,
+      transfer_fee_basis_points: number
+    },
+    withheld_amount?: boolean,
+    withheld_amount_ratio: number
+  },
   "isToken2022": boolean,
   "nonTransferable"?: string,
 }

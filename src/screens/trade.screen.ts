@@ -12,6 +12,7 @@ import { UserTradeSettingService } from "../services/user.trade.setting.service"
 import { MsgLogService } from "../services/msglog.service";
 import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard } from "../utils";
+import { PositionService } from "../services/position.service";
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
@@ -168,7 +169,7 @@ export const buyHandler = async (
 
   const mintinfo = await TokenService.getMintInfo(mint);
   if (!mintinfo) return;
-  const { name, symbol, price } = mintinfo.overview;
+  const { name, symbol, decimals } = mintinfo.overview;
   const { isToken2022 } = mintinfo.secureinfo;
   const solprice = await TokenService.getSOLPrice();
   // send Notification
@@ -202,8 +203,8 @@ export const buyHandler = async (
     gas
   );
   if (quoteResult) {
-    const txn = quoteResult;
-    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${txn}">${txn}</a>\n`;
+    const { signature, quote } = quoteResult;
+    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = await getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
     bot.editMessageText(
@@ -216,6 +217,19 @@ export const buyHandler = async (
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       }
     )
+
+    // buy price
+    const volume = amount * solprice;
+    const { outAmount } = quote;
+    const buydata = {
+      username,
+      chat_id,
+      mint,
+      wallet_address: user.wallet_address,
+      volume,
+      amount: Number(outAmount) / 10 ** decimals
+    };
+    await PositionService.updateBuyPosition(buydata);
   } else {
     const failedCaption = await getcaption(`🔴 <b>Buy Failed</b>\n`);
     bot.editMessageText(
@@ -243,7 +257,6 @@ export const sellHandler = async (
 
   const user = await UserService.findOne({ username });
   if (!user) return;
-
 
   const msglog = await MsgLogService.findOne({
     username,
@@ -309,9 +322,10 @@ export const sellHandler = async (
     gas
   );
   if (quoteResult) {
-    const txn = quoteResult;
-    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${txn}">${txn}</a>\n`;
+    const { signature } = quoteResult;
+    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = await getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+
     bot.editMessageText(
       successCaption,
       {
@@ -322,6 +336,15 @@ export const sellHandler = async (
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       }
     )
+    // sell updates
+    const selldata = {
+      username,
+      chat_id,
+      mint,
+      wallet_address: user.wallet_address,
+      amount: sellAmount
+    };
+    await PositionService.updateSellPosition(selldata);
   } else {
     const failedCaption = await getcaption(`🔴 <b>Sell Failed</b>\n`);
     bot.editMessageText(
