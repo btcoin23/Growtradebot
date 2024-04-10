@@ -29,6 +29,10 @@ const Position = new Schema({
     type: Number,
     default: 0.0,
   },
+  sol_amount: {
+    type: Number,
+    default: 0.0,
+  },
   amount: {
     type: Number,
     default: 0.0,

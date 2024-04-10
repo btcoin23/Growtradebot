@@ -48,19 +48,25 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
       `<i>${copytoclipboard(mint)}</i>\n\n`;
 
+    const solprice = await TokenService.getSOLPrice();
+    const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
+
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
     if (position) {
-      const { amount, volume } = position;
-      let pnl = (price * amount * 100) / volume;
-      if (transferFeeEnable && transferFeeData) {
-        const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-        pnl *= feerate;
-      }
+      const { sol_amount } = position;
+      if (sol_amount > 0) {
+        let pnl = (price / solprice * splbalance * 100) / sol_amount;
 
-      if (pnl >= 100) {
-        caption += `<b>PNL:</b> ${(pnl - 100).toFixed(2)}% 🟩\n\n`
-      } else {
-        caption += `<b>PNL:</b> ${(100 - pnl).toFixed(2)}% 🟥\n\n`
+        if (transferFeeEnable && transferFeeData) {
+          const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+          pnl *= feerate;
+        }
+
+        if (pnl >= 100) {
+          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% 🟩\n\n`
+        } else {
+          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% 🟥\n\n`
+        }
       }
     }
 
@@ -100,7 +106,6 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
 
     await bot.deleteMessage(chat_id, msg.message_id);
     const solbalance = await TokenService.getSOLBalance(user.wallet_address);
-    const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
     bot.editMessageText(
       caption.replace(
         "Balance: loading...",
@@ -212,6 +217,7 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     const { symbol, name, price, mc } = overview;
     const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData } = secureinfo;
 
+    const solprice = await TokenService.getSOLPrice();
     const solbalance = await TokenService.getSOLBalance(user.wallet_address, true);
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
 
@@ -221,17 +227,19 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
 
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
     if (position) {
-      const { volume } = position;
-      let pnl = (price * splbalance * 100) / volume;
+      const { sol_amount } = position;
+      if (sol_amount > 0) {
+        let pnl = (price / solprice * splbalance * 100) / sol_amount;
 
-      if (transferFeeEnable && transferFeeData) {
-        const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-        pnl *= feerate;
-      }
-      if (pnl >= 100) {
-        caption += `<b>PNL:</b> +${pnl.toFixed(2)}% 🟩\n\n`
-      } else {
-        caption += `<b>PNL:</b> -${pnl.toFixed(2)}% 🟥\n\n`
+        if (transferFeeEnable && transferFeeData) {
+          const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+          pnl *= feerate;
+        }
+        if (pnl >= 100) {
+          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% 🟩\n\n`
+        } else {
+          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% 🟥\n\n`
+        }
       }
     }
 

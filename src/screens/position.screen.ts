@@ -63,6 +63,7 @@ export const positionScreenHandler = async (
     }
 
     const tokenaccounts = await TokenService.getTokenAccounts(user.wallet_address);
+    const solprice = await TokenService.getSOLPrice();
 
     let caption = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
@@ -77,18 +78,19 @@ export const positionScreenHandler = async (
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       const position = positions.filter(ps => ps.mint === mintAddress);
       if (position.length > 0) {
-        const { volume } = position[0];
+        const { sol_amount } = position[0];
+        if (sol_amount > 0) {
+          let pnl = (price / solprice * tokenBalance * 100) / sol_amount;
+          if (transferFeeEnable && transferFeeData) {
+            const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+            pnl *= feerate;
+          }
 
-        let pnl = (price * tokenBalance * 100) / volume;
-        if (transferFeeEnable && transferFeeData) {
-          const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-          pnl *= feerate;
-        }
-
-        if (pnl >= 100) {
-          caption += `<b>PNL:</b> ${(pnl - 100).toFixed(2)}% 🟩`
-        } else {
-          caption += `<b>PNL:</b> ${(100 - pnl).toFixed(2)}% 🟥`
+          if (pnl >= 100) {
+            caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% 🟩`
+          } else {
+            caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% 🟥`
+          }
         }
       }
       caption += `<i>${copytoclipboard(mintAddress)}</i>\n`;

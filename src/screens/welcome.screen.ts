@@ -13,6 +13,7 @@ const welcomeKeyboardList = [
   [{ text: '🎯 Sniper [soon]', command: 'dummy_button' }, { text: '📊 Positions', command: 'position' }],
   // [{ text: '🫳 Buy', command: 'buy_token' }, { text: '🫴 Sell', command: 'sell_token' }],
   [{ text: '♻️ Withdraw', command: 'transfer_funds' }, { text: '⚙️ Settings', command: 'settings' }],
+  [{ text: '⛓ Bridge', command: 'bridge' }],
   [{ text: '❌ Close', command: 'dismiss_message' }],
 ];
 
@@ -131,6 +132,12 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
 
   const reply_markup = {
     inline_keyboard: welcomeKeyboardList.map((rowItem) => rowItem.map((item) => {
+      if (item.command.includes("bridge")) {
+        return {
+          text: item.text,
+          url: 'https://t.me/growbridge_bot'
+        }
+      }
       return {
         text: item.text,
         callback_data: JSON.stringify({

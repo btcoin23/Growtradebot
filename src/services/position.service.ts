@@ -92,11 +92,11 @@ export const PositionService = {
 
     if (!position) {
       // Create new position entry if it doesn't exist
-      position = new PositionSchema({ wallet_address, mint, chat_id, username, volume, amount });
+      position = new PositionSchema({ wallet_address, mint, chat_id, username, volume, sol_amount: amount });
     } else {
       // Update volume if position already exists
       position.volume += volume;
-      position.amount += amount;
+      position.sol_amount += amount;
     }
     await position.save();
   },
@@ -110,12 +110,12 @@ export const PositionService = {
       return null;
     }
     if (percent >= 100) {
-      position.amount = 0;
+      position.sol_amount = 0;
       position.volume = 0;
     } else {
-      const rA = position.amount * (100 - percent) / 100;
+      const rA = position.sol_amount * (100 - percent) / 100;
       const rV = position.volume * (100 - percent) / 100;
-      position.amount = rA;
+      position.sol_amount = rA;
       position.volume = rV;
     }
 
