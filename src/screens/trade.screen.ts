@@ -226,6 +226,7 @@ export const buyHandler = async (
       mint,
       wallet_address: user.wallet_address,
       volume,
+      amount
     };
     await PositionService.updateBuyPosition(buydata);
   } else {
@@ -285,7 +286,7 @@ export const sellHandler = async (
   const { name, symbol, price, decimals } = mintinfo.overview;
   const { isToken2022 } = mintinfo.secureinfo;
 
-  const splbalance = (!spl_amount || spl_amount === 0) ? await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022) : spl_amount;
+  const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
   const sellAmount = splbalance * percent / 100;
 
   // send Notification
@@ -340,7 +341,7 @@ export const sellHandler = async (
       chat_id,
       mint,
       wallet_address: user.wallet_address,
-      amount: sellAmount
+      percent
     };
     await PositionService.updateSellPosition(selldata);
   } else {

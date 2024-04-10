@@ -86,16 +86,17 @@ export const PositionService = {
     }
   },
   updateBuyPosition: async function (params: any) {
-    const { wallet_address, mint, chat_id, username, volume } = params;
+    const { wallet_address, mint, chat_id, username, volume, amount } = params;
 
     let position = await PositionSchema.findOne({ wallet_address, mint });
 
     if (!position) {
       // Create new position entry if it doesn't exist
-      position = new PositionSchema({ wallet_address, mint, chat_id, username, volume });
+      position = new PositionSchema({ wallet_address, mint, chat_id, username, volume, amount });
     } else {
       // Update volume if position already exists
       position.volume += volume;
+      position.amount += amount;
     }
     await position.save();
   },
@@ -109,10 +110,13 @@ export const PositionService = {
       return null;
     }
     if (percent >= 100) {
+      position.amount = 0;
       position.volume = 0;
     } else {
-      const sellVolume = position.volume * (percent / 100);
-      position.volume = sellVolume;
+      const rA = position.amount * (100 - percent) / 100;
+      const rV = position.volume * (100 - percent) / 100;
+      position.amount = rA;
+      position.volume = rV;
     }
 
     await position.save();
