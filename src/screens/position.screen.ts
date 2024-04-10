@@ -86,9 +86,9 @@ export const positionScreenHandler = async (
         }
 
         if (pnl >= 100) {
-          caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟩`
+          caption += `<b>PNL:</b> ${(pnl - 100).toFixed(2)}% 🟩`
         } else {
-          caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟥`
+          caption += `<b>PNL:</b> ${(100 - pnl).toFixed(2)}% 🟥`
         }
       }
       caption += `<i>${copytoclipboard(mintAddress)}</i>\n`;

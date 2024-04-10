@@ -58,9 +58,9 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       }
 
       if (pnl >= 100) {
-        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟩\n\n`
+        caption += `<b>PNL:</b> ${(pnl - 100).toFixed(2)}% 🟩\n\n`
       } else {
-        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟥\n\n`
+        caption += `<b>PNL:</b> ${(100 - pnl).toFixed(2)}% 🟥\n\n`
       }
     }
 
