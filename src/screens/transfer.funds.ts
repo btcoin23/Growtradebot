@@ -282,7 +282,7 @@ export const withdrawHandler = async (
 
   const { isToken2022 } = mintinfo.secureinfo;
   const balance = (mint === NATIVE_MINT.toBase58()) ?
-    (await TokenService.getSOLBalance(user.wallet_address) - 0.00001) :
+    (await TokenService.getSOLBalance(user.wallet_address) - 0.000025) :
     await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
 
   const amount = reply_message_id ? percent : balance * percent / 100;
@@ -310,7 +310,7 @@ export const withdrawHandler = async (
   )
 
   const transferResult = (mint === NATIVE_MINT.toBase58()) ?
-    await JupiterService.transferSOL(amount, 9, topubkey, user.private_key) :
+    await JupiterService.transferSOL(amount, 9, topubkey, user.private_key, 100000, 200000) :
     await JupiterService.transferSPL(mint, amount, decimals, topubkey, user.private_key, isToken2022);
   if (transferResult) {
     const txn = transferResult;

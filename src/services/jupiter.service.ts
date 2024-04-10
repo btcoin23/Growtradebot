@@ -1,4 +1,4 @@
-import { ASSOCIATED_TOKEN_PROGRAM_ID, Account, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, createAssociatedTokenAccountInstruction, createTransferCheckedInstruction, createTransferInstruction, getAccount, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, Account, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, closeAccount, createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createTransferCheckedInstruction, createTransferInstruction, getAccount, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { QuoteGetRequest, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
@@ -271,11 +271,10 @@ export const JupiterService = {
       }
     } while (retires < 5);
   },
-  transferSOL: async (fundAmount: number, decimals: number, toPubkey: string, pk: string) => {
+  transferSOL: async (fundAmount: number, decimals: number, toPubkey: string, pk: string, lamports: number = 5000, units: number = 20000) => {
     if (fundAmount <= 0) return;
     let retires = 0;
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
-
     do {
       try {
         const amount = Number((fundAmount * 10 ** decimals).toFixed(0));
@@ -283,10 +282,10 @@ export const JupiterService = {
           connection,
           [
             ComputeBudgetProgram.setComputeUnitPrice({
-              microLamports: 5000,
+              microLamports: lamports,
             }),
             ComputeBudgetProgram.setComputeUnitLimit({
-              units: 20_000,
+              units: units,
             }),
             SystemProgram.transfer({
               fromPubkey: wallet.publicKey,
@@ -299,7 +298,7 @@ export const JupiterService = {
         if (!txid) {
           retires++;
         } else {
-          console.log("WithdrawSOL:", `https://solscan.io/tx/${txid}`);
+          console.log("TransferSOL:", `https://solscan.io/tx/${txid}`);
           retires = 100;
           return txid;
         }
