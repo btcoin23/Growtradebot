@@ -282,7 +282,7 @@ export const withdrawHandler = async (
 
   const { isToken2022 } = mintinfo.secureinfo;
   const balance = (mint === NATIVE_MINT.toBase58()) ?
-    await TokenService.getSOLBalance(user.wallet_address) :
+    (await TokenService.getSOLBalance(user.wallet_address) - 0.00001) :
     await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
 
   const amount = reply_message_id ? percent : balance * percent / 100;
