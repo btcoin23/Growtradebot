@@ -77,10 +77,9 @@ export const positionScreenHandler = async (
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       const position = positions.filter(ps => ps.mint === mintAddress);
       if (position.length > 0) {
-        const { amount, volume } = position[0];
+        const { volume } = position[0];
 
-        let pnl = (price * amount * 100) / volume;
-
+        let pnl = (price * tokenBalance * 100) / volume;
         if (transferFeeEnable && transferFeeData) {
           const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
           pnl *= feerate;

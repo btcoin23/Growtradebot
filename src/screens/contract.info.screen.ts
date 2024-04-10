@@ -48,7 +48,6 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
       `<i>${copytoclipboard(mint)}</i>\n\n`;
 
-    console.log(transferFeeData, transferFeeEnable);
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
     if (position) {
       const { amount, volume } = position;
@@ -222,17 +221,17 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
 
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
     if (position) {
-      const { amount, volume } = position;
-      let pnl = (price * amount * 100) / volume;
+      const { volume } = position;
+      let pnl = (price * splbalance * 100) / volume;
 
       if (transferFeeEnable && transferFeeData) {
         const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
         pnl *= feerate;
       }
       if (pnl >= 100) {
-        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟩\n\n`
+        caption += `<b>PNL:</b> +${pnl.toFixed(2)}% 🟩\n\n`
       } else {
-        caption += `<b>PNL:</b> ${pnl.toFixed(2)}% 🟥\n\n`
+        caption += `<b>PNL:</b> -${pnl.toFixed(2)}% 🟥\n\n`
       }
     }
 

@@ -31,11 +31,8 @@ export const WelcomeScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Me
     // if new user, create one
     if (!user) {
       const res = await newUserHandler(bot, msg);
-      console.log("1welcome message", res);
-
       if (!res) return;
     }
-    console.log("welcome message");
     // send welcome guide
     await welcomeGuideHandler(bot, msg);
     await bot.deleteMessage(chat_id, msg.message_id);

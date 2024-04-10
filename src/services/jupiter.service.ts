@@ -223,7 +223,6 @@ export const JupiterService = {
           });
 
           if (value.err) {
-            console.log({ value, txid });
             retires++;
           } else {
             console.log(`ClaimAll: https://solscan.io/tx/${txid}`);

@@ -220,14 +220,12 @@ export const buyHandler = async (
 
     // buy price
     const volume = amount * solprice;
-    const { outAmount } = quote;
     const buydata = {
       username,
       chat_id,
       mint,
       wallet_address: user.wallet_address,
       volume,
-      amount: Number(outAmount) / 10 ** decimals
     };
     await PositionService.updateBuyPosition(buydata);
   } else {

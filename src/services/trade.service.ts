@@ -71,12 +71,10 @@ export const TradeService = {
   getCustomTradeInfo: async (username: string, message_id: number) => {
     const key = `${username}${message_id}_trade`;
     const data = await redisClient.get(key);
-    console.log("GET", key, data);
     return data;
   },
   storeCustomTradeInfo: async (mint: string, username: string, message_id: number) => {
     const key = `${username}${message_id}_trade`;
-    console.log("SET", key, mint);
 
     await redisClient.set(key, mint);
     // we remove it for performance

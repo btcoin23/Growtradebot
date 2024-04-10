@@ -36,7 +36,6 @@ export const messageHandler = async (
         }
       } else {
         if (text === WITHDRAW_TOKEN_AMT_TEXT.replace(/<[^>]*>/g, '')) {
-          console.log("Withdraw Text", messageText);
           await withdrawAddressHandler(bot, msg, messageText, reply_message_id);
         }
       }
