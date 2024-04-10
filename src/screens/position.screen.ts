@@ -112,7 +112,7 @@ export const positionScreenHandler = async (
 
     if (tokenaccounts.length <= 0) {
       transferInlineKeyboards.push([]);
-      caption += '\n<i>You have no any token</i>';
+      caption += `\n<i>You don't hold any tokens in this wallet</i>`;
     }
     transferInlineKeyboards.push([]);
     transferInlineKeyboards[Math.ceil(tokenaccounts.length / 3)].push(...[
