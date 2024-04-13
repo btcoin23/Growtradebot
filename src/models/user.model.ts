@@ -37,6 +37,10 @@ const User = new Schema({
     required: true,
     unique: true,
   },
+  preset_setting: {
+    type: Array,
+    default: [0.01, 1, 5, 10],
+  },
   nonce: {
     type: Number,
     default: 0,

@@ -10,14 +10,14 @@ import { PositionService } from "../services/position.service";
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
   [{ text: "Slippage: 5%", command: 'set_slippage' }],
-  [{ text: "-------------Buy------------------", command: null }],
-  [{ text: "Buy 0.01 SOL", command: 'buytoken_0.01' }, { text: "Buy 5 SOL", command: 'buytoken_5' }, { text: "Buy X SOL", command: 'buy_custom' }],
-  [{ text: "-------------Sell-----------------", command: null }],
-  [{ text: "Sell 50%", command: 'selltoken_50' }, { text: "Sell 100%", command: 'selltoken_100' }, { text: "Sell X %", command: 'sell_custom' }],
-  [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }],
+  [{ text: "Buy 0.01 SOL", command: 'buytoken_0.01' }, { text: "Buy 1 SOL", command: 'buytoken_1' },],
+  [{ text: "Buy 5 SOL", command: 'buytoken_5' }, { text: "Buy 10 SOL", command: 'buytoken_10' },],
+  [{ text: "Buy X SOL", command: 'buy_custom' }],
+  [{ text: "🔁 Switch To Sell", command: "SS_" }],
+  [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }]
 ]
 
-export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string) => {
+export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string, switchBtn: string) => {
   try {
     const { id: chat_id, username } = msg.chat;
 
@@ -31,6 +31,21 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     if (!user) {
       await sendNoneUserNotification(bot, msg);
       return;
+    }
+
+    let preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
+
+    if (switchBtn == "switch_sell") {
+      inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
+      inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
+      inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
+      inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
+    }
+    if (switchBtn == "switch_buy") {
+      inline_keyboards[2] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
+      inline_keyboards[3] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
+      inline_keyboards[4] = [{ text: "Sell X%", command: `sell_custom` }]
+      inline_keyboards[5] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
     }
 
     // check token metadata
@@ -63,9 +78,13 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
         }
 
         if (pnl >= 100) {
-          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% 🟩\n\n`
+          let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
+          let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
+          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
         } else {
-          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% 🟥\n\n`
+          let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
+          let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
+          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
         }
       }
     }
@@ -142,6 +161,13 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
   } catch (e) {
     console.log("~ contractInfoScreenHandler ~", e);
   }
+}
+
+export const changeBuySellHandler = async (bot: TelegramBot, msg: TelegramBot.Message, command: String) => {
+  console.log("🚀 ~ changeBuySellHandler ~ command:", command)
+  const chat_id = msg.chat.id;
+  const username = msg.chat.username;
+
 }
 
 export const changeGasFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Message, gasfee: GasFeeEnum) => {
@@ -236,9 +262,13 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
           pnl *= feerate;
         }
         if (pnl >= 100) {
-          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% 🟩\n\n`
+          let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
+          let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
+          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
         } else {
-          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% 🟥\n\n`
+          let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
+          let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
+          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
         }
       }
     }

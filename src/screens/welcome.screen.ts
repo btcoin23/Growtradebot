@@ -118,7 +118,7 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
   if (!user) return;
   const solbalance = await TokenService.getSOLBalance(user.wallet_address);
   const caption = `<b>Welcome to GrowTrade | Beta Version</b>\n\n` +
-    `The Unique Solana Trading Bot. Snipe, trade and keep track of your posisionts with GrowTrade.\n\n` +
+    `The Unique Solana Trading Bot. Snipe, trade and keep track of your positions with GrowTrade.\n\n` +
     `⬩ A never seen unique Burn Mechanism 🔥\n` +
     `⬩ Revenue Share through Buybacks on GrowSol ($GRW)\n\n` +
     `<b>💳 My Wallet:</b>\n${copytoclipboard(user.wallet_address)}\n\n` +

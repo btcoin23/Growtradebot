@@ -4,7 +4,7 @@ import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { generateNewWalletHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler } from "../screens/settings.screen";
+import { generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 
 export const callbackQueryHandler = async (
@@ -48,7 +48,13 @@ export const callbackQueryHandler = async (
 
     if (data.command.includes('BS_')) {
       const mint = data.command.slice(3);
-      await contractInfoScreenHandler(bot, callbackMessage, mint);
+      await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_buy");
+      return;
+    }
+
+    if (data.command.includes('SS_')) {
+      const mint = data.command.slice(3);
+      await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_sell");
       return;
     }
 
@@ -136,6 +142,20 @@ export const callbackQueryHandler = async (
     }
     if (data.command.includes("set_slippage")) {
       await setSlippageScreenHandler(bot, callbackMessage);
+      return;
+    }
+    if (data.command.includes("preset_setting")) {
+      await presetBuyBtnHandler(bot, callbackMessage);
+      return;
+    }
+    if (data.command.includes("wallet_view")) {
+      await walletViewHandler(bot, callbackMessage);
+      return;
+    }
+    const presetBuyStr = 'preset_buy_';
+    if (data.command.includes(presetBuyStr)) {
+      const preset_index = parseInt(data.command.slice(presetBuyStr.length));
+      await presetBuyAmountScreenHandler(bot, callbackMessage, preset_index);
       return;
     }
     if (data.command === 'refresh') {
