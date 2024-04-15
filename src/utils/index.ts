@@ -1,3 +1,4 @@
+import { BIRDEYE_API_URL, REQUEST_HEADER } from "../config";
 import redisClient from "../services/redis";
 
 export function isValidWalletAddress(address: string): boolean {
@@ -70,7 +71,8 @@ export const getPrice = async (mint: string) => {
   if (data) {
     return data;
   }
-  const response = await fetch(`https://public-api.birdeye.so/public/price?address=${mint}`, options)
+  const options = { method: 'GET', headers: REQUEST_HEADER };
+  const response = await fetch(`https://public-api.birdeye.so/defi/price?address=${mint}`, options)
   const res = await response.json();
   const price = res.data.value;
   await redisClient.set(key, price);
