@@ -64,7 +64,7 @@ export const settingScreenHandler = async (
         reply_markup
       }
     );
-  } catch (e) { }
+  } catch (e) { console.log("~ settingScreenHandler ~", e) }
 }
 
 export const presetBuyBtnHandler = async (bot: TelegramBot,
@@ -142,7 +142,7 @@ export const presetBuyAmountScreenHandler = async (bot: TelegramBot, msg: Telegr
     const user = await UserService.findOne({ username });
     if (!user) return;
 
-    let key = "preset_index"
+    let key = "preset_index"+username;
     await redisClient.set(key, preset_index);
     const sentMessage = await bot.sendMessage(
       chat_id,
@@ -161,61 +161,66 @@ export const presetBuyAmountScreenHandler = async (bot: TelegramBot, msg: Telegr
 
 export const walletViewHandler = async (bot: TelegramBot,
   msg: TelegramBot.Message) => {
+  try {
 
-  const { chat } = msg;
-  const { id: chat_id, username } = chat;
-  if (!username) {
-    await sendUsernameRequiredNotification(bot, msg);
-    return;
-  }
+    const { chat } = msg;
+    const { id: chat_id, username } = chat;
+    if (!username) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
 
-  const users = await UserService.findAndSort({ username });
-  const activeuser = users.filter(user => user.retired === false)[0];
-  const { wallet_address } = activeuser;
+    const users = await UserService.findAndSort({ username });
+    const activeuser = users.filter(user => user.retired === false)[0];
+    const { wallet_address } = activeuser;
 
-  const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>Your active wallet:</b>\n` +
-    `${copytoclipboard(wallet_address)}`;
-  const sentMessage = await bot.sendMessage(
-    chat_id,
-    caption,
-    {
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      reply_markup: {
-        inline_keyboard: [
-          ...users.map((user) => {
-            const { nonce, wallet_address, retired } = user;
-            return [{
-              text: `${retired ? "🔴" : "🟢"} ${wallet_address}`, callback_data: JSON.stringify({
-                'command': `wallet_${nonce}`
+    const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>Your active wallet:</b>\n` +
+      `${copytoclipboard(wallet_address)}`;
+    const sentMessage = await bot.sendMessage(
+      chat_id,
+      caption,
+      {
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: {
+          inline_keyboard: [
+            ...users.map((user) => {
+              const { nonce, wallet_address, retired } = user;
+              return [{
+                text: `${retired ? "🔴" : "🟢"} ${wallet_address}`, callback_data: JSON.stringify({
+                  'command': `wallet_${nonce}`
+                })
+              },
+              {
+                text: `${retired ? "📌 Use this" : "🪄 In use"}`, callback_data: JSON.stringify({
+                  'command': `usewallet_${nonce}`
+                })
+              },
+              {
+                text: `🗝 Private key`, callback_data: JSON.stringify({
+                  'command': `revealpk`
+                })
+              }]
+            }),
+            [{
+              text: '💳 Generate new wallet', callback_data: JSON.stringify({
+                'command': 'generate_wallet'
               })
-            },
-            {
-              text: `${retired ? "📌 Use this" : "🪄 In use"}`, callback_data: JSON.stringify({
-                'command': `usewallet_${nonce}`
-              })
-            },
-            {
-              text: `🗝 Private key`, callback_data: JSON.stringify({
-                'command': `revealpk`
+            }],
+            [{
+              text: `❌ Dismiss message`,
+              callback_data: JSON.stringify({
+                'command': 'dismiss_message'
               })
             }]
-          }),
-          [{
-            text: '💳 Generate new wallet', callback_data: JSON.stringify({
-              'command': 'generate_wallet'
-            })
-          }],
-          [{
-            text: `❌ Dismiss message`,
-            callback_data: JSON.stringify({
-              'command': 'dismiss_message'
-            })
-          }]
-        ]
+          ]
+        }
       }
-    }
-  );
+    );
+  }
+  catch (e) {
+    console.log("~walletViewHandler~", e);
+  }
 }
 
 export const generateNewWalletHandler = async (
@@ -354,7 +359,7 @@ export const revealWalletPrivatekyHandler = async (
     );
     settingScreenHandler(bot, msg, msg.message_id);
   } catch (e) {
-    console.log("~generateNewWalletHandler~", e);
+    console.log("~revealWalletPrivatekyHandler~", e);
   }
 }
 
@@ -381,31 +386,36 @@ export const switchWalletHandler = async (
     deleteDelayMessage(bot, chat.id, sentmsg.message_id, 5000);
     settingScreenHandler(bot, msg, msg.message_id);
   } catch (e) {
-    console.log("~generateNewWalletHandler~", e);
+    console.log("~switchWalletHandler~", e);
   }
 }
+
 export const setCustomBuyPresetHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
   amount: number,
   reply_message_id: number
 ) => {
-  const { id: chat_id, username } = msg.chat
-  if (!username) {
-    await sendUsernameRequiredNotification(bot, msg);
-    return;
+  try {
+    const { id: chat_id, username } = msg.chat
+    if (!username) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+
+    let key = "preset_index"+username;
+    let preset_index = await redisClient.get(key) ?? "0";
+    const user = await UserService.findOne({ username });
+    let presetSetting = user?.preset_setting ?? [0.1, 1, 5, 10];
+    presetSetting.splice(parseInt(preset_index), 1, amount);
+    await UserService.findAndUpdateOne({ username }, { preset_setting: presetSetting });
+
+    setTimeout(() => {
+      bot.deleteMessage(chat_id, reply_message_id - 1);
+      bot.deleteMessage(chat_id, reply_message_id);
+      bot.deleteMessage(chat_id, msg.message_id);
+    }, 2000)
+  } catch (e) {
+    console.log("~ setCustomBuyPresetHandler ~", e)
   }
-
-  let key = "preset_index";
-  let preset_index = await redisClient.get(key) ?? "0";
-  const user = await UserService.findOne({ username });
-  let presetSetting = user?.preset_setting ?? [0.1, 1, 5, 10];
-  presetSetting.splice(parseInt(preset_index), 1, amount);
-  await UserService.findAndUpdateOne({ username }, { preset_setting: presetSetting });
-
-  setTimeout(() => {
-    bot.deleteMessage(chat_id, reply_message_id - 1);
-    bot.deleteMessage(chat_id, reply_message_id);
-    bot.deleteMessage(chat_id, msg.message_id);
-  }, 2000)
 }

@@ -145,6 +145,6 @@ export const positionScreenHandler = async (
       }
     )
   } catch (e) {
-    console.log("~ TransferFundScreenHandler~", e);
+    console.log("~ positionScreenHandler~", e);
   }
 }
