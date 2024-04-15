@@ -85,11 +85,14 @@ export const positionScreenHandler = async (
             const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
             pnl *= feerate;
           }
-
           if (pnl >= 100) {
-            caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% 🟩`
+            let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
+            let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
+            caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
           } else {
-            caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% 🟥`
+            let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
+            let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
+            caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
           }
         }
       }
@@ -142,6 +145,6 @@ export const positionScreenHandler = async (
       }
     )
   } catch (e) {
-    console.log("~ TransferFundScreenHandler~", e);
+    console.log("~ positionScreenHandler~", e);
   }
 }

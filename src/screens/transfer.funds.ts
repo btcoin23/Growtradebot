@@ -378,7 +378,7 @@ export const withdrawCustomAmountScreenHandler = async (bot: TelegramBot, msg: T
       parent_msgid: msg.message_id
     });
   } catch (e) {
-    console.log("~buyCustomAmountScreenHandler~", e);
+    console.log("~withdrawCustomAmountScreenHandler~", e);
   }
 }
 

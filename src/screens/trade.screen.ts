@@ -3,7 +3,7 @@ import { JupiterService } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
 import { closeReplyMarkup, deleteDelayMessage } from "./common.screen";
 import { UserService } from "../services/user.service";
-import { BUY_XSOL_TEXT, SELL_XPRO_TEXT, SET_SLIPPAGE_TEXT } from "../bot.opts";
+import { BUY_XSOL_TEXT, PRESET_BUY_TEXT, SELL_XPRO_TEXT, SET_SLIPPAGE_TEXT } from "../bot.opts";
 import { TradeService } from "../services/trade.service";
 import { PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
@@ -13,6 +13,7 @@ import { MsgLogService } from "../services/msglog.service";
 import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard } from "../utils";
 import { PositionService } from "../services/position.service";
+import redisClient from "../services/redis";
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
@@ -53,6 +54,7 @@ export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: Telegr
     console.log("~buyCustomAmountScreenHandler~", e);
   }
 }
+
 
 export const sellCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
