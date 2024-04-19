@@ -14,12 +14,16 @@ export default redisClient;
 // [mint_overview] => overview     # every 6 hour (MC)
 // [mint_secureinfo] => secureinfo # 1day
 // [wallet_tokenaccounts] => Array<mint, balance>
-export interface IUserTradeSetting {
+export interface ITradeSlippageSetting {
   chatId?: number;
   slippage: number;
   slippagebps: number;
-  gas: GasFeeEnum;
   wallet?: string
+}
+
+export interface ITradeGasSetting {
+  gas: GasFeeEnum;
+  value?: number;
 }
 
 export interface IMintPrice {

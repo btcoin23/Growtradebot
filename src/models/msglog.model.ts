@@ -13,7 +13,6 @@ const MsgLog = new Schema({
   mint: {
     type: String,
     default: "",
-    required: true,
   },
   wallet_address: {
     type: String,
@@ -43,6 +42,10 @@ const MsgLog = new Schema({
   },
   extra_id: {
     type: Number,
+  },
+  extra_key: {
+    type: String,
+    default: "",
   },
   creation_time: {
     type: Number,

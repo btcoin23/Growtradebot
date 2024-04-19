@@ -8,7 +8,7 @@ import { TradeService } from "../services/trade.service";
 import { PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { amount } from "@metaplex-foundation/js";
-import { UserTradeSettingService } from "../services/user.trade.setting.service";
+import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard } from "../utils";
@@ -151,12 +151,13 @@ export const buyHandler = async (
   });
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
-  // const solbalance = sol_amount ?? await TokenService.getSOLBalance(user.wallet_address);
+
+  const gassetting = await UserTradeSettingService.getGas(username);
+  const gasvalue = UserTradeSettingService.getGasValue(gassetting);
 
   if (!mint) return;
-
   // Insufficient check check if enough includes fee
-  if (sol_amount && sol_amount <= amount + 0.005) {
+  if (sol_amount && sol_amount <= amount + gasvalue) {
     bot.sendMessage(
       chat_id,
       "<b>⚠️ Insufficient SOL balance!</b>",
@@ -193,7 +194,8 @@ export const buyHandler = async (
     }
   )
 
-  const { gas, slippage } = await UserTradeSettingService.get(username, mint);
+  const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
+
   // buy token
   const quoteResult = await JupiterService.swapToken(
     user.private_key,
@@ -202,7 +204,7 @@ export const buyHandler = async (
     9, // SOL decimal
     amount,
     slippage,
-    gas
+    gasvalue
   );
   if (quoteResult) {
     const { signature, quote } = quoteResult;
@@ -311,7 +313,9 @@ export const sellHandler = async (
   )
 
   // buy token
-  const { gas, slippage } = await UserTradeSettingService.get(username, mint);
+  const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
+  const gassetting = await UserTradeSettingService.getGas(username);
+  const gasvalue = UserTradeSettingService.getGasValue(gassetting);
 
   const quoteResult = await JupiterService.swapToken(
     user.private_key,
@@ -320,7 +324,7 @@ export const sellHandler = async (
     decimals,
     sellAmount,
     slippage,
-    gas
+    gasvalue
   );
   if (quoteResult) {
     const { signature } = quoteResult;
@@ -380,21 +384,24 @@ export const setSlippageHandler = async (
 
   if (!mint) return;
 
-  const oldone = await UserTradeSettingService.get(username, mint);
-  const newone = oldone;
-  newone.slippage = percent;
-  await UserTradeSettingService.set(
+  await UserTradeSettingService.setSlippage(
     username,
     mint,
-    newone,
+    {
+      slippage: percent,
+      slippagebps: percent * 100
+    },
   );
 
-  const { gas: gasfee, slippage } = newone;
-  const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gasfee);
-  const gasvalue = await UserTradeSettingService.getGasValue(gasfee);
+  const gassetting = await UserTradeSettingService.getGas(username);
+  const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gassetting.gas);
+  const gasvalue = UserTradeSettingService.getGasValue(gassetting);
 
-  inline_keyboards[0][0].text = gasvalue;
-  inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
+  inline_keyboards[0][0] = {
+    text: `${gassetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
+    command: 'custom_fee'
+  }
+  inline_keyboards[1][0].text = `Slippage: ${percent} %`;
 
   await bot.editMessageReplyMarkup({
     inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {

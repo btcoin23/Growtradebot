@@ -17,7 +17,7 @@ export const inline_keyboards = [
   [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }]
 ]
 
-export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string, switchBtn: string) => {
+export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string, switchBtn?: string) => {
   try {
     const { id: chat_id, username } = msg.chat;
 
@@ -35,17 +35,16 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
 
     let preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
 
-    if (switchBtn == "switch_sell") {
-      inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
-      inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
-      inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
-      inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
-    }
     if (switchBtn == "switch_buy") {
       inline_keyboards[2] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
       inline_keyboards[3] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
       inline_keyboards[4] = [{ text: "Sell X%", command: `sell_custom` }]
       inline_keyboards[5] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
+    } else { // (switchBtn == "switch_sell")  or null
+      inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
+      inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
+      inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
+      inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
     }
 
     // check token metadata
@@ -96,21 +95,22 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       `💳 <b>Balance: loading... </b>\n` +
       `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
 
-    const usersetting = await UserTradeSettingService.get(username, mint);
-    const { gas: gasfee, slippage } = usersetting;
-    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gasfee);
-    const gasvalue = await UserTradeSettingService.getGasValue(gasfee);
+    const slippageSetting = await UserTradeSettingService.getSlippage(username, mint);
+    const gasSetting = await UserTradeSettingService.getGas(username);
+    const { slippage } = slippageSetting;
 
-    inline_keyboards[0][0].text = gasvalue;
+    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gasSetting.gas);
+    const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
+
+    inline_keyboards[0][0] = {
+      text: `${gasSetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
+      command: 'custom_fee'
+    }
     inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
 
-    const sentMessage = await bot.sendMessage(
-      chat_id,
-      caption,
-      {
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup: {
+    if (switchBtn) {
+      bot.editMessageReplyMarkup(
+        {
           inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
             return {
               text: item.text,
@@ -118,46 +118,80 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
                 'command': item.command ?? "dummy_button"
               })
             }
-          }))
+          })),
+        },
+        {
+          message_id: msg.message_id,
+          chat_id,
         }
-      }
-    );
-
-    await bot.deleteMessage(chat_id, msg.message_id);
-    const solbalance = await TokenService.getSOLBalance(user.wallet_address);
-    bot.editMessageText(
-      caption.replace(
-        "Balance: loading...",
-        `Balance: ${solbalance.toFixed(6)} SOL\n` +
-        `💳 Token: ${splbalance} ${symbol ?? "\n"}`
-      ),
-      {
-        message_id: sentMessage.message_id,
+      );
+      await MsgLogService.findOneAndUpdate({
+        filter: {
+          username,
+          mint,
+          wallet_address: user.wallet_address,
+          chat_id,
+          msg_id: msg.message_id,
+        },
+        data: {
+          extra_key: switchBtn
+        }
+      });
+    } else {
+      const sentMessage = await bot.sendMessage(
         chat_id,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup: {
-          inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
-            return {
-              text: item.text,
-              callback_data: JSON.stringify({
-                'command': item.command ?? "dummy_button"
-              })
-            }
-          }))
+        caption,
+        {
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
+              return {
+                text: item.text,
+                callback_data: JSON.stringify({
+                  'command': item.command ?? "dummy_button"
+                })
+              }
+            }))
+          }
         }
-      }
-    );
+      );
 
-    await MsgLogService.create({
-      username,
-      mint,
-      wallet_address: user.wallet_address,
-      chat_id,
-      msg_id: sentMessage.message_id,
-      sol_amount: solbalance,
-      spl_amount: splbalance,
-    });
+      const solbalance = await TokenService.getSOLBalance(user.wallet_address);
+      bot.editMessageText(
+        caption.replace(
+          "Balance: loading...",
+          `Balance: ${solbalance.toFixed(6)} SOL\n` +
+          `💳 Token: ${splbalance} ${symbol ?? "\n"}`
+        ),
+        {
+          message_id: sentMessage.message_id,
+          chat_id,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
+              return {
+                text: item.text,
+                callback_data: JSON.stringify({
+                  'command': item.command ?? "dummy_button"
+                })
+              }
+            }))
+          }
+        }
+      );
+      await MsgLogService.create({
+        username,
+        mint,
+        wallet_address: user.wallet_address,
+        chat_id,
+        msg_id: sentMessage.message_id,
+        sol_amount: solbalance,
+        spl_amount: splbalance,
+        extra_key: switchBtn
+      });
+    }
   } catch (e) {
     console.log("~ contractInfoScreenHandler ~", e);
   }
@@ -177,18 +211,13 @@ export const changeGasFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
   const reply_markup = msg.reply_markup
   if (!caption || !username || !reply_markup) return;
 
-  const msglog = await MsgLogService.findOne({
+  await UserTradeSettingService.setGas(
     username,
-    msg_id: msg.message_id
-  });
-  if (!msglog) return;
+    {
+      gas: gasfee
+    }
+  );
 
-  const { mint } = msglog;
-  const oldone = await UserTradeSettingService.get(username, mint);
-  const newone = oldone;
-  newone.gas = gasfee;
-
-  await UserTradeSettingService.set(username, mint, newone);
   const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gasfee);
   let inline_keyboard = reply_markup.inline_keyboard;
   inline_keyboard[0] = gaskeyboards.map((item) => {
@@ -200,8 +229,13 @@ export const changeGasFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
     }
   })
 
-  const gasvalue = await UserTradeSettingService.getGasValue(gasfee);
-  inline_keyboard[1][0].text = gasvalue;
+  const gasvalue = UserTradeSettingService.getGasValue({ gas: gasfee });
+  inline_keyboard[1][0] = {
+    text: `${gasfee === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
+    callback_data: JSON.stringify({
+      'command': 'custom_fee'
+    })
+  }
 
   await bot.editMessageReplyMarkup({
     inline_keyboard
@@ -237,6 +271,26 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     if (!tokeninfo) {
       await sendNoneExistTokenNotification(bot, msg);
       return;
+    }
+
+    const gassetting = await UserTradeSettingService.getGas(username);
+    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gassetting.gas);
+    let inline_keyboard = reply_markup.inline_keyboard;
+    inline_keyboard[0] = gaskeyboards.map((item) => {
+      return {
+        text: item.text,
+        callback_data: JSON.stringify({
+          'command': item.command
+        })
+      }
+    })
+
+    const gasvalue = UserTradeSettingService.getGasValue(gassetting);
+    inline_keyboard[1][0] = {
+      text: `${gassetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
+      callback_data: JSON.stringify({
+        'command': 'custom_fee'
+      })
     }
 
     const { overview, secureinfo } = tokeninfo;
