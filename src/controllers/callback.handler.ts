@@ -4,7 +4,7 @@ import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomFeeScreenHandler, settingScreenHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
+import { generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomFeeScreenHandler, settingScreenHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
 import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
@@ -43,6 +43,10 @@ export const callbackQueryHandler = async (
       return;
     }
 
+    if (data.command.includes('burn_switch')) {
+      await switchBurnOptsHandler(bot, callbackMessage);
+      return;
+    }
     if (data.command === 'pos_ref') {
       const replaceId = callbackMessage.message_id;
       await positionScreenHandler(bot, callbackMessage, replaceId);
