@@ -2,7 +2,7 @@ import TelegramBot from "node-telegram-bot-api";
 import redisClient from "./redis";
 import { ALERT_MSG_IMAGE, AlertBotID, TradeBotID } from "../bot.opts";
 import { ReferralChannelController } from "../controllers/referral.channel";
-import { getReferralList, get_referral_info, update_channel_id } from "./referral.service";
+import { getReferralList, get_referrer_info, update_channel_id } from "./referral.service";
 
 export type ReferralData = {
   username: string,
@@ -131,7 +131,7 @@ export const newReferralChannelHandler = async (msg: TelegramBot.Message) => {
       if (!alertbotInfo) return;
 
       const creator = from.username;
-      const refdata = await get_referral_info(creator);
+      const refdata = await get_referrer_info(creator);
 
       if (!refdata) return;
 
@@ -164,7 +164,7 @@ export const removeReferralChannelHandler = async (msg: TelegramBot.Message) => 
       if (!alertbotInfo) return;
 
       const creator = from.username;
-      const refdata = await get_referral_info(creator);
+      const refdata = await get_referrer_info(creator);
 
       if (!refdata) return;
       const referral_code = refdata;

@@ -61,6 +61,10 @@ const User = new Schema({
     type: String,
     default: ""
   },
+  referral_date: {
+    type: String,
+    default: ""
+  },
   schedule: {
     type: String,
     default: "60"
