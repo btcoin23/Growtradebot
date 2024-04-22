@@ -21,7 +21,6 @@ export const REQUEST_HEADER = {
   'X-API-KEY': BIRDEYE_API_KEY,
 };
 
-export const RESERVE_WALLET = "HFHHBkQdXoFxUAgQkdGZnLThPV5KvHkZx36WEeZntE9X";
 export const REFERRAL_ACCOUNT = "DgzkEQqczAZCrUeq52cMbfKgx3mSHUon7wtiVuivs7Q7";
 
 export const MIN = 60;
