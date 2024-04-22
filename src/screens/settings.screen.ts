@@ -10,6 +10,7 @@ import redisClient from "../services/redis";
 import { PRESET_BUY_TEXT, SET_GAS_FEE } from "../bot.opts";
 import { wait } from "../utils/wait";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
+import { burn } from "@solana/spl-token";
 
 export const settingScreenHandler = async (
   bot: TelegramBot,
@@ -26,7 +27,7 @@ export const settingScreenHandler = async (
 
     const users = await UserService.findAndSort({ username });
     const activeuser = users.filter(user => user.retired === false)[0];
-    const { wallet_address } = activeuser;
+    const { wallet_address, burn_fee } = activeuser;
 
     const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>Your active wallet:</b>\n` +
       `${copytoclipboard(wallet_address)}`;
@@ -40,6 +41,11 @@ export const settingScreenHandler = async (
         }, {
           text: `🗒  Preset Settings`, callback_data: JSON.stringify({
             'command': `preset_setting`
+          })
+        }],
+        [{
+          text: `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
+            'command': `burn_switch`
           })
         }],
         [{
@@ -549,5 +555,84 @@ export const setCustomFeeHandler = async (
     })
   } catch (e) {
     console.log("~ setCustomBuyPresetHandler ~", e)
+  }
+}
+
+export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  try {
+    const message_id = msg.message_id;
+    const sentMessage = await bot.sendMessage(
+      msg.chat.id,
+      'Updating...'
+    );
+
+    const username = msg.chat.username;
+    if (!username) {
+      await bot.deleteMessage(
+        msg.chat.id,
+        message_id
+      );
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+
+    const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendUsernameRequiredNotification(bot, msg);
+      await bot.deleteMessage(
+        msg.chat.id,
+        sentMessage.message_id
+      );
+      return;
+    }
+
+    await UserService.findAndUpdateOne(
+      { username },
+      { burn_fee: !user.burn_fee }
+    )
+
+    const reply_markup = {
+      inline_keyboard: [
+        [{
+          text: `💳 Wallet`, callback_data: JSON.stringify({
+            'command': `wallet_view`
+          })
+        }, {
+          text: `🗒  Preset Settings`, callback_data: JSON.stringify({
+            'command': `preset_setting`
+          })
+        }],
+        [{
+          text: `${!user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
+            'command': `burn_switch`
+          })
+        }],
+        [{
+          text: '↩️ Back', callback_data: JSON.stringify({
+            'command': 'back_home'
+          })
+        },
+        {
+          text: '❌ Close', callback_data: JSON.stringify({
+            'command': 'dismiss_message'
+          })
+        }]
+      ]
+    }
+
+    await bot.editMessageReplyMarkup(
+      reply_markup,
+      {
+        message_id,
+        chat_id: msg.chat.id,
+      }
+    );
+
+    await bot.deleteMessage(
+      msg.chat.id,
+      sentMessage.message_id
+    );
+  } catch {
+
   }
 }
