@@ -5,7 +5,7 @@ import { ALERT_BOT_TOKEN_SECRET } from "../config";
 
 const alertBotToken = ALERT_BOT_TOKEN_SECRET;
 if (!alertBotToken) {
-  throw new Error('API_KEY is not defined in the environment variables');
+  throw new Error('ALERT_BOT_TOKEN_SECRET is not defined in the environment variables');
 }
 
 export const alertBot = new TelegramBot(alertBotToken, { polling: true });

@@ -184,6 +184,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
           }
         }
       );
+
       await MsgLogService.create({
         username,
         mint,

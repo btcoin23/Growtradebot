@@ -5,15 +5,19 @@ import { closeReplyMarkup, deleteDelayMessage } from "./common.screen";
 import { UserService } from "../services/user.service";
 import { BUY_XSOL_TEXT, PRESET_BUY_TEXT, SELL_XPRO_TEXT, SET_SLIPPAGE_TEXT } from "../bot.opts";
 import { TradeService } from "../services/trade.service";
-import { PublicKey } from "@solana/web3.js";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
+import { NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, createBurnInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { amount } from "@metaplex-foundation/js";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard } from "../utils";
 import { PositionService } from "../services/position.service";
-import redisClient from "../services/redis";
+import bs58 from "bs58";
+import { RESERVE_KEY, connection } from "../config";
+import { sendTransactionV0 } from "../utils/v0.transaction";
+
+const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
@@ -204,10 +208,11 @@ export const buyHandler = async (
     9, // SOL decimal
     amount,
     slippage,
-    gasvalue
+    gasvalue,
+    user.burn_fee ?? true
   );
   if (quoteResult) {
-    const { signature, quote } = quoteResult;
+    const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = await getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -222,7 +227,6 @@ export const buyHandler = async (
       }
     )
 
-    // buy price
     const volume = amount * solprice;
     const buydata = {
       username,
@@ -233,6 +237,15 @@ export const buyHandler = async (
       amount
     };
     await PositionService.updateBuyPosition(buydata);
+
+    await feeHandler(
+      total_fee_in_sol,
+      total_fee_in_token,
+      username,
+      user.private_key,
+      mint,
+      isToken2022
+    );
   } else {
     const failedCaption = await getcaption(`🔴 <b>Buy Failed</b>\n`);
     bot.editMessageText(
@@ -324,10 +337,11 @@ export const sellHandler = async (
     decimals,
     sellAmount,
     slippage,
-    gasvalue
+    gasvalue,
+    user.burn_fee ?? true
   );
   if (quoteResult) {
-    const { signature } = quoteResult;
+    const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = await getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
@@ -350,6 +364,15 @@ export const sellHandler = async (
       percent
     };
     await PositionService.updateSellPosition(selldata);
+
+    await feeHandler(
+      total_fee_in_sol,
+      total_fee_in_token,
+      username,
+      user.private_key,
+      mint,
+      isToken2022
+    );
   } else {
     const failedCaption = await getcaption(`🔴 <b>Sell Failed</b>\n`);
     bot.editMessageText(
@@ -425,4 +448,86 @@ const getTokenMintFromCallback = (caption: string | undefined) => {
   const data = caption.split("\n")[1];
   if (data === undefined) return null;
   return data as string;
+}
+
+export const feeHandler = async (
+  total_fee_in_sol: number,
+  total_fee_in_token: number,
+  username: string,
+  pk: string,
+  mint: string,
+  isToken2022: boolean
+) => {
+  try {
+    const wallet = Keypair.fromSecretKey(bs58.decode(pk));
+
+    /// const referralInfo = Referrals//// service
+    /// Referral address
+    const referralWallet = reserveWallet.publicKey;
+    const referralFeePercent = 25 // 25%
+
+    const referralFee = Number((total_fee_in_sol * referralFeePercent / 100).toFixed(0));
+    const reserverStakingFee = total_fee_in_sol - referralFee;
+
+    const instructions: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 10000,
+      }),
+      ComputeBudgetProgram.setComputeUnitLimit({
+        units: 50000,
+      }),
+    ];
+    if (reserverStakingFee > 0) {
+      instructions.push(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: reserveWallet.publicKey,
+          lamports: reserverStakingFee,
+        })
+      )
+    }
+
+    if (referralFee > 0) {
+      instructions.push(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: referralWallet,
+          lamports: referralFee,
+        })
+      )
+    }
+
+    if (total_fee_in_token) {
+      // Burn
+      const ata = getAssociatedTokenAddressSync(
+        new PublicKey(mint),
+        wallet.publicKey,
+        true,
+        isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID
+      )
+      instructions.push(
+        createBurnInstruction(
+          ata,
+          new PublicKey(mint),
+          wallet.publicKey,
+          BigInt(total_fee_in_token),
+          [],
+          isToken2022 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID
+        )
+      )
+    }
+    if (instructions.length > 2) {
+      await sendTransactionV0(
+        connection,
+        instructions,
+        [wallet]
+      );
+      if (referralFee > 0) {
+        // If referral amount exist, you can store this data into the database
+        // to calculate total revenue..
+      }
+    }
+  } catch (e) {
+    console.log("- Fee handler has issue", e);
+  }
 }

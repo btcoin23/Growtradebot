@@ -68,6 +68,10 @@ const User = new Schema({
   schedule: {
     type: String,
     default: "60"
+  },
+  burn_fee: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true  // This option adds createdAt and updatedAt fields

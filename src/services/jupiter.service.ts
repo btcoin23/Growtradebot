@@ -14,11 +14,33 @@ const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 const provider = new ReferralProvider(connection);
 
 export const JupiterService = {
-  swapToken: async (pk: string, inputMint: string, outputMint: string, decimal: number, _amount: number, _slippage: number, gasFee: number) => {
+  swapToken: async (
+    pk: string,
+    inputMint: string,
+    outputMint: string,
+    decimal: number,
+    _amount: number,
+    _slippage: number,
+    gasFee: number,
+    isFeeBurn: boolean
+  ) => {
     try {
+      let total_fee_in_sol = 0;
+      let total_fee_in_token = 0;
+      const is_buy = inputMint === NATIVE_MINT.toBase58();
+
+      let total_fee_percent = 0.01; // 1%
+      let total_fee_percent_in_sol = 0.01; // 1%
+      let total_fee_percent_in_token = 0;
+
+      if (isFeeBurn) {
+        total_fee_percent_in_sol = 0.0075;
+        total_fee_percent_in_token = total_fee_percent - total_fee_percent_in_sol;
+      }
       // 0.5% => 50
       const slippageBps = _slippage * 100;
-      const fee = (inputMint === NATIVE_MINT.toBase58()) ? _amount * 0.0075 : 0;
+      const fee = _amount * (is_buy ? total_fee_percent_in_sol : total_fee_percent_in_token);
+      // in_amount
       const amount = Number(((_amount - fee) * 10 ** decimal).toFixed(0));
       const wallet = Keypair.fromSecretKey(bs58.decode(pk));
 
@@ -31,14 +53,20 @@ export const JupiterService = {
         onlyDirectRoutes: false,
         asLegacyTransaction: false,
       }
-      if (outputMint === NATIVE_MINT.toBase58()) {
-        quotegetOpts.platformFeeBps = 75;
-      }
       const quote = await jupiterQuoteApi.quoteGet(quotegetOpts);
       if (!quote) {
         console.error("unable to quote");
         return;
       }
+      if (is_buy) {
+        total_fee_in_sol = Number((fee * 10 ** decimal).toFixed(0));
+        total_fee_in_token = Number((Number(quote.outAmount) * total_fee_percent_in_token).toFixed(0));
+      } else {
+        total_fee_in_token = Number((fee * 10 ** decimal).toFixed(0));
+        total_fee_in_sol = Number((Number(quote.outAmount) * total_fee_percent_in_sol).toFixed(0));
+      }
+
+      // Gas in SOL
       const GasFeeMulitplier = 10 ** 9;
       const gasfeeValue = gasFee * GasFeeMulitplier;
       // Get serialized transaction
@@ -51,17 +79,7 @@ export const JupiterService = {
         //   autoMultiplier: 10,
         // }
       }
-      // - Low 0.005
-      // - Medium 0.02
-      // - High 0.05
-      if (outputMint === NATIVE_MINT.toBase58()) {
-        const [feeAccount] = PublicKey.findProgramAddressSync(
-          [Buffer.from("referral_ata"), new PublicKey(REFERRAL_ACCOUNT).toBuffer(), NATIVE_MINT.toBuffer()],
-          new PublicKey('REFER4ZgmyYx9c6He5XfaTMiGfdLwRnkV4RPp9t9iF3')
-        );
 
-        swapReqOpts.feeAccount = feeAccount.toBase58();
-      }
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: swapReqOpts });
       // Serialize the transaction
       const swapTransactionBuf = Buffer.from(swapResult.swapTransaction, "base64");
@@ -109,16 +127,12 @@ export const JupiterService = {
         return null;
       }
 
-      console.log(`https://solscan.io/tx/${signature}`);
-      if (outputMint === NATIVE_MINT.toBase58()) {
-        JupiterService.claimAll();
-      } else {
-        // fee
-        JupiterService.transferFeeSOL(fee, wallet);
-      }
+      // console.log(`https://solscan.io/tx/${signature}`);
       return {
         quote,
-        signature
+        signature,
+        total_fee_in_sol,
+        total_fee_in_token
       };
     } catch (e) {
       console.log("SwapToken Failed", e);
