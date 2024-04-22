@@ -21,7 +21,7 @@ export const get_referral_info = async (username: string) => {
     let referral_code = userInfo?.referral_code;
 
     if (referral_code == '') {
-        return;
+        return ({ referral: false });
     }
 
     let referral_date = userInfo?.referral_date ?? new Date();
@@ -34,18 +34,19 @@ export const get_referral_info = async (username: string) => {
     let currentDateAfter90Days = inputDate.getTime() + (90 * 24 * 60 * 60 * 1000);
 
     // Determine the referral_option based on the conditions
-    let referral_option = 0;
+    let referral_option = 15;
     if (Date.now() < currentDateAfter45Days) {
-        referral_option = 0;
+        referral_option = 25;
     } else if (Date.now() < currentDateAfter90Days) {
-        referral_option = 1;
+        referral_option = 20;
     } else {
-        referral_option = 2;
+        referral_option = 15;
     }
 
     let referrerInfo = await UserService.findOne({ referrer_code: referral_code });
 
     return {
+        referral: true,
         referral_option: referral_option,
         uniquecode: userInfo?.referral_code ?? "",
         referral_address: referrerInfo?.referrer_wallet ?? referrerInfo?.wallet_address

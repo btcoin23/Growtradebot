@@ -16,6 +16,7 @@ import { PositionService } from "../services/position.service";
 import bs58 from "bs58";
 import { RESERVE_KEY, connection } from "../config";
 import { sendTransactionV0 } from "../utils/v0.transaction";
+import { get_referral_info } from "../services/referral.service";
 
 const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 
@@ -460,11 +461,16 @@ export const feeHandler = async (
 ) => {
   try {
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
+    let ref_info = await get_referral_info(username);
+    let referralWallet;
+    if (ref_info?.referral_address) {
+      referralWallet = new PublicKey(ref_info?.referral_address)
+    }
+    else {
+      referralWallet = reserveWallet.publicKey;
+    }
+    const referralFeePercent = ref_info?.referral_option ?? 0// 25%
 
-    /// const referralInfo = Referrals//// service
-    /// Referral address
-    const referralWallet = reserveWallet.publicKey;
-    const referralFeePercent = 25 // 25%
 
     const referralFee = Number((total_fee_in_sol * referralFeePercent / 100).toFixed(0));
     const reserverStakingFee = total_fee_in_sol - referralFee;
