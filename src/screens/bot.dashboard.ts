@@ -107,11 +107,6 @@ export const sendMsgForAlertScheduleHandler = async (
           'command': 'schedule_time_60'
         })
       }, {
-        text: '2h',
-        callback_data: JSON.stringify({
-          'command': 'schedule_time_120'
-        })
-      }, {
         text: '3h',
         callback_data: JSON.stringify({
           'command': 'schedule_time_180'
@@ -120,6 +115,11 @@ export const sendMsgForAlertScheduleHandler = async (
         text: '4h',
         callback_data: JSON.stringify({
           'command': 'schedule_time_240'
+        })
+      }, {
+        text: '6h',
+        callback_data: JSON.stringify({
+          'command': 'schedule_time_360'
         })
       }],
     ];

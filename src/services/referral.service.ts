@@ -35,7 +35,6 @@ export const get_referral_info = async (username: string) => {
 
     // Determine the referral_option based on the conditions
     let referral_option = 0;
-    console.log("🚀 ~ constget_referral_info= ~ referral_option:", referral_option)
     if (Date.now() < currentDateAfter45Days) {
         referral_option = 0;
     } else if (Date.now() < currentDateAfter90Days) {
