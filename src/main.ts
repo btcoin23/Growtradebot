@@ -5,6 +5,10 @@ import { WelcomeScreenHandler } from "./screens/welcome.screen";
 import { callbackQueryHandler } from "./controllers/callback.handler";
 import { messageHandler } from "./controllers/message.handler";
 import { positionScreenHandler } from "./screens/position.screen";
+import { ReferralController } from "./controllers/referral";
+import { UserService } from "./services/user.service";
+import { alertBot, runAlertBotForChannel, runAlertBotSchedule } from "./cron/alert.bot.cron";
+import { newReferralChannelHandler, removeReferralChannelHandler } from "./services/alert.bot.module";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -14,6 +18,8 @@ if (!token) {
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
   // bot menu
+  runAlertBotSchedule();
+  runAlertBotForChannel();
   bot.setMyCommands(BotMenu);
 
 
@@ -29,10 +35,28 @@ const startTradeBot = () => {
 
   // bot commands
   bot.onText(/\/start/, async (msg: TelegramBot.Message) => {
+    // https://t.me/growswapver1_bot?start=mqMyH7jKzWN3tNA
+    const referralcode = ReferralController.extractUniqueCode(msg.text ?? "");
+    if (referralcode && referralcode !== "") {
+      // store info
+      const chat = msg.chat;
+      if (chat.username) {
+        await UserService.findAndUpdateOne({ username: chat.username }, {
+          referral_code: referralcode
+        });
+      }
+    }
     await WelcomeScreenHandler(bot, msg);
   });
   bot.onText(/\/position/, async (msg: TelegramBot.Message) => {
     await positionScreenHandler(bot, msg);
+  });
+
+  alertBot.on('new_chat_members', async (msg: TelegramBot.Message) => {
+    await newReferralChannelHandler(msg);
+  });
+  alertBot.on('left_chat_member', async (msg: TelegramBot.Message) => {
+    await removeReferralChannelHandler(msg);
   });
 }
 

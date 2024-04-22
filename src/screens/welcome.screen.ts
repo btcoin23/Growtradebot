@@ -5,6 +5,7 @@ import bs58 from "bs58";
 import { GrowTradeVersion } from "../config";
 import { copytoclipboard } from "../utils";
 import { TokenService } from "../services/token.metadata";
+import { contractInfoScreenHandler } from "./contract.info.screen";
 
 const MAX_RETRIES = 5;
 const welcomeKeyboardList = [
@@ -14,6 +15,7 @@ const welcomeKeyboardList = [
   // [{ text: '🫳 Buy', command: 'buy_token' }, { text: '🫴 Sell', command: 'sell_token' }],
   [{ text: '♻️ Withdraw', command: 'transfer_funds' }, { text: '⚙️ Settings', command: 'settings' }],
   [{ text: '⛓ Bridge', command: 'bridge' }],
+  [{ text: '🎁 Referral Program', command: 'referral' }],
   [{ text: '❌ Close', command: 'dismiss_message' }],
 ];
 
@@ -130,6 +132,25 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
     `<a href="https://growsol.io">🌍 Website</a>\n\n` +
     `<b>Paste a contract address to trigger the Buy/Sell Menu or pick an option to get started.</b>`;
 
+  const textEventHandler = async (msg: TelegramBot.Message) => {
+    const receivedChatId = msg.chat.id;
+    const receivedText = msg.text;
+    const receivedMessageId = msg.message_id;
+    const receivedTextSender = msg.chat.username;
+    // Check if the received message ID matches the original message ID
+    if (receivedText && receivedChatId === chat_id) {
+      // message should be same user
+      if (receivedTextSender === username) {
+        await contractInfoScreenHandler(bot, msg, receivedText, 'switch_sell');
+      }
+      setTimeout(() => { bot.deleteMessage(receivedChatId, receivedMessageId) }, 2000)
+    }
+    bot.removeListener('text', textEventHandler);
+  }
+
+  // Add the 'text' event listener
+  bot.on('text', textEventHandler);
+
   const reply_markup = {
     inline_keyboard: welcomeKeyboardList.map((rowItem) => rowItem.map((item) => {
       if (item.command.includes("bridge")) {
@@ -170,10 +191,3 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
     );
   }
 }
-// export const WelcomeScreenHandler = () => {
-//   try {
-
-//   } catch {
-
-//   }
-// }

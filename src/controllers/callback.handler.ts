@@ -6,6 +6,9 @@ import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
 import { generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
+import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
+import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
+import { backToHomeHandler, refreshPayoutHandler, sendPayoutAddressManageScreen, setSOLPayoutAddressHandler } from "../screens/payout.screen";
 
 export const callbackQueryHandler = async (
   bot: TelegramBot,
@@ -151,6 +154,62 @@ export const callbackQueryHandler = async (
     if (data.command.includes("wallet_view")) {
       await walletViewHandler(bot, callbackMessage);
       return;
+    }
+    if (data.command === 'referral') {
+      await OpenReferralWindowHandler(bot, callbackMessage)
+    }
+    // Open payout dashboard
+    if (data.command === 'payout_address') {
+      await sendPayoutAddressManageScreen(
+        bot,
+        callbackMessage.chat,
+        callbackMessage.message_id
+      );
+    }
+    // Update SOL address
+    if (data.command === 'set_sol_address') {
+      await setSOLPayoutAddressHandler(
+        bot,
+        callbackMessage.chat,
+      );
+    }
+    else if (data.command === 'refresh_payout') {
+      await refreshPayoutHandler(
+        bot,
+        callbackMessage,
+      );
+    }
+    // Alert Bot
+    if (data.command === 'alert_bot' || data.command === 'refresh_alert_bot') {
+      bot.deleteMessage(callbackMessage.chat.id, callbackMessage.message_id);
+      await openAlertBotDashboard(
+        bot,
+        callbackMessage.chat,
+      );
+    }
+    // Schedule
+    else if (data.command.includes('alert_schedule')) {
+      await sendMsgForAlertScheduleHandler(
+        bot,
+        callbackMessage.chat,
+      );
+    }
+    // Back home
+    else if (data.command === 'back_from_ref') {
+      await backToHomeHandler(
+        bot,
+        callbackMessage.chat,
+        callbackMessage
+      );
+    }
+    else if (data.command.includes('schedule_time_')) {
+      const scheduleTime = data.command.slice(14)
+
+      await updateSchedule(
+        bot,
+        callbackMessage.chat,
+        scheduleTime,
+      );
     }
     const presetBuyStr = 'preset_buy_';
     if (data.command.includes(presetBuyStr)) {
