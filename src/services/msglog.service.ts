@@ -1,3 +1,4 @@
+import { timeStamp } from "console";
 import { MsgLogSchema } from "../models/index";
 
 export const MsgLogService = {
@@ -22,7 +23,7 @@ export const MsgLogService = {
   findOne: async (props: any) => {
     try {
       const filter = props;
-      const result = await MsgLogSchema.findOne(filter);
+      const result = await MsgLogSchema.findOne(filter).sort({ timeStamp: -1 });
 
       return result;
     } catch (err: any) {
@@ -53,6 +54,19 @@ export const MsgLogService = {
     const { id } = props;
     try {
       const result = await MsgLogSchema.findByIdAndUpdate(id, props);
+      return result;
+    } catch (err: any) {
+      throw new Error(err.message);
+    }
+  },
+  findOneAndUpdate: async (props: any) => {
+    const { filter, data } = props;
+    try {
+      const result = await MsgLogSchema.findOneAndUpdate(
+        filter,
+        { $set: data },
+        { new: true }
+      );
       return result;
     } catch (err: any) {
       throw new Error(err.message);

@@ -7,8 +7,9 @@ import { copytoclipboard } from "../utils";
 import { GrowTradeVersion, MAX_WALLET } from "../config";
 import { MsgLogService } from "../services/msglog.service";
 import redisClient from "../services/redis";
-import { PRESET_BUY_TEXT } from "../bot.opts";
+import { PRESET_BUY_TEXT, SET_GAS_FEE } from "../bot.opts";
 import { wait } from "../utils/wait";
+import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 
 export const settingScreenHandler = async (
   bot: TelegramBot,
@@ -422,6 +423,130 @@ export const setCustomBuyPresetHandler = async (
     }, 2000)
 
 
+  } catch (e) {
+    console.log("~ setCustomBuyPresetHandler ~", e)
+  }
+}
+
+export const setCustomFeeScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  try {
+    const chat_id = msg.chat.id;
+    const username = msg.chat.username;
+    const user = await UserService.findOne({ username });
+    if (!user) return;
+
+    const sentMessage = await bot.sendMessage(
+      chat_id,
+      SET_GAS_FEE,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          force_reply: true,
+        }
+      }
+    );
+
+    await MsgLogService.create({
+      username,
+      wallet_address: user.wallet_address,
+      chat_id,
+      msg_id: sentMessage.message_id,
+      parent_msgid: msg.message_id
+    });
+  } catch (e) {
+    console.log("~ setCustomFeeScreenHandler ~", e);
+  }
+}
+
+export const setCustomFeeHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message,
+  amount: number,
+  reply_message_id: number
+) => {
+  try {
+    const { id: chat_id, username } = msg.chat
+    if (!username) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+
+    // user
+    const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendNoneUserNotification(bot, msg);
+      return;
+    }
+
+    const msgLog = await MsgLogService.findOne({ username, msg_id: reply_message_id });
+    if (!msgLog) {
+      return;
+    }
+    const parent_msgid = msgLog.parent_msgid;
+
+    const parentMsgLog = await MsgLogService.findOne({ username, msg_id: parent_msgid });
+    if (!parentMsgLog) {
+      return;
+    }
+    const { mint, extra_key } = parentMsgLog;
+    await UserTradeSettingService.setGas(
+      username,
+      {
+        gas: GasFeeEnum.CUSTOM,
+        value: amount
+      }
+    );
+
+    bot.deleteMessage(chat_id, msg.message_id);
+    bot.deleteMessage(chat_id, reply_message_id);
+
+    const inline_keyboards = [
+      [{ text: "Gas: 0.000105 SOL", command: null }],
+      [{ text: "Slippage: 5%", command: 'set_slippage' }],
+      [{ text: "Buy 0.01 SOL", command: 'buytoken_0.01' }, { text: "Buy 1 SOL", command: 'buytoken_1' },],
+      [{ text: "Buy 5 SOL", command: 'buytoken_5' }, { text: "Buy 10 SOL", command: 'buytoken_10' },],
+      [{ text: "Buy X SOL", command: 'buy_custom' }],
+      [{ text: "🔁 Switch To Sell", command: "SS_" }],
+      [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }]
+    ]
+
+    let preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
+
+    if (extra_key == "switch_sell") {
+      inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
+      inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
+      inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
+      inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
+    }
+    if (extra_key == "switch_buy") {
+      inline_keyboards[2] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
+      inline_keyboards[3] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
+      inline_keyboards[4] = [{ text: "Sell X%", command: `sell_custom` }]
+      inline_keyboards[5] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
+    }
+    const slippageSetting = await UserTradeSettingService.getSlippage(username, mint);
+    const { slippage } = slippageSetting;
+
+    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(GasFeeEnum.CUSTOM);
+    inline_keyboards[0][0] = {
+      text: `Gas: ${amount} SOL ⚙️`,
+      command: 'custom_fee'
+    }
+    inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
+
+    await bot.editMessageReplyMarkup({
+      inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
+        return {
+          text: item.text,
+          callback_data: JSON.stringify({
+            'command': item.command ?? "dummy_button"
+          })
+        }
+      }))
+    }, {
+      message_id: parent_msgid,
+      chat_id
+    })
   } catch (e) {
     console.log("~ setCustomBuyPresetHandler ~", e)
   }

@@ -14,6 +14,7 @@ export const ALERT_BOT_IMAGE = 'https://imgtr.ee/images/2024/03/22/40cadc1c117dc
 export const ALERT_MSG_IMAGE = 'https://imgtr.ee/images/2024/03/28/24ec15df80dad1223fcea15793278bbe.png';
 export const AlertBotID = 'grow_trade_alert_test_bot';
 export const INPUT_SOL_ADDRESS = 'Please send your SOL payout address in solana network.';
+export const SET_GAS_FEE = `🌳 Custom GAS\n\n<i>💲 Enter SOL Value in format "0.001"</i>`;
 
 export const WITHDRAW_TOKEN_AMT_TEXT = `<i>🌳 Enter your receive wallet address</i>`;
 export enum CommandEnum {

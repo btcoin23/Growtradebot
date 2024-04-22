@@ -4,7 +4,7 @@ import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, settingScreenHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
+import { generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomFeeScreenHandler, settingScreenHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
 import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
@@ -121,6 +121,11 @@ export const callbackQueryHandler = async (
     }
     if (data.command === 'high_gas') {
       await changeGasFeeHandler(bot, callbackMessage, GasFeeEnum.HIGH);
+      return;
+    }
+
+    if (data.command === 'custom_fee') {
+      await setCustomFeeScreenHandler(bot, callbackMessage);
       return;
     }
     const buyTokenStr = 'buytoken_';

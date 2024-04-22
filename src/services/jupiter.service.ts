@@ -6,15 +6,15 @@ import { ReferralProvider } from "@jup-ag/referral-sdk";
 import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_KEY, connection } from "../config";
 import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
-import { GasFeeEnum } from "./user.trade.setting.service";
-import redisClient from "./redis";
+import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
+import redisClient, { ITradeGasSetting } from "./redis";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 
 const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 const provider = new ReferralProvider(connection);
 
 export const JupiterService = {
-  swapToken: async (pk: string, inputMint: string, outputMint: string, decimal: number, _amount: number, _slippage: number, gasFee: string = GasFeeEnum.HIGH) => {
+  swapToken: async (pk: string, inputMint: string, outputMint: string, decimal: number, _amount: number, _slippage: number, gasFee: number) => {
     try {
       // 0.5% => 50
       const slippageBps = _slippage * 100;
@@ -39,16 +39,17 @@ export const JupiterService = {
         console.error("unable to quote");
         return;
       }
-
+      const GasFeeMulitplier = 10 ** 9;
+      const gasfeeValue = gasFee * GasFeeMulitplier;
       // Get serialized transaction
       const swapReqOpts: SwapRequest = {
         quoteResponse: quote,
         userPublicKey: wallet.publicKey.toBase58(),
         dynamicComputeUnitLimit: true,
-        // prioritizationFeeLamports: "auto",
-        prioritizationFeeLamports: {
-          autoMultiplier: 10,
-        }
+        prioritizationFeeLamports: Number(gasfeeValue.toFixed(0)),
+        // prioritizationFeeLamports: {
+        //   autoMultiplier: 10,
+        // }
       }
       // - Low 0.005
       // - Medium 0.02
@@ -61,17 +62,7 @@ export const JupiterService = {
 
         swapReqOpts.feeAccount = feeAccount.toBase58();
       }
-      if (gasFee === GasFeeEnum.MEDIUM) {
-        swapReqOpts.prioritizationFeeLamports = {
-          autoMultiplier: 15,
-        }
-      } else if (gasFee === GasFeeEnum.HIGH) {
-        swapReqOpts.prioritizationFeeLamports = {
-          autoMultiplier: 25,
-        }
-      }
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: swapReqOpts });
-
       // Serialize the transaction
       const swapTransactionBuf = Buffer.from(swapResult.swapTransaction, "base64");
       var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
@@ -79,7 +70,6 @@ export const JupiterService = {
       // Sign the transaction
       transaction.sign([wallet]);
       const signature = getSignature(transaction);
-
       // We first simulate whether the transaction would be successful
       const { value: simulatedTransactionResponse } =
         await connection.simulateTransaction(transaction, {
