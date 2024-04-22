@@ -48,6 +48,22 @@ const User = new Schema({
   retired: {
     type: Boolean,
     default: false
+  },
+  referrer_code: {
+    type: String,
+    default: ""
+  },
+  referrer_wallet: {
+    type: String,
+    default: ""
+  },
+  referral_code: {
+    type: String,
+    default: ""
+  },
+  schedule: {
+    type: String,
+    default: "60"
   }
 }, {
   timestamps: true  // This option adds createdAt and updatedAt fields

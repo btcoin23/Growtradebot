@@ -2,6 +2,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 
 export const MONGODB_URL = process.env.MONGODB_URL || "mongodb://127.0.0.1:27017/growtrade";
 export const TELEGRAM_BOT_API_TOKEN = process.env.TELEGRAM_BOT_API_TOKEN;
+export const ALERT_BOT_TOKEN_SECRET = process.env.ALERT_BOT_API_TOKEN;
 export const RESERVE_KEY = process.env.RESERVE_KEY || "";
 if (RESERVE_KEY === "") {
   throw new Error("Missing RESERVE_KEY");

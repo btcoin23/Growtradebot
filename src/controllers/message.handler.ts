@@ -48,6 +48,11 @@ export const messageHandler = async (
     }
 
 
+    // // wallet address
+    // if (isValidWalletAddress(messageText)) {
+    //   await contractInfoScreenHandler(bot, msg, messageText, 'switch_sell');
+    //   return;
+    // }
     // wallet address
     if (isValidWalletAddress(messageText)) {
       await contractInfoScreenHandler(bot, msg, messageText);

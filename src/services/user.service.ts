@@ -85,4 +85,5 @@ export const UserService = {
       throw new Error(err.message);
     }
   },
+
 };

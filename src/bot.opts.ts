@@ -8,6 +8,12 @@ export const PRESET_BUY_TEXT = `🌳Preset Buy SOL Button \n\n<i>💲 Enter SOL 
 export const SELL_XPRO_TEXT = `🌳Sell X %\n\n<i>💲 Enter X Value in format "25.5"</i>`;
 export const WITHDRAW_XTOKEN_TEXT = `🌳Withdraw X token\n\n<i>💲 Enter X Value in format "25.5"</i>`;
 export const SET_SLIPPAGE_TEXT = `🌳Slippage X %\n\n<i>💲 Enter X Value in format "2.5"</i>`;
+export const TradeBotID = "grow_trade_test_bot"
+export const WELCOME_REFERRAL = 'https://imgtr.ee/images/2024/04/22/23d31147ac76fc2975736c6b66de6c92.png';
+export const ALERT_BOT_IMAGE = 'https://imgtr.ee/images/2024/03/22/40cadc1c117dced73d024164d0214704.png';
+export const ALERT_MSG_IMAGE = 'https://imgtr.ee/images/2024/04/22/a84bf0785b7eef4a64cde8c26b28686b.png';
+export const AlertBotID = 'grow_trade_alert_test_bot';
+export const INPUT_SOL_ADDRESS = 'Please send your SOL payout address in solana network.';
 export const SET_GAS_FEE = `🌳 Custom GAS\n\n<i>💲 Enter SOL Value in format "0.001"</i>`;
 
 export const WITHDRAW_TOKEN_AMT_TEXT = `<i>🌳 Enter your receive wallet address</i>`;

@@ -55,8 +55,8 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     }
 
     const { overview, secureinfo } = tokeninfo;
-    const { symbol, name, price, mc } = overview;
-    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData } = secureinfo;
+    const { symbol, name, price, mc, liquidity } = overview;
+    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData, top10HolderBalance, top10HolderPercent } = secureinfo;
 
     let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
@@ -65,6 +65,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     const solprice = await TokenService.getSOLPrice();
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
 
+    let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
     if (position) {
       const { sol_amount } = position;
@@ -89,8 +90,10 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     }
 
     caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
-      `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
+      `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🟥' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n` +
+      // `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
+      `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
       `💳 <b>Balance: loading... </b>\n` +
       `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
@@ -294,12 +297,14 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     }
 
     const { overview, secureinfo } = tokeninfo;
-    const { symbol, name, price, mc } = overview;
-    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData } = secureinfo;
+    const { symbol, name, price, mc, liquidity } = overview;
+    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData, top10HolderPercent } = secureinfo;
 
     const solprice = await TokenService.getSOLPrice();
     const solbalance = await TokenService.getSOLBalance(user.wallet_address, true);
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
+
+    let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
 
     let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
@@ -328,8 +333,10 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     }
 
     caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
-      `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
+      // `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
+      `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🟥' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
+      `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
       `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
       `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +

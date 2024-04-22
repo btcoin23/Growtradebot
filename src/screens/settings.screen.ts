@@ -410,12 +410,19 @@ export const setCustomBuyPresetHandler = async (
     let presetSetting = user?.preset_setting ?? [0.1, 1, 5, 10];
     presetSetting.splice(parseInt(preset_index), 1, amount);
     await UserService.findAndUpdateOne({ username }, { preset_setting: presetSetting });
+    const sentSuccessMsg = await bot.sendMessage(chat_id, "Preset value changed successfully!");
+
+    setTimeout(() => {
+      bot.deleteMessage(chat_id, sentSuccessMsg.message_id)
+    }, 3000);
 
     setTimeout(() => {
       bot.deleteMessage(chat_id, reply_message_id - 1);
       bot.deleteMessage(chat_id, reply_message_id);
       bot.deleteMessage(chat_id, msg.message_id);
     }, 2000)
+
+
   } catch (e) {
     console.log("~ setCustomBuyPresetHandler ~", e)
   }

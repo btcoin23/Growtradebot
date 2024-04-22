@@ -8,6 +8,16 @@ export function isValidWalletAddress(address: string): boolean {
   return pattern.test(address);
 }
 
+export const generateReferralCode = (length: number) => {
+  let code = '';
+  // Convert the Telegram username to a hexadecimal string
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  for (let i = 0; i < length; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return code;
+}
+
 export function formatNumber(number: bigint | string | number) {
   if (!number) return "0";
   // Convert the number to a string and add commas using regular expression
