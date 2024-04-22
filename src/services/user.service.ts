@@ -85,5 +85,9 @@ export const UserService = {
       throw new Error(err.message);
     }
   },
+  extractUniqueCode: (text: string): string | null => {
+    const words = text.split(' ');
+    return words.length > 1 ? words[1] : null;
+  }
 
 };

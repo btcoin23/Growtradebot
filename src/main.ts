@@ -5,7 +5,6 @@ import { WelcomeScreenHandler } from "./screens/welcome.screen";
 import { callbackQueryHandler } from "./controllers/callback.handler";
 import { messageHandler } from "./controllers/message.handler";
 import { positionScreenHandler } from "./screens/position.screen";
-import { ReferralController } from "./controllers/referral";
 import { UserService } from "./services/user.service";
 import { alertBot, runAlertBotForChannel, runAlertBotSchedule } from "./cron/alert.bot.cron";
 import { newReferralChannelHandler, removeReferralChannelHandler } from "./services/alert.bot.module";
@@ -36,13 +35,14 @@ const startTradeBot = () => {
   // bot commands
   bot.onText(/\/start/, async (msg: TelegramBot.Message) => {
     // https://t.me/growswapver1_bot?start=mqMyH7jKzWN3tNA
-    const referralcode = ReferralController.extractUniqueCode(msg.text ?? "");
+    const referralcode = UserService.extractUniqueCode(msg.text ?? "");
     if (referralcode && referralcode !== "") {
       // store info
       const chat = msg.chat;
       if (chat.username) {
         await UserService.findAndUpdateOne({ username: chat.username }, {
-          referral_code: referralcode
+          referral_code: referralcode,
+          referral_date: new Date()
         });
       }
     }

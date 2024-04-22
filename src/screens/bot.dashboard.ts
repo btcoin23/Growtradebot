@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { ALERT_BOT_IMAGE, AlertBotID, WELCOME_REFERRAL } from "../bot.opts";
-import { get_referral_info } from "../services/referral.service";
+import { get_referrer_info } from "../services/referral.service";
 import { ReferralChannelController } from "../controllers/referral.channel";
 import { UserService } from "../services/user.service";
 import { schedule } from "node-cron";
@@ -14,7 +14,7 @@ export const openAlertBotDashboard = async (
     const username = chat.username;
 
     if (!username) return;
-    const refdata = await get_referral_info(username);
+    const refdata = await get_referrer_info(username);
     if (!refdata) {
       bot.sendMessage(chat.id, 'You have no referral code. Please create a referral code first.');
       return;
@@ -107,11 +107,6 @@ export const sendMsgForAlertScheduleHandler = async (
           'command': 'schedule_time_60'
         })
       }, {
-        text: '2h',
-        callback_data: JSON.stringify({
-          'command': 'schedule_time_120'
-        })
-      }, {
         text: '3h',
         callback_data: JSON.stringify({
           'command': 'schedule_time_180'
@@ -120,6 +115,11 @@ export const sendMsgForAlertScheduleHandler = async (
         text: '4h',
         callback_data: JSON.stringify({
           'command': 'schedule_time_240'
+        })
+      }, {
+        text: '6h',
+        callback_data: JSON.stringify({
+          'command': 'schedule_time_360'
         })
       }],
     ];
