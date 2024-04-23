@@ -32,7 +32,7 @@ export const openAlertBotDashboard = async (
         })
       }, {
         text: 'Invite AlertBot 🤖',
-        url: `https://t.me/${AlertBotID}`
+        url: `https://t.me/${AlertBotID}?startgroup=true`
       }],
       [{
         text: 'Refresh bot info',

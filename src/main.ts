@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { TELEGRAM_BOT_API_TOKEN } from "./config";
-import { BotMenu } from "./bot.opts";
+import { AlertBotID, BotMenu } from "./bot.opts";
 import { WelcomeScreenHandler } from "./screens/welcome.screen";
 import { callbackQueryHandler } from "./controllers/callback.handler";
 import { messageHandler } from "./controllers/message.handler";
@@ -52,6 +52,11 @@ const startTradeBot = () => {
     await positionScreenHandler(bot, msg);
   });
 
+  alertBot.onText(/\/start/, async (msg: TelegramBot.Message) => {
+    if (msg.text && msg.text.includes(`/start@${AlertBotID}`)) {
+      alertBot.deleteMessage(msg.chat.id, msg.message_id);
+    }
+  });
   alertBot.on('new_chat_members', async (msg: TelegramBot.Message) => {
     await newReferralChannelHandler(msg);
   });

@@ -9,6 +9,10 @@ const ReferralHistorySchema = new Schema({
     type: String,
     default: "",
   },
+  uniquecode: {
+    type: String,
+    default: "",
+  },
   referrer_address: {
     type: String,
     default: "",

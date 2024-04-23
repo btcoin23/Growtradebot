@@ -25,7 +25,6 @@ export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: Telegr
   try {
     const chat_id = msg.chat.id;
     const username = msg.chat.username;
-    console.log("🚀 ~ buyCustomAmountScreenHandler ~ username:", username)
     if (!username) return;
     const user = await UserService.findOne({ username });
     if (!user) return;
@@ -281,6 +280,8 @@ export const sellHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
+  console.log("🚀 ~ msg.message_id:", msg.message_id)
+  console.log("🚀 ~ msglog:", msglog)
 
   if (!msglog) return;
   const { mint, spl_amount, sol_amount } = msglog;
@@ -464,13 +465,16 @@ export const feeHandler = async (
   try {
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
     let ref_info = await get_referral_info(username);
+    console.log("🚀 ~ ref_info:", ref_info)
     let referralWallet;
     if (ref_info?.referral_address) {
+      console.log("🚀 ~ ref_info?.referral_address:", ref_info?.referral_address)
       referralWallet = new PublicKey(ref_info?.referral_address)
     }
     else {
       referralWallet = reserveWallet.publicKey;
     }
+    console.log("🚀 ~ referralWallet:", referralWallet)
     const referralFeePercent = ref_info?.referral_option ?? 0// 25%
 
 
@@ -535,6 +539,7 @@ export const feeHandler = async (
         // to calculate total revenue..
         await ReferralHistoryControler.create({
           username: username,
+          uniquecode: ref_info.uniquecode,
           referrer_address: referralWallet,
           amount: referralFee
         })
