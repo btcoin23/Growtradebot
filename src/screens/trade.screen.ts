@@ -17,6 +17,7 @@ import bs58 from "bs58";
 import { RESERVE_KEY, connection } from "../config";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 import { get_referral_info } from "../services/referral.service";
+import { ReferralHistoryControler } from "../controllers/referral.history";
 
 const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 
@@ -24,6 +25,7 @@ export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: Telegr
   try {
     const chat_id = msg.chat.id;
     const username = msg.chat.username;
+    console.log("🚀 ~ buyCustomAmountScreenHandler ~ username:", username)
     if (!username) return;
     const user = await UserService.findOne({ username });
     if (!user) return;
@@ -154,12 +156,12 @@ export const buyHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
+  console.log("🚀 ~ msg.message_id:", msg.message_id)
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
 
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
-
   if (!mint) return;
   // Insufficient check check if enough includes fee
   if (sol_amount && sol_amount <= amount + gasvalue) {
@@ -531,6 +533,11 @@ export const feeHandler = async (
       if (referralFee > 0) {
         // If referral amount exist, you can store this data into the database
         // to calculate total revenue..
+        await ReferralHistoryControler.create({
+          username: username,
+          referrer_address: referralWallet,
+          amount: referralFee
+        })
       }
     }
   } catch (e) {

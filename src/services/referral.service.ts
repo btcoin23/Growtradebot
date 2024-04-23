@@ -61,6 +61,11 @@ export const get_referrer_info = async (username: string) => {
     };
 }
 
+export const get_referral_num = async (uniquecode: string) => {
+    let userList = await UserService.find({ referral_code: uniquecode });
+    return { num: userList.length }
+}
+
 export const getReferralList = async () => {
     let userInfo = await UserService.find({});
     let res = userInfo?.map((item) => ({

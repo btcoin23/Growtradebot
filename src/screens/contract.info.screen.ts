@@ -50,7 +50,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     // check token metadata
     const tokeninfo = await TokenService.getMintInfo(mint);
     if (!tokeninfo) {
-      await sendNoneExistTokenNotification(bot, msg);
+      // await sendNoneExistTokenNotification(bot, msg);
       return;
     }
 
@@ -205,7 +205,6 @@ export const changeBuySellHandler = async (bot: TelegramBot, msg: TelegramBot.Me
   console.log("🚀 ~ changeBuySellHandler ~ command:", command)
   const chat_id = msg.chat.id;
   const username = msg.chat.username;
-
 }
 
 export const changeGasFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Message, gasfee: GasFeeEnum) => {
