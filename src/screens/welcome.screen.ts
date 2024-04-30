@@ -11,7 +11,7 @@ const MAX_RETRIES = 5;
 const welcomeKeyboardList = [
   // [{ text: '🏦 Buy/Sell', command: 'buysell' }],
   // snipe_token, my_position
-  [{ text: '🎯 Sniper [Soon]', command: 'dummy_button' }, { text: '📊 Positions [Soon]', command: 'position' }], // position
+  [{ text: '🎯 Sniper [Soon]', command: 'dummy_button' }, { text: '📊 Positions', command: 'position' }], // position
   [{ text: '♻️ Withdraw', command: 'transfer_funds' }, { text: '⚙️ Settings', command: 'settings' }],
   [{ text: '⛓ Bridge', command: 'bridge' }],
   [{ text: '🎁 Referral Program', command: 'referral' }],
