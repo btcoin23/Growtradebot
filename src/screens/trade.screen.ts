@@ -155,6 +155,7 @@ export const buyHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
+  console.log("🚀 ~ msglog:", msglog)
   console.log("🚀 ~ msg.message_id:", msg.message_id)
   if (!msglog) return;
   const { mint, sol_amount } = msglog;

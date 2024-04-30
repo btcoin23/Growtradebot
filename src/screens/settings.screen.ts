@@ -596,14 +596,16 @@ export const setCustomAutoBuyAmountHandler = async (
 ) => {
   try {
     const { id: chat_id, username } = msg.chat
+    const message_id = msg.message_id;
     if (!username) {
       await sendUsernameRequiredNotification(bot, msg);
       return;
     }
-
-    let key = "preset_index" + username;
-    let preset_index = await redisClient.get(key) ?? "0";
     const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
     await UserService.findAndUpdateOne({ username }, { auto_buy_amount: amount });
     const sentSuccessMsg = await bot.sendMessage(chat_id, "AutoBuy amount changed successfully!");
 

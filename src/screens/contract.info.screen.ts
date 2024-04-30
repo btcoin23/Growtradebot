@@ -6,6 +6,7 @@ import { sendNoneExistTokenNotification, sendNoneUserNotification, sendUsernameR
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { PositionService } from "../services/position.service";
+import { buyHandler } from "./trade.screen";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -206,6 +207,12 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
         spl_amount: splbalance,
         extra_key: switchBtn
       });
+    }
+    const autoBuyAmount = parseFloat(user.auto_buy_amount);
+    console.log("🚀 ~ contractInfoScreenHandler ~ autoBuyAmount:", autoBuyAmount)
+    if (user.auto_buy) {
+      console.log("🚀 ~ contractInfoScreenHandler ~ user.auto_buy:", user.auto_buy)
+      await buyHandler(bot, msg, autoBuyAmount)
     }
   } catch (e) {
     console.log("~ contractInfoScreenHandler ~", e);
