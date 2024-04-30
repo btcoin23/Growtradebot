@@ -1,10 +1,10 @@
 import TelegramBot from "node-telegram-bot-api";
 import { isValidWalletAddress } from "../utils";
 import { contractInfoScreenHandler } from "../screens/contract.info.screen";
-import { BUY_XSOL_TEXT, PRESET_BUY_TEXT, SELL_XPRO_TEXT, SET_GAS_FEE, SET_SLIPPAGE_TEXT, WITHDRAW_TOKEN_AMT_TEXT, WITHDRAW_XTOKEN_TEXT } from "../bot.opts";
+import { AUTO_BUY_TEXT, BUY_XSOL_TEXT, PRESET_BUY_TEXT, SELL_XPRO_TEXT, SET_GAS_FEE, SET_SLIPPAGE_TEXT, WITHDRAW_TOKEN_AMT_TEXT, WITHDRAW_XTOKEN_TEXT } from "../bot.opts";
 import { buyHandler, sellHandler, setSlippageHandler } from "../screens/trade.screen";
 import { withdrawAddressHandler, withdrawHandler } from "../screens/transfer.funds";
-import { presetBuyBtnHandler, setCustomBuyPresetHandler, setCustomFeeHandler } from "../screens/settings.screen";
+import { presetBuyBtnHandler, setCustomAutoBuyAmountHandler, setCustomBuyPresetHandler, setCustomFeeHandler } from "../screens/settings.screen";
 
 export const messageHandler = async (
   bot: TelegramBot,
@@ -36,6 +36,8 @@ export const messageHandler = async (
           await setSlippageHandler(bot, msg, amount, reply_message_id);
         } else if (text === PRESET_BUY_TEXT.replace(/<[^>]*>/g, '')) {
           await setCustomBuyPresetHandler(bot, msg, amount, reply_message_id);
+        } else if (text === AUTO_BUY_TEXT.replace(/<[^>]*>/g, '')) {
+          await setCustomAutoBuyAmountHandler(bot, msg, amount, reply_message_id);
         } else if (text === SET_GAS_FEE.replace(/<[^>]*>/g, '')) {
           await setCustomFeeHandler(bot, msg, amount, reply_message_id);
         }
