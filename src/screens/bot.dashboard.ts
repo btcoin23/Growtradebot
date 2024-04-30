@@ -32,7 +32,10 @@ export const openAlertBotDashboard = async (
         })
       }, {
         text: 'Invite AlertBot 🤖',
-        url: `https://t.me/${AlertBotID}?startgroup=true`
+        callback_data: JSON.stringify({
+          'command': 'dummy_button'
+        })
+        // url: `https://t.me/${AlertBotID}?startgroup=true`
       }],
       [{
         text: 'Refresh bot info',
