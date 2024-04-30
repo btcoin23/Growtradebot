@@ -7,10 +7,8 @@ import { copytoclipboard } from "../utils";
 import { GrowTradeVersion, MAX_WALLET } from "../config";
 import { MsgLogService } from "../services/msglog.service";
 import redisClient from "../services/redis";
-import { PRESET_BUY_TEXT, SET_GAS_FEE } from "../bot.opts";
-import { wait } from "../utils/wait";
+import { AUTO_BUY_TEXT, PRESET_BUY_TEXT, SET_GAS_FEE } from "../bot.opts";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
-import { burn } from "@solana/spl-token";
 
 export const settingScreenHandler = async (
   bot: TelegramBot,
@@ -27,10 +25,9 @@ export const settingScreenHandler = async (
 
     const users = await UserService.findAndSort({ username });
     const activeuser = users.filter(user => user.retired === false)[0];
-    const { wallet_address, burn_fee } = activeuser;
+    const { wallet_address, burn_fee, auto_buy, auto_buy_amount } = activeuser;
 
-    const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>Your active wallet:</b>\n` +
-      `${copytoclipboard(wallet_address)}`;
+    const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>AutoBuy</b>\nAutomatically execute buys upon pasting token address.\nTap to switch on/off.\n\n<b>Your active wallet:</b>\n` + `${copytoclipboard(wallet_address)}`;
 
     const reply_markup = {
       inline_keyboard: [
@@ -46,6 +43,16 @@ export const settingScreenHandler = async (
         [{
           text: `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
             'command': `burn_switch`
+          })
+        }],
+        [{
+          text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
+            'command': `autobuy_switch`
+          })
+        },
+        {
+          text: `${auto_buy_amount} SOL`, callback_data: JSON.stringify({
+            'command': `autobuy_amount`
           })
         }],
         [{
@@ -139,6 +146,29 @@ export const presetBuyBtnHandler = async (bot: TelegramBot,
       }
     }
   );
+}
+
+export const autoBuyAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  try {
+    const chat_id = msg.chat.id;
+    const username = msg.chat.username;
+    if (!username) return;
+    const user = await UserService.findOne({ username });
+    if (!user) return;
+
+    const sentMessage = await bot.sendMessage(
+      chat_id,
+      AUTO_BUY_TEXT,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          force_reply: true,
+        }
+      }
+    );
+  } catch (e) {
+    console.log("~buyCustomAmountScreenHandler~", e);
+  }
 }
 
 export const presetBuyAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, preset_index: number) => {
@@ -558,6 +588,41 @@ export const setCustomFeeHandler = async (
   }
 }
 
+export const setCustomAutoBuyAmountHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message,
+  amount: number,
+  reply_message_id: number
+) => {
+  try {
+    const { id: chat_id, username } = msg.chat
+    if (!username) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+
+    let key = "preset_index" + username;
+    let preset_index = await redisClient.get(key) ?? "0";
+    const user = await UserService.findOne({ username });
+    await UserService.findAndUpdateOne({ username }, { auto_buy_amount: amount });
+    const sentSuccessMsg = await bot.sendMessage(chat_id, "AutoBuy amount changed successfully!");
+
+    setTimeout(() => {
+      bot.deleteMessage(chat_id, sentSuccessMsg.message_id)
+    }, 3000);
+
+    setTimeout(() => {
+      bot.deleteMessage(chat_id, reply_message_id - 1);
+      bot.deleteMessage(chat_id, reply_message_id);
+      bot.deleteMessage(chat_id, msg.message_id);
+    }, 2000)
+
+
+  } catch (e) {
+    console.log("~ setCustomAutoBuyHandler ~", e)
+  }
+}
+
 export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
     const message_id = msg.message_id;
@@ -590,6 +655,7 @@ export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.M
       { username },
       { burn_fee: !user.burn_fee }
     )
+    console.log("🚀 ~ switchBurnOptsHandler ~ user.burn_fee:", user.burn_fee)
 
     const reply_markup = {
       inline_keyboard: [
@@ -605,6 +671,16 @@ export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.M
         [{
           text: `${!user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
             'command': `burn_switch`
+          })
+        }],
+        [{
+          text: `${!user.auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
+            'command': `autobuy_switch`
+          })
+        },
+        {
+          text: `${user.auto_buy_amount} SOL`, callback_data: JSON.stringify({
+            'command': `autobuy_amount`
           })
         }],
         [{
@@ -632,7 +708,99 @@ export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.M
       msg.chat.id,
       sentMessage.message_id
     );
-  } catch {
+  } catch (error) {
+    console.log("🚀 ~ switchBurnOptsHandler ~ error:", error)
+  }
+}
+
+
+export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  try {
+    const message_id = msg.message_id;
+    const sentMessage = await bot.sendMessage(
+      msg.chat.id,
+      'Updating...'
+    );
+
+    const username = msg.chat.username;
+    if (!username) {
+      await bot.deleteMessage(
+        msg.chat.id,
+        message_id
+      );
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+
+    const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendUsernameRequiredNotification(bot, msg);
+      await bot.deleteMessage(
+        msg.chat.id,
+        sentMessage.message_id
+      );
+      return;
+    }
+
+    await UserService.findAndUpdateOne(
+      { username },
+      { auto_buy: !user.auto_buy }
+    )
+
+    const reply_markup = {
+      inline_keyboard: [
+        [{
+          text: `💳 Wallet`, callback_data: JSON.stringify({
+            'command': `wallet_view`
+          })
+        }, {
+          text: `🗒  Preset Settings`, callback_data: JSON.stringify({
+            'command': `preset_setting`
+          })
+        }],
+        [{
+          text: `${user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
+            'command': `burn_switch`
+          })
+        }],
+        [{
+          text: `${user.auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
+            'command': `autobuy_switch`
+          })
+        },
+        {
+          text: `${user.auto_buy_amount} SOL`, callback_data: JSON.stringify({
+            'command': `autobuy_amount`
+          })
+        }],
+        [{
+          text: '↩️ Back', callback_data: JSON.stringify({
+            'command': 'back_home'
+          })
+        },
+        {
+          text: '❌ Close', callback_data: JSON.stringify({
+            'command': 'dismiss_message'
+          })
+        }]
+      ]
+    }
+
+    await bot.editMessageReplyMarkup(
+      reply_markup,
+      {
+        message_id,
+        chat_id: msg.chat.id,
+      }
+    );
+
+    await bot.deleteMessage(
+      msg.chat.id,
+      sentMessage.message_id
+    );
+  } catch (error) {
+    console.log("🚀 ~ switchAutoBuyOptsHandler ~ error:", error)
 
   }
 }
+

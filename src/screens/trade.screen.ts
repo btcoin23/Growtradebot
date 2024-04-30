@@ -17,6 +17,7 @@ import bs58 from "bs58";
 import { RESERVE_KEY, connection } from "../config";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 import { get_referral_info } from "../services/referral.service";
+import { ReferralHistoryControler } from "../controllers/referral.history";
 
 const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 
@@ -154,12 +155,12 @@ export const buyHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
+  console.log("🚀 ~ msg.message_id:", msg.message_id)
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
 
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
-
   if (!mint) return;
   // Insufficient check check if enough includes fee
   if (sol_amount && sol_amount <= amount + gasvalue) {
@@ -279,6 +280,8 @@ export const sellHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
+  console.log("🚀 ~ msg.message_id:", msg.message_id)
+  console.log("🚀 ~ msglog:", msglog)
 
   if (!msglog) return;
   const { mint, spl_amount, sol_amount } = msglog;
@@ -462,13 +465,16 @@ export const feeHandler = async (
   try {
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
     let ref_info = await get_referral_info(username);
+    console.log("🚀 ~ ref_info:", ref_info)
     let referralWallet;
     if (ref_info?.referral_address) {
+      console.log("🚀 ~ ref_info?.referral_address:", ref_info?.referral_address)
       referralWallet = new PublicKey(ref_info?.referral_address)
     }
     else {
       referralWallet = reserveWallet.publicKey;
     }
+    console.log("🚀 ~ referralWallet:", referralWallet)
     const referralFeePercent = ref_info?.referral_option ?? 0// 25%
 
 
@@ -531,6 +537,12 @@ export const feeHandler = async (
       if (referralFee > 0) {
         // If referral amount exist, you can store this data into the database
         // to calculate total revenue..
+        await ReferralHistoryControler.create({
+          username: username,
+          uniquecode: ref_info.uniquecode,
+          referrer_address: referralWallet,
+          amount: referralFee
+        })
       }
     }
   } catch (e) {

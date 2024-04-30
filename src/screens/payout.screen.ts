@@ -31,9 +31,10 @@ export const sendPayoutAddressManageScreen = async (
         //     `\n\n` +
         const caption = '<b>Payout address</b>👇\n' +
             `<b>SOL</b> wallet (Solana) 🔹\n${copytoclipboard(payout_wallet)}\n\n` +
+            `<b>Current referral percentage: First Month: 25%</b>`
 
-            // `<b>USDT</b> wallet (BNB-chain) 🔸\n${copytoclipboard(busdpayout)}\n\n` +
-            `Note: Payouts can be requests when profits reach a value of 20$.`
+        // `<b>USDT</b> wallet (BNB-chain) 🔸\n${copytoclipboard(busdpayout)}\n\n` +
+        // `Note: Payouts can be requests when profits reach a value of 20$.`
 
         const reply_markup = {
             inline_keyboard: [
@@ -43,12 +44,12 @@ export const sendPayoutAddressManageScreen = async (
                         'command': 'set_sol_address'
                     })
                 }],
-                [{
-                    text: 'Payout history',
-                    callback_data: JSON.stringify({
-                        'command': 'get_payout_history'
-                    })
-                }],
+                // [{
+                //     text: 'Payout history',
+                //     callback_data: JSON.stringify({
+                //         'command': 'get_payout_history'
+                //     })
+                // }],
                 [{
                     text: 'Refresh',
                     callback_data: JSON.stringify({

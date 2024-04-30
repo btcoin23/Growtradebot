@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse, isAxiosError } from 'axios';
 import { UserService } from './user.service';
 import { schedule } from 'node-cron';
+import referralHistory from '../models/referral.history';
 
 export type ReferralData = {
     username: string,
@@ -49,7 +50,7 @@ export const get_referral_info = async (username: string) => {
         referral: true,
         referral_option: referral_option,
         uniquecode: userInfo?.referral_code ?? "",
-        referral_address: referrerInfo?.referrer_wallet ?? referrerInfo?.wallet_address
+        referral_address: referrerInfo?.referrer_wallet == "" ? referrerInfo?.wallet_address : referrerInfo?.referrer_wallet
     };
 }
 export const get_referrer_info = async (username: string) => {
@@ -59,6 +60,20 @@ export const get_referrer_info = async (username: string) => {
         uniquecode: userInfo?.referrer_code ?? "",
         schedule: userInfo?.schedule ?? "60"
     };
+}
+
+export const get_referral_num = async (uniquecode: string) => {
+    let userList = await UserService.find({ referral_code: uniquecode });
+    return { num: userList.length }
+}
+
+export const get_referral_amount = async (uniquecode: string) => {
+    let referalList = await referralHistory.find({ uniquecode: uniquecode });
+    let totalAmount = 0;
+    for (let index = 0; index < referalList.length; index++) {
+        totalAmount += referalList[index].amount;
+    }
+    return { totalAmount: totalAmount / 100000 / 10000 }
 }
 
 export const getReferralList = async () => {

@@ -72,6 +72,18 @@ const User = new Schema({
   burn_fee: {
     type: Boolean,
     default: true
+  },
+  auto_buy: {
+    type: Boolean,
+    default: false
+  },
+  auto_buy_amount: {
+    type: String,
+    default: '0.1'
+  },
+  auto_sell_amount: {
+    type: String,
+    default: '30'
   }
 }, {
   timestamps: true  // This option adds createdAt and updatedAt fields

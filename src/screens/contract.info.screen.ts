@@ -40,7 +40,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       inline_keyboards[3] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
       inline_keyboards[4] = [{ text: "Sell X%", command: `sell_custom` }]
       inline_keyboards[5] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
-    } else { // (switchBtn == "switch_sell")  or null
+    } else {
       inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
       inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
       inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
@@ -50,7 +50,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     // check token metadata
     const tokeninfo = await TokenService.getMintInfo(mint);
     if (!tokeninfo) {
-      await sendNoneExistTokenNotification(bot, msg);
+      // await sendNoneExistTokenNotification(bot, msg);
       return;
     }
 
@@ -64,6 +64,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
 
     const solprice = await TokenService.getSOLPrice();
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
+    const solbalance = await TokenService.getSOLBalance(user.wallet_address);
 
     let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
@@ -112,7 +113,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
 
     if (switchBtn) {
-      bot.editMessageReplyMarkup(
+      const sentMessage = bot.editMessageReplyMarkup(
         {
           inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
             return {
@@ -128,18 +129,28 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
           chat_id,
         }
       );
-      await MsgLogService.findOneAndUpdate({
-        filter: {
-          username,
-          mint,
-          wallet_address: user.wallet_address,
-          chat_id,
-          msg_id: msg.message_id,
-        },
-        data: {
-          extra_key: switchBtn
-        }
+      await MsgLogService.create({
+        username,
+        mint,
+        wallet_address: user.wallet_address,
+        chat_id,
+        msg_id: msg.message_id,
+        sol_amount: solbalance,
+        spl_amount: splbalance,
+        extra_key: switchBtn
       });
+      // await MsgLogService.findOneAndUpdate({
+      //   filter: {
+      //     username,
+      //     mint,
+      //     wallet_address: user.wallet_address,
+      //     chat_id,
+      //     msg_id: msg.message_id,
+      //   },
+      //   data: {
+      //     extra_key: switchBtn
+      //   }
+      // });
     } else {
       const sentMessage = await bot.sendMessage(
         chat_id,
@@ -160,7 +171,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
         }
       );
 
-      const solbalance = await TokenService.getSOLBalance(user.wallet_address);
+
       bot.editMessageText(
         caption.replace(
           "Balance: loading...",
@@ -205,7 +216,6 @@ export const changeBuySellHandler = async (bot: TelegramBot, msg: TelegramBot.Me
   console.log("🚀 ~ changeBuySellHandler ~ command:", command)
   const chat_id = msg.chat.id;
   const username = msg.chat.username;
-
 }
 
 export const changeGasFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Message, gasfee: GasFeeEnum) => {
