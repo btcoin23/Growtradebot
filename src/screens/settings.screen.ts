@@ -148,13 +148,16 @@ export const presetBuyBtnHandler = async (bot: TelegramBot,
   );
 }
 
-export const autoBuyAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+export const autoBuyAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, replaceId: number) => {
   try {
     const chat_id = msg.chat.id;
     const username = msg.chat.username;
     if (!username) return;
     const user = await UserService.findOne({ username });
     if (!user) return;
+
+    const key = "autobuy_amount" + username;
+    await redisClient.set(key, replaceId);
 
     const sentMessage = await bot.sendMessage(
       chat_id,
@@ -609,12 +612,16 @@ export const setCustomAutoBuyAmountHandler = async (
     await UserService.findAndUpdateOne({ username }, { auto_buy_amount: amount });
     const sentSuccessMsg = await bot.sendMessage(chat_id, "AutoBuy amount changed successfully!");
 
+    const key = "autobuy_amount" + username;
+    const replaceId = await redisClient.get(key) ?? "0";
+
+    settingScreenHandler(bot, msg, parseInt(replaceId));
     setTimeout(() => {
       bot.deleteMessage(chat_id, sentSuccessMsg.message_id)
     }, 3000);
 
     setTimeout(() => {
-      bot.deleteMessage(chat_id, reply_message_id - 1);
+      // bot.deleteMessage(chat_id, reply_message_id - 1);
       bot.deleteMessage(chat_id, reply_message_id);
       bot.deleteMessage(chat_id, msg.message_id);
     }, 2000)

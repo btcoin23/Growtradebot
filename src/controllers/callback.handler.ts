@@ -54,7 +54,8 @@ export const callbackQueryHandler = async (
     }
 
     if (data.command.includes('autobuy_amount')) {
-      await autoBuyAmountScreenHandler(bot, callbackMessage);
+      const replaceId = callbackMessage.message_id;
+      await autoBuyAmountScreenHandler(bot, callbackMessage, replaceId);
       return;
     }
 
