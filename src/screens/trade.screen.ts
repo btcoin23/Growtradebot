@@ -289,7 +289,7 @@ export const sellHandler = async (
 
   if (!mint) return;
   // check if enough includes fee
-  if (sol_amount && sol_amount <= 0.005) {
+  if (sol_amount && sol_amount <= 0.0005) {
     bot.sendMessage(
       chat_id,
       "<b>⚠️ Insufficient SOL balance for gas fee!</b>",
