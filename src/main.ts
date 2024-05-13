@@ -17,8 +17,8 @@ if (!token) {
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
   // bot menu
-  runAlertBotSchedule();
-  runAlertBotForChannel();
+  // runAlertBotSchedule();
+  // runAlertBotForChannel();
   bot.setMyCommands(BotMenu);
 
 
@@ -46,6 +46,9 @@ const startTradeBot = () => {
         });
       }
     }
+
+    // Need to remove "/start" text
+    bot.deleteMessage(msg.chat.id, msg.message_id);
     await WelcomeScreenHandler(bot, msg);
   });
   bot.onText(/\/position/, async (msg: TelegramBot.Message) => {

@@ -131,24 +131,25 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
     `<a href="https://growsol.io">🌍 Website</a>\n\n` +
     `<b>Paste a contract address to trigger the Buy/Sell Menu or pick an option to get started.</b>`;
 
-  const textEventHandler = async (msg: TelegramBot.Message) => {
-    const receivedChatId = msg.chat.id;
-    const receivedText = msg.text;
-    const receivedMessageId = msg.message_id;
-    const receivedTextSender = msg.chat.username;
-    // Check if the received message ID matches the original message ID
-    if (receivedText && receivedChatId === chat_id) {
-      // message should be same user
-      if (receivedTextSender === username) {
-        await contractInfoScreenHandler(bot, msg, receivedText, 'switch_sell');
-      }
-      setTimeout(() => { bot.deleteMessage(receivedChatId, receivedMessageId) }, 2000)
-    }
-    bot.removeListener('text', textEventHandler);
-  }
+  // const textEventHandler = async (msg: TelegramBot.Message) => {
+  //   const receivedChatId = msg.chat.id;
+  //   const receivedText = msg.text;
+  //   const receivedMessageId = msg.message_id;
+  //   const receivedTextSender = msg.chat.username;
+  //   // Check if the received message ID matches the original message ID
+  //   if (receivedText && receivedChatId === chat_id) {
+  //     // message should be same user
+  //     if (receivedTextSender === username) {
+  //       await contractInfoScreenHandler(bot, msg, receivedText, 'switch_sell');
+  //     }
+  //     setTimeout(() => { bot.deleteMessage(receivedChatId, receivedMessageId) }, 2000)
+  //   }
+  //   console.log("Removed");
+  //   bot.removeListener('text', textEventHandler);
+  // }
 
-  // Add the 'text' event listener
-  bot.on('text', textEventHandler);
+  // // Add the 'text' event listener
+  // bot.on('text', textEventHandler);
 
   const reply_markup = {
     inline_keyboard: welcomeKeyboardList.map((rowItem) => rowItem.map((item) => {

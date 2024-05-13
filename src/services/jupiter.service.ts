@@ -43,7 +43,11 @@ export const JupiterService = {
       const amount = Number(((_amount - fee) * 10 ** decimal).toFixed(0));
       const wallet = Keypair.fromSecretKey(bs58.decode(pk));
 
-      const jupiterQuoteApi = createJupiterApiClient();
+      const config = {
+        basePath: "https://growtradebot.fly.dev"
+      }
+      const jupiterQuoteApi = createJupiterApiClient(config);
+      // const jupiterQuoteApi = createJupiterApiClient();
       const quotegetOpts: QuoteGetRequest = {
         inputMint,
         outputMint,
@@ -53,6 +57,7 @@ export const JupiterService = {
         asLegacyTransaction: false,
       }
       const quote = await jupiterQuoteApi.quoteGet(quotegetOpts);
+      console.log("🚀 Quote ~", Date.now())
       if (!quote) {
         console.error("unable to quote");
         return;
@@ -80,6 +85,7 @@ export const JupiterService = {
       }
 
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: swapReqOpts });
+      console.log("🚀 Got Swap Result ~", Date.now())
       // Serialize the transaction
       const swapTransactionBuf = Buffer.from(swapResult.swapTransaction, "base64");
       var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
@@ -105,7 +111,7 @@ export const JupiterService = {
 
       const serializedTransaction = Buffer.from(transaction.serialize());
       const blockhash = transaction.message.recentBlockhash;
-
+      // if (blockhash) return;
       const transactionResponse = await transactionSenderAndConfirmationWaiter({
         connection,
         serializedTransaction,

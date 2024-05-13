@@ -146,7 +146,7 @@ export const buyHandler = async (
   const chat_id = msg.chat.id;
   const username = msg.chat.username;
   if (!username) return;
-
+  console.log("Buy:", Date.now())
   const user = await UserService.findOne({ username });
   if (!user) return;
 
@@ -154,8 +154,8 @@ export const buyHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
-  console.log("🚀 ~ msglog:", msglog)
-  console.log("🚀 ~ msg.message_id:", msg.message_id)
+  // console.log("🚀 ~ msglog:", msglog)
+  // console.log("🚀 ~ msg.message_id:", msg.message_id)
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
 
@@ -199,9 +199,8 @@ export const buyHandler = async (
       parse_mode: 'HTML'
     }
   )
-
   const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
-
+  console.log("Buy start:", Date.now())
   // buy token
   const quoteResult = await JupiterService.swapToken(
     user.private_key,
@@ -280,8 +279,8 @@ export const sellHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id
   });
-  console.log("🚀 ~ msg.message_id:", msg.message_id)
-  console.log("🚀 ~ msglog:", msglog)
+  // console.log("🚀 ~ msg.message_id:", msg.message_id)
+  // console.log("🚀 ~ msglog:", msglog)
 
   if (!msglog) return;
   const { mint, spl_amount, sol_amount } = msglog;
