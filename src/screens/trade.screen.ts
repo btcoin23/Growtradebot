@@ -14,12 +14,11 @@ import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard } from "../utils";
 import { PositionService } from "../services/position.service";
 import bs58 from "bs58";
-import { RESERVE_KEY, connection } from "../config";
+import { RESERVE_WALLET, connection } from "../config";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 import { get_referral_info } from "../services/referral.service";
 import { ReferralHistoryControler } from "../controllers/referral.history";
 
-const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   try {
@@ -473,7 +472,7 @@ export const feeHandler = async (
       referralWallet = new PublicKey(ref_info?.referral_address)
     }
     else {
-      referralWallet = reserveWallet.publicKey;
+      referralWallet = RESERVE_WALLET;
     }
     console.log("🚀 ~ referralWallet:", referralWallet)
     const referralFeePercent = ref_info?.referral_option ?? 0// 25%
@@ -494,7 +493,7 @@ export const feeHandler = async (
       instructions.push(
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
-          toPubkey: reserveWallet.publicKey,
+          toPubkey: RESERVE_WALLET,
           lamports: reserverStakingFee,
         })
       )

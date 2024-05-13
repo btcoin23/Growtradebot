@@ -3,14 +3,13 @@ import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, T
 import { QuoteGetRequest, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
 import { ReferralProvider } from "@jup-ag/referral-sdk";
-import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_KEY, connection } from "../config";
+import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_WALLET, connection } from "../config";
 import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
 import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
 import redisClient, { ITradeGasSetting } from "./redis";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 
-const reserveWallet = Keypair.fromSecretKey(bs58.decode(RESERVE_KEY));
 const provider = new ReferralProvider(connection);
 
 export const JupiterService = {
@@ -139,107 +138,107 @@ export const JupiterService = {
       return null;
     }
   },
-  createReferralAccount: async () => {
-    const referralAccountKeypair = Keypair.generate();
-    const tx = await provider.initializeReferralAccount({
-      payerPubKey: reserveWallet.publicKey,
-      partnerPubKey: reserveWallet.publicKey,
-      projectPubKey: JUPITER_PROJECT,
-      referralAccountPubKey: referralAccountKeypair.publicKey,
-    });
+  // createReferralAccount: async () => {
+  //   const referralAccountKeypair = Keypair.generate();
+  //   const tx = await provider.initializeReferralAccount({
+  //     payerPubKey: RESERVE_WALLET,
+  //     partnerPubKey: RESERVE_WALLET,
+  //     projectPubKey: JUPITER_PROJECT,
+  //     referralAccountPubKey: referralAccountKeypair.publicKey,
+  //   });
 
-    const referralAccount = await connection.getAccountInfo(
-      referralAccountKeypair.publicKey,
-    );
+  //   const referralAccount = await connection.getAccountInfo(
+  //     referralAccountKeypair.publicKey,
+  //   );
 
-    if (!referralAccount) {
-      const txId = await sendAndConfirmTransaction(connection, tx, [
-        reserveWallet,
-        referralAccountKeypair,
-      ]);
-      console.log({
-        txId,
-        referralAccountPubKey: referralAccountKeypair.publicKey.toBase58(),
-      });
-    } else {
-      console.log(
-        `referralAccount ${referralAccountKeypair.publicKey.toBase58()} already exists`,
-      );
-    }
-  },
-  createReferralTokenAccount: async (mintstr: string) => {
-    const mint = new PublicKey(mintstr);
-    const key = `referral_${mintstr}`;
-    const data = await redisClient.get(key);
-    if (data) {
-      return data;
-    }
-    const { tx, referralTokenAccountPubKey } =
-      await provider.initializeReferralTokenAccount({
-        payerPubKey: reserveWallet.publicKey,
-        referralAccountPubKey: new PublicKey(
-          REFERRAL_ACCOUNT,
-        ), // Referral Key. You can create this with createReferralAccount.ts.
-        mint,
-      });
+  //   if (!referralAccount) {
+  //     const txId = await sendAndConfirmTransaction(connection, tx, [
+  //       reserveWallet,
+  //       referralAccountKeypair,
+  //     ]);
+  //     console.log({
+  //       txId,
+  //       referralAccountPubKey: referralAccountKeypair.publicKey.toBase58(),
+  //     });
+  //   } else {
+  //     console.log(
+  //       `referralAccount ${referralAccountKeypair.publicKey.toBase58()} already exists`,
+  //     );
+  //   }
+  // },
+  // createReferralTokenAccount: async (mintstr: string) => {
+  //   const mint = new PublicKey(mintstr);
+  //   const key = `referral_${mintstr}`;
+  //   const data = await redisClient.get(key);
+  //   if (data) {
+  //     return data;
+  //   }
+  //   const { tx, referralTokenAccountPubKey } =
+  //     await provider.initializeReferralTokenAccount({
+  //       payerPubKey: RESERVE_WALLET,
+  //       referralAccountPubKey: new PublicKey(
+  //         REFERRAL_ACCOUNT,
+  //       ), // Referral Key. You can create this with createReferralAccount.ts.
+  //       mint,
+  //     });
 
-    const referralTokenAccount = await connection.getAccountInfo(
-      referralTokenAccountPubKey,
-    );
+  //   const referralTokenAccount = await connection.getAccountInfo(
+  //     referralTokenAccountPubKey,
+  //   );
 
-    if (!referralTokenAccount) {
-      const txId = await sendAndConfirmTransaction(connection, tx, [reserveWallet]);
-      console.log({
-        txId,
-        referralTokenAccountPubKey: referralTokenAccountPubKey.toBase58(),
-      });
-      await redisClient.set(key, referralTokenAccountPubKey.toBase58());
-    } else {
-      console.log(
-        `referralTokenAccount ${referralTokenAccountPubKey.toBase58()} for mint ${mint.toBase58()} already exists`,
-      );
-      await redisClient.set(key, referralTokenAccountPubKey.toBase58());
-    }
-  },
-  claimAll: async () => {
-    try {
-      // This method will returns a list of transactions for all claims batched by 5 claims for each transaction.
-      const tx = await provider.claim({
-        payerPubKey: reserveWallet.publicKey,
-        referralAccountPubKey: new PublicKey(
-          REFERRAL_ACCOUNT,
-        ), // Referral Key. You can create this with createReferralAccount.ts.
-        mint: NATIVE_MINT
-      });
+  //   if (!referralTokenAccount) {
+  //     const txId = await sendAndConfirmTransaction(connection, tx, [reserveWallet]);
+  //     console.log({
+  //       txId,
+  //       referralTokenAccountPubKey: referralTokenAccountPubKey.toBase58(),
+  //     });
+  //     await redisClient.set(key, referralTokenAccountPubKey.toBase58());
+  //   } else {
+  //     console.log(
+  //       `referralTokenAccount ${referralTokenAccountPubKey.toBase58()} for mint ${mint.toBase58()} already exists`,
+  //     );
+  //     await redisClient.set(key, referralTokenAccountPubKey.toBase58());
+  //   }
+  // },
+  // claimAll: async () => {
+  //   try {
+  //     // This method will returns a list of transactions for all claims batched by 5 claims for each transaction.
+  //     const tx = await provider.claim({
+  //       payerPubKey: RESERVE_WALLET,
+  //       referralAccountPubKey: new PublicKey(
+  //         REFERRAL_ACCOUNT,
+  //       ), // Referral Key. You can create this with createReferralAccount.ts.
+  //       mint: NATIVE_MINT
+  //     });
 
-      // Send each claim transaction one by one.
-      let retires = 0;
-      do {
-        try {
-          // tx.sign([reserveWallet]);
-          const { blockhash, lastValidBlockHeight } =
-            await connection.getLatestBlockhash();
-          const txid = await connection.sendTransaction(tx, [reserveWallet]);
-          const { value } = await connection.confirmTransaction({
-            signature: txid,
-            blockhash,
-            lastValidBlockHeight,
-          });
+  //     // Send each claim transaction one by one.
+  //     let retires = 0;
+  //     do {
+  //       try {
+  //         // tx.sign([reserveWallet]);
+  //         const { blockhash, lastValidBlockHeight } =
+  //           await connection.getLatestBlockhash();
+  //         const txid = await connection.sendTransaction(tx, [reserveWallet]);
+  //         const { value } = await connection.confirmTransaction({
+  //           signature: txid,
+  //           blockhash,
+  //           lastValidBlockHeight,
+  //         });
 
-          if (value.err) {
-            retires++;
-          } else {
-            console.log(`ClaimAll: https://solscan.io/tx/${txid}`);
-            retires = 10;
-          }
-        } catch (e) {
-          retires++;
-        }
-      } while (retires < 5);
-    } catch (e) {
-      console.log("ClaimAll Failed", e);
-    }
-  },
+  //         if (value.err) {
+  //           retires++;
+  //         } else {
+  //           console.log(`ClaimAll: https://solscan.io/tx/${txid}`);
+  //           retires = 10;
+  //         }
+  //       } catch (e) {
+  //         retires++;
+  //       }
+  //     } while (retires < 5);
+  //   } catch (e) {
+  //     console.log("ClaimAll Failed", e);
+  //   }
+  // },
   transferFeeSOL: async (fee: number, wallet: Keypair) => {
     if (fee <= 0) return;
     let retires = 0;
@@ -257,7 +256,7 @@ export const JupiterService = {
             }),
             SystemProgram.transfer({
               fromPubkey: wallet.publicKey,
-              toPubkey: reserveWallet.publicKey,
+              toPubkey: RESERVE_WALLET,
               lamports: amount,
             })
           ],

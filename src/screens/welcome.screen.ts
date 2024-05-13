@@ -37,9 +37,9 @@ export const WelcomeScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Me
     }
     // send welcome guide
     await welcomeGuideHandler(bot, msg);
-    await bot.deleteMessage(chat_id, msg.message_id);
+    // await bot.deleteMessage(chat_id, msg.message_id);
   } catch (error) {
-    console.log(error);
+    console.log("-WelcomeScreenHandler-", error);
   }
 }
 

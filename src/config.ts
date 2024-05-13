@@ -3,16 +3,12 @@ import { Connection, PublicKey } from "@solana/web3.js";
 export const MONGODB_URL = process.env.MONGODB_URL || "mongodb://127.0.0.1:27017/growtrade";
 export const TELEGRAM_BOT_API_TOKEN = process.env.TELEGRAM_BOT_API_TOKEN;
 export const ALERT_BOT_TOKEN_SECRET = process.env.ALERT_BOT_API_TOKEN;
-export const RESERVE_KEY = process.env.RESERVE_KEY || "";
-if (RESERVE_KEY === "") {
-  throw new Error("Missing RESERVE_KEY");
-}
 export const REDIS_URI = process.env.REDIS_URI || "redis://localhost:6379";
 
 export const MAINNET_RPC = process.env.MAINNET_RPC || "https://api.mainnet-beta.solana.com";
 export const COMMITMENT_LEVEL = 'finalized';
 export const connection = new Connection(MAINNET_RPC, COMMITMENT_LEVEL);
-
+export const RESERVE_WALLET = new PublicKey("B474hx9ktA2pq48ctLm9QXJpfitg59AWwMEQRn7YhyB7");
 export const BIRDEYE_API_URL = "https://public-api.birdeye.so";
 export const BIRDEYE_API_KEY = process.env.BIRD_EVEY_API || "";
 export const REQUEST_HEADER = {
