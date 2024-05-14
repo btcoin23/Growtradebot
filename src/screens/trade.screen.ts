@@ -146,7 +146,7 @@ export const buyHandler = async (
   const chat_id = msg.chat.id;
   const username = msg.chat.username;
   if (!username) return;
-  console.log("Buy:", Date.now())
+  console.log("Buy1:", Date.now())
   const user = await UserService.findOne({ username });
   if (!user) return;
   console.log("Buy2:", Date.now())
@@ -202,16 +202,14 @@ export const buyHandler = async (
   const buycaption = getcaption(`🕒 <b>Buy in progress</b>\n`);
   console.log("Buy7:", Date.now())
 
-  let pendingTxMsgId = 0;
-  bot.sendMessage(
+  const pendingTxMsg = await bot.sendMessage(
     chat_id,
     buycaption,
     {
       parse_mode: 'HTML'
     }
-  ).then((pendingTxMsg) => {
-    pendingTxMsgId = pendingTxMsg.message_id;
-  })
+  );
+  const pendingTxMsgId = pendingTxMsg.message_id;
   console.log("Buy8:", Date.now())
 
   const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
