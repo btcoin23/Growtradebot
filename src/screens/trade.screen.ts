@@ -149,6 +149,7 @@ export const buyHandler = async (
   console.log("Buy:", Date.now())
   const user = await UserService.findOne({ username });
   if (!user) return;
+  console.log("Buy2:", Date.now())
 
   const msglog = await MsgLogService.findOne({
     username,
@@ -156,10 +157,14 @@ export const buyHandler = async (
   });
   // console.log("🚀 ~ msglog:", msglog)
   // console.log("🚀 ~ msg.message_id:", msg.message_id)
+  console.log("Buy3:", Date.now())
+
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
 
   const gassetting = await UserTradeSettingService.getGas(username);
+  console.log("Buy4:", Date.now())
+
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
   if (!mint) return;
   // Insufficient check check if enough includes fee
@@ -178,11 +183,15 @@ export const buyHandler = async (
 
   const mintinfo = await TokenService.getMintInfo(mint);
   if (!mintinfo) return;
+  console.log("Buy5:", Date.now())
+
   const { name, symbol, decimals } = mintinfo.overview;
   const { isToken2022 } = mintinfo.secureinfo;
   const solprice = await TokenService.getSOLPrice();
+  console.log("Buy6:", Date.now())
+
   // send Notification
-  const getcaption = async (status: string, suffix: string = "") => {
+  const getcaption = (status: string, suffix: string = "") => {
     const securecaption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
       `<i>${copytoclipboard(mint)}</i>\n` + status +
@@ -190,15 +199,21 @@ export const buyHandler = async (
 
     return securecaption;
   }
-  const buycaption = await getcaption(`🕒 <b>Buy in progress</b>\n`);
+  const buycaption = getcaption(`🕒 <b>Buy in progress</b>\n`);
+  console.log("Buy7:", Date.now())
 
-  const pendingMessage = await bot.sendMessage(
+  let pendingTxMsgId = 0;
+  bot.sendMessage(
     chat_id,
     buycaption,
     {
       parse_mode: 'HTML'
     }
-  )
+  ).then((pendingTxMsg) => {
+    pendingTxMsgId = pendingTxMsg.message_id;
+  })
+  console.log("Buy8:", Date.now())
+
   const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
   console.log("Buy start:", Date.now())
   // buy token
@@ -212,21 +227,25 @@ export const buyHandler = async (
     gasvalue,
     user.burn_fee ?? true
   );
+
   if (quoteResult) {
     const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    const successCaption = await getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
+    const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
-    bot.editMessageText(
-      successCaption,
-      {
-        message_id: pendingMessage.message_id,
-        chat_id,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      }
-    )
+    // Just in case
+    try {
+      bot.editMessageText(
+        successCaption,
+        {
+          message_id: pendingTxMsgId,
+          chat_id,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+        }
+      )
+    } catch (e) { }
 
     const volume = amount * solprice;
     const buydata = {
@@ -248,11 +267,11 @@ export const buyHandler = async (
       isToken2022
     );
   } else {
-    const failedCaption = await getcaption(`🔴 <b>Buy Failed</b>\n`);
+    const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     bot.editMessageText(
       failedCaption,
       {
-        message_id: pendingMessage.message_id,
+        message_id: pendingTxMsgId,
         chat_id,
         parse_mode: 'HTML',
         disable_web_page_preview: true,

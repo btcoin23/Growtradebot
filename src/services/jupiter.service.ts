@@ -101,6 +101,9 @@ export const JupiterService = {
         });
       const { err, logs } = simulatedTransactionResponse;
 
+      console.log("🚀 Simulate ~", Date.now())
+      if (!err) return;
+
       if (err) {
         // Simulation error, we can check the logs for more details
         // If you are getting an invalid account error, make sure that you have the input mint account to actually swap from.

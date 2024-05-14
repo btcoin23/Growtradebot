@@ -8,6 +8,7 @@ import { positionScreenHandler } from "./screens/position.screen";
 import { UserService } from "./services/user.service";
 import { alertBot, runAlertBotForChannel, runAlertBotSchedule } from "./cron/alert.bot.cron";
 import { newReferralChannelHandler, removeReferralChannelHandler } from "./services/alert.bot.module";
+import { runSOLPriceUpdateSchedule } from "./cron/sol.price.cron";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -19,6 +20,7 @@ const startTradeBot = () => {
   // bot menu
   // runAlertBotSchedule();
   // runAlertBotForChannel();
+  runSOLPriceUpdateSchedule();
   bot.setMyCommands(BotMenu);
 
 
