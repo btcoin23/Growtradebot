@@ -9,7 +9,8 @@ import { getSignature } from "../utils/get.signature";
 import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
 import redisClient, { ITradeGasSetting } from "./redis";
 import { sendTransactionV0 } from "../utils/v0.transaction";
-import { JitoBundleService } from "./jito.bundle";
+import { JitoBundleService, tipAccounts } from "./jito.bundle";
+import { FeeService } from "./fee.service";
 
 const provider = new ReferralProvider(connection);
 
@@ -28,6 +29,7 @@ export class JupiterService {
       data: Buffer.from(instruction.data, "base64"),
     });
   };
+
   async getAdressLookupTableAccounts(
     keys: string[], connection: Connection
   ): Promise<AddressLookupTableAccount[]> {
@@ -58,7 +60,9 @@ export class JupiterService {
     _amount: number,
     _slippage: number,
     gasFee: number,
-    isFeeBurn: boolean
+    isFeeBurn: boolean,
+    username: string,
+    isToken2022: boolean
   ) {
     try {
       let total_fee_in_sol = 0;
@@ -115,10 +119,7 @@ export class JupiterService {
         quoteResponse: quote,
         userPublicKey: wallet.publicKey.toBase58(),
         dynamicComputeUnitLimit: true,
-        // prioritizationFeeLamports: Number(gasfeeValue.toFixed(0)),
-        prioritizationFeeLamports: {
-          jitoTipLamports: 1500000,
-        }
+        prioritizationFeeLamports: Number(gasfeeValue.toFixed(0)),
       }
 
       const swapInstructions: SwapInstructionsResponse = await jupiterQuoteApi.swapInstructionsPost({ swapRequest: swapReqOpts });
@@ -139,6 +140,29 @@ export class JupiterService {
         this.instructionDataToTransactionInstruction(swapInstruction),
         this.instructionDataToTransactionInstruction(cleanupInstruction),
       ].filter((ix) => ix !== null) as TransactionInstruction[];
+
+      // JitoTipOption
+      instructions.push(
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: new PublicKey(tipAccounts[0]),
+          lamports: 1_500_000
+        })
+      )
+
+      // Referral Fee, ReserverStaking Fee, Burn Token
+      console.log("Before Fee: ", Date.now())
+      const feeInstruction = await (new FeeService()).getFeeInstructions(
+        total_fee_in_sol,
+        total_fee_in_token,
+        username,
+        pk,
+        is_buy ? outputMint : inputMint,
+        isToken2022
+      );
+      instructions.push(...feeInstruction);
+      console.log("After Fee: ", Date.now())
+
       const addressLookupTableAccounts = await this.getAdressLookupTableAccounts(
         addressLookupTableAddresses,
         connection

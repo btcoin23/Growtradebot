@@ -224,7 +224,9 @@ export const buyHandler = async (
     amount,
     slippage,
     gasvalue,
-    user.burn_fee ?? true
+    user.burn_fee ?? true,
+    username,
+    isToken2022
   );
 
   if (quoteResult) {
@@ -360,7 +362,9 @@ export const sellHandler = async (
     sellAmount,
     slippage,
     gasvalue,
-    user.burn_fee ?? true
+    user.burn_fee ?? true,
+    username,
+    isToken2022
   );
   if (quoteResult) {
     const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
@@ -480,6 +484,7 @@ export const feeHandler = async (
   mint: string,
   isToken2022: boolean
 ) => {
+  if (username) return;
   try {
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
     let ref_info = await get_referral_info(username);

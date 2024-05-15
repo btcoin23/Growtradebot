@@ -31,6 +31,6 @@ const updateSolPrice = async () => {
     const price = res.data.value;
     await redisClient.set(key, price);
   } catch (e) {
-    console.log("🚀 ~ SOL price cron job ~ Failed")
+    console.log("🚀 ~ SOL price cron job ~ Failed", e)
   }
 }

@@ -26,11 +26,9 @@ export const tipAccounts = [
 
 export class JitoBundleService {
   endpoint: string;
-  tipAccount: string;
 
   constructor(_region: Region) {
     this.endpoint = endpoints[_region];
-    this.tipAccount = tipAccounts[0];
   }
 
   async sendTransaction(serializedTransaction: Uint8Array) {
