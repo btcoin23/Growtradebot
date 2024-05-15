@@ -18,7 +18,9 @@ export const inline_keyboards = [
   [{ text: "🔄 Refresh", command: 'refresh' }, { text: "❌ Close", command: 'dismiss_message' }]
 ]
 
-export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message, mint: string, switchBtn?: string) => {
+export const contractInfoScreenHandler = async (
+  bot: TelegramBot, msg: TelegramBot.Message, mint: string, switchBtn?: string, fromPosition?: boolean
+) => {
   try {
     const { id: chat_id, username } = msg.chat;
 
@@ -67,7 +69,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
     const solbalance = await TokenService.getSOLBalance(user.wallet_address);
 
-    let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
+    // let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
     const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
     if (position) {
       const { sol_amount } = position;
@@ -95,7 +97,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
       `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🟥' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n` +
       // `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-      `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
+      // `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
       `💳 <b>Balance: loading... </b>\n` +
       `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
@@ -113,7 +115,7 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
     }
     inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
 
-    if (switchBtn) {
+    if (switchBtn && !fromPosition) {
       const sentMessage = bot.editMessageReplyMarkup(
         {
           inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
@@ -208,21 +210,24 @@ export const contractInfoScreenHandler = async (bot: TelegramBot, msg: TelegramB
         extra_key: switchBtn
       });
     }
-    const autoBuyAmount = parseFloat(user.auto_buy_amount);
-    console.log("🚀 ~ contractInfoScreenHandler ~ autoBuyAmount:", autoBuyAmount)
-    if (user.auto_buy) {
-      console.log("🚀 ~ contractInfoScreenHandler ~ user.auto_buy:", user.auto_buy)
-      await autoBuyHandler(
-        bot,
-        msg,
-        user,
-        mint,
-        autoBuyAmount,
-        solbalance,
-        gasvalue,
-        tokeninfo,
-        slippage
-      )
+
+    if (!switchBtn || switchBtn.includes("sell")) {
+      const autoBuyAmount = parseFloat(user.auto_buy_amount);
+      console.log("🚀 ~ contractInfoScreenHandler ~ autoBuyAmount:", autoBuyAmount)
+      if (user.auto_buy) {
+        console.log("🚀 ~ contractInfoScreenHandler ~ user.auto_buy:", user.auto_buy)
+        await autoBuyHandler(
+          bot,
+          msg,
+          user,
+          mint,
+          autoBuyAmount,
+          solbalance,
+          gasvalue,
+          tokeninfo,
+          slippage
+        )
+      }
     }
   } catch (e) {
     console.log("~ contractInfoScreenHandler ~", e);
@@ -332,7 +337,7 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     const solbalance = await TokenService.getSOLBalance(user.wallet_address, true);
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
 
-    let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
+    // let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
 
     let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
@@ -364,7 +369,7 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
       // `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
       `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🟥' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-      `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
+      // `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
       `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
       `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +

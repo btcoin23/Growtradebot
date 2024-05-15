@@ -106,7 +106,7 @@ export const positionScreenHandler = async (
       transferInlineKeyboards[Math.floor(idx / 3)].push({
         text: `${symbol ? symbol : mintAddress}`,
         callback_data: JSON.stringify({
-          'command': `BS_${mintAddress}`
+          'command': `SPS_${mintAddress}`
         })
       });
 

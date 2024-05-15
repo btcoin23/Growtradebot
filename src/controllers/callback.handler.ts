@@ -65,6 +65,13 @@ export const callbackQueryHandler = async (
       return;
     }
 
+    // click on mint symbol from position
+    if (data.command.includes('SPS_')) {
+      const mint = data.command.slice(3);
+      await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_buy", true);
+      return;
+    }
+
     if (data.command.includes('BS_')) {
       const mint = data.command.slice(3);
       await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_buy");
