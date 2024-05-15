@@ -110,10 +110,10 @@ export const checkReferralFeeSent = async (
 ) => {
     try {
         console.log("Calculate Referral Fee to wallet starts");
-        const maxRetry = 10;
+        const maxRetry = 30;
         let retries = 0;
         while (retries < maxRetry) {
-            await wait(4_000);
+            await wait(2_000);
             retries++;
 
             const tx = await connection.getSignatureStatus(signature, {
@@ -126,6 +126,7 @@ export const checkReferralFeeSent = async (
             }
             if (tx?.value?.confirmationStatus === "confirmed") {
                 retries = 0;
+                console.log("Transaction confirmed!!!");
                 break;
             }
         }
