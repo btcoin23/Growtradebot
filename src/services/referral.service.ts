@@ -109,6 +109,7 @@ export const checkReferralFeeSent = async (
     signature: string
 ) => {
     try {
+        console.log("Calculate Referral Fee to wallet starts");
         const maxRetry = 5;
         let retries = 0;
         while (retries < maxRetry) {
@@ -156,6 +157,8 @@ export const checkReferralFeeSent = async (
                 amount: referralFee
             })
         }
+        console.log("Calculate Referral Fee to wallet ends");
+
     } catch (e) {
         console.log("CheckReferralFeeSent Failed");
     }
