@@ -84,11 +84,11 @@ export class JupiterService {
       const amount = Number(((_amount - fee) * 10 ** decimal).toFixed(0));
       const wallet = Keypair.fromSecretKey(bs58.decode(pk));
 
-      // const config = {
-      //   basePath: "https://growtradebot.fly.dev"
-      // }
-      // const jupiterQuoteApi = createJupiterApiClient(config);
-      const jupiterQuoteApi = createJupiterApiClient();
+      const config = {
+        basePath: "https://growtradebot.fly.dev"
+      }
+      const jupiterQuoteApi = createJupiterApiClient(config);
+      // const jupiterQuoteApi = createJupiterApiClient();
       const quotegetOpts: QuoteGetRequest = {
         inputMint,
         outputMint,
