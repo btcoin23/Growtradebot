@@ -248,18 +248,36 @@ export const buyHandler = async (
       )
     } catch (e) { }
 
-    const volume = amount * solprice;
-    const buydata = {
-      username,
-      chat_id,
-      mint,
-      wallet_address: user.wallet_address,
-      volume,
-      amount
-    };
-    await PositionService.updateBuyPosition(buydata);
+    const result = await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    if (result === true) {
+      const volume = amount * solprice;
+      const buydata = {
+        username,
+        chat_id,
+        mint,
+        wallet_address: user.wallet_address,
+        volume,
+        amount
+      };
+      await PositionService.updateBuyPosition(buydata);
+    } else if (result === null) {
+      const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+      const successCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
 
-    await checkReferralFeeSent(total_fee_in_sol, username, signature);
+      // Just in case
+      try {
+        bot.editMessageText(
+          successCaption,
+          {
+            message_id: pendingTxMsgId,
+            chat_id,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+            reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+          }
+        )
+      } catch (e) { }
+    }
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     bot.editMessageText(
@@ -364,18 +382,37 @@ export const autoBuyHandler = async (
       )
     } catch (e) { }
 
-    const volume = amount * solprice;
-    const buydata = {
-      username,
-      chat_id,
-      mint,
-      wallet_address: user.wallet_address,
-      volume,
-      amount
-    };
-    await PositionService.updateBuyPosition(buydata);
 
-    await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    const result = await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    if (result === true) {
+      const volume = amount * solprice;
+      const buydata = {
+        username,
+        chat_id,
+        mint,
+        wallet_address: user.wallet_address,
+        volume,
+        amount
+      };
+      await PositionService.updateBuyPosition(buydata);
+    } else if (result === null) {
+      const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+      const successCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
+
+      // Just in case
+      try {
+        bot.editMessageText(
+          successCaption,
+          {
+            message_id: pendingTxMsgId,
+            chat_id,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+            reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+          }
+        )
+      } catch (e) { }
+    }
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     bot.editMessageText(
@@ -439,7 +476,7 @@ export const sellHandler = async (
   const sellAmount = splbalance * percent / 100;
 
   // send Notification
-  const getcaption = async (status: string, suffix: string = "") => {
+  const getcaption = (status: string, suffix: string = "") => {
 
     const securecaption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
@@ -448,7 +485,7 @@ export const sellHandler = async (
     return securecaption;
   }
 
-  const buycaption = await getcaption(`🕒 <b>Sell in progress</b>\n`);
+  const buycaption = getcaption(`🕒 <b>Sell in progress</b>\n`);
   const pendingMessage = await bot.sendMessage(
     chat_id,
     buycaption,
@@ -478,7 +515,7 @@ export const sellHandler = async (
   if (quoteResult) {
     const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    const successCaption = await getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+    const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
     bot.editMessageText(
       successCaption,
@@ -490,18 +527,38 @@ export const sellHandler = async (
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       }
     )
-    // sell updates
-    const selldata = {
-      username,
-      chat_id,
-      mint,
-      wallet_address: user.wallet_address,
-      percent
-    };
-    await PositionService.updateSellPosition(selldata);
-    await checkReferralFeeSent(total_fee_in_sol, username, signature);
+
+    const result = await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    if (result === true) {
+      // sell updates
+      const selldata = {
+        username,
+        chat_id,
+        mint,
+        wallet_address: user.wallet_address,
+        percent
+      };
+      await PositionService.updateSellPosition(selldata);
+    } else if (result === null) {
+      const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
+
+      // Just in case
+      try {
+        bot.editMessageText(
+          failedCaption,
+          {
+            message_id: pendingMessage.message_id,
+            chat_id,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+            reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+          }
+        )
+      } catch (e) { }
+    }
   } else {
-    const failedCaption = await getcaption(`🔴 <b>Sell Failed</b>\n`);
+    const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
     bot.editMessageText(
       failedCaption,
       {
