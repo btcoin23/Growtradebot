@@ -152,7 +152,7 @@ export class JupiterService {
 
       // Referral Fee, ReserverStaking Fee, Burn Token
       console.log("Before Fee: ", Date.now())
-      const feeInstruction = await (new FeeService()).getFeeInstructions(
+      const feeInstructions = await (new FeeService()).getFeeInstructions(
         total_fee_in_sol,
         total_fee_in_token,
         username,
@@ -160,7 +160,7 @@ export class JupiterService {
         is_buy ? outputMint : inputMint,
         isToken2022
       );
-      instructions.push(...feeInstruction);
+      instructions.push(...feeInstructions);
       console.log("After Fee: ", Date.now())
 
       const addressLookupTableAccounts = await this.getAdressLookupTableAccounts(

@@ -71,7 +71,7 @@ const User = new Schema({
   },
   burn_fee: {
     type: Boolean,
-    default: true
+    default: false
   },
   auto_buy: {
     type: Boolean,

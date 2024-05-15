@@ -2,6 +2,10 @@ import axios, { AxiosError, AxiosResponse, isAxiosError } from 'axios';
 import { UserService } from './user.service';
 import { schedule } from 'node-cron';
 import referralHistory from '../models/referral.history';
+import { ReferralHistoryControler } from '../controllers/referral.history';
+import { PublicKey } from '@solana/web3.js';
+import { connection } from '../config';
+import { wait } from '../utils/wait';
 
 export type ReferralData = {
     username: string,
@@ -96,5 +100,63 @@ export const update_channel_id = async (username: string, idx: number, channelId
         return null;
     } catch (error) {
         return null;
+    }
+}
+
+export const checkReferralFeeSent = async (
+    total_fee_in_sol: number,
+    username: string,
+    signature: string
+) => {
+    try {
+        const maxRetry = 5;
+        let retries = 0;
+        while (retries < maxRetry) {
+            await wait(4_000);
+            retries++;
+
+            const tx = await connection.getSignatureStatus(signature, {
+                searchTransactionHistory: false,
+            });
+            if (tx?.value?.err) {
+                retries = maxRetry * 2;
+                break;
+            }
+            if (tx?.value?.confirmationStatus === "confirmed") {
+                retries = 0;
+                break;
+            }
+        }
+
+        if (retries > maxRetry) return;
+
+        connection.getSignatureStatus(signature, {
+            searchTransactionHistory: false,
+        })
+        let ref_info = await get_referral_info(username);
+        if (!ref_info) return;
+
+        const {
+            referral_option,
+            referral_address
+        } = ref_info;
+        if (!referral_address) return;
+
+        const referralFeePercent = referral_option ?? 0; // 25%
+        const referralFee = Number((total_fee_in_sol * referralFeePercent / 100).toFixed(0));
+        const referralWallet = new PublicKey(referral_address);
+
+        if (referralFee > 0) {
+            // If referral amount exist, you can store this data into the database
+            // to calculate total revenue..
+            await ReferralHistoryControler.create({
+                username: username,
+                uniquecode: ref_info.uniquecode,
+                referrer_address: referralWallet,
+                amount: referralFee
+            })
+        }
+    } catch (e) {
+        console.log("CheckReferralFeeSent Failed");
     }
 }

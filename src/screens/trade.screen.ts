@@ -16,7 +16,7 @@ import { PositionService } from "../services/position.service";
 import bs58 from "bs58";
 import { RESERVE_WALLET, connection } from "../config";
 import { sendTransactionV0 } from "../utils/v0.transaction";
-import { get_referral_info } from "../services/referral.service";
+import { checkReferralFeeSent, get_referral_info } from "../services/referral.service";
 import { ReferralHistoryControler } from "../controllers/referral.history";
 
 
@@ -259,14 +259,123 @@ export const buyHandler = async (
     };
     await PositionService.updateBuyPosition(buydata);
 
-    await feeHandler(
-      total_fee_in_sol,
-      total_fee_in_token,
+    await checkReferralFeeSent(total_fee_in_sol, username, signature);
+  } else {
+    const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
+    bot.editMessageText(
+      failedCaption,
+      {
+        message_id: pendingTxMsgId,
+        chat_id,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      }
+    )
+  }
+}
+
+
+export const autoBuyHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message,
+  user: any,
+  mint: string,
+  amount: number,
+  sol_amount: number,
+  gasvalue: number,
+  mintinfo: any,
+  slippage: number,
+) => {
+  const chat_id = msg.chat.id;
+  const username = msg.chat.username;
+  if (!username) return;
+  // Insufficient check check if enough includes fee
+  if (sol_amount && sol_amount <= amount + gasvalue) {
+    bot.sendMessage(
+      chat_id,
+      "<b>⚠️ Insufficient SOL balance!</b>",
+      closeReplyMarkup
+    ).then(sentMessage => {
+      setTimeout(() => {
+        bot.deleteMessage(chat_id, sentMessage.message_id);
+      }, 5000);
+    })
+    return;
+  }
+
+  const { name, symbol, decimals } = mintinfo.overview;
+  const { isToken2022 } = mintinfo.secureinfo;
+  const solprice = await TokenService.getSOLPrice();
+  console.log("AutoBuy1:", Date.now())
+
+  // send Notification
+  const getcaption = (status: string, suffix: string = "") => {
+    const securecaption = `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+      `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
+      `<i>${copytoclipboard(mint)}</i>\n` + status +
+      `💲 <b>Value: ${amount} SOL ($ ${(amount * solprice).toFixed(3)})</b>\n` + suffix;
+
+    return securecaption;
+  }
+  const buycaption = getcaption(`🕒 <b>Buy in progress</b>\n`);
+
+  const pendingTxMsg = await bot.sendMessage(
+    chat_id,
+    buycaption,
+    {
+      parse_mode: 'HTML'
+    }
+  );
+  const pendingTxMsgId = pendingTxMsg.message_id;
+  console.log("Buy start:", Date.now())
+
+  // buy token
+  const jupiterSerivce = new JupiterService();
+  const quoteResult = await jupiterSerivce.swapToken(
+    user.private_key,
+    NATIVE_MINT.toBase58(),
+    mint,
+    9, // SOL decimal
+    amount,
+    slippage,
+    gasvalue,
+    user.burn_fee ?? true,
+    username,
+    isToken2022
+  );
+
+  if (quoteResult) {
+    const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
+    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+    const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
+
+    // Just in case
+    try {
+      bot.editMessageText(
+        successCaption,
+        {
+          message_id: pendingTxMsgId,
+          chat_id,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+        }
+      )
+    } catch (e) { }
+
+    const volume = amount * solprice;
+    const buydata = {
       username,
-      user.private_key,
+      chat_id,
       mint,
-      isToken2022
-    );
+      wallet_address: user.wallet_address,
+      volume,
+      amount
+    };
+    await PositionService.updateBuyPosition(buydata);
+
+    await checkReferralFeeSent(total_fee_in_sol, username, signature);
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     bot.editMessageText(
@@ -390,15 +499,7 @@ export const sellHandler = async (
       percent
     };
     await PositionService.updateSellPosition(selldata);
-
-    await feeHandler(
-      total_fee_in_sol,
-      total_fee_in_token,
-      username,
-      user.private_key,
-      mint,
-      isToken2022
-    );
+    await checkReferralFeeSent(total_fee_in_sol, username, signature);
   } else {
     const failedCaption = await getcaption(`🔴 <b>Sell Failed</b>\n`);
     bot.editMessageText(
@@ -476,6 +577,7 @@ const getTokenMintFromCallback = (caption: string | undefined) => {
   return data as string;
 }
 
+// Deprecated: Don't use this
 export const feeHandler = async (
   total_fee_in_sol: number,
   total_fee_in_token: number,
@@ -552,11 +654,6 @@ export const feeHandler = async (
       )
     }
     if (instructions.length > 2) {
-      await sendTransactionV0(
-        connection,
-        instructions,
-        [wallet]
-      );
       if (referralFee > 0) {
         // If referral amount exist, you can store this data into the database
         // to calculate total revenue..

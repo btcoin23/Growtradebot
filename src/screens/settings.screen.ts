@@ -735,7 +735,7 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
     if (!username) {
       await bot.deleteMessage(
         msg.chat.id,
-        message_id
+        sentMessage.message_id
       );
       await sendUsernameRequiredNotification(bot, msg);
       return;
@@ -743,11 +743,11 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
 
     const user = await UserService.findOne({ username });
     if (!user) {
-      await sendUsernameRequiredNotification(bot, msg);
       await bot.deleteMessage(
         msg.chat.id,
         sentMessage.message_id
       );
+      await sendNoneUserNotification(bot, msg);
       return;
     }
 
