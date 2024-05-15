@@ -215,7 +215,8 @@ export const buyHandler = async (
   const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
   console.log("Buy start:", Date.now())
   // buy token
-  const quoteResult = await JupiterService.swapToken(
+  const jupiterSerivce = new JupiterService();
+  const quoteResult = await jupiterSerivce.swapToken(
     user.private_key,
     NATIVE_MINT.toBase58(),
     mint,
@@ -350,7 +351,8 @@ export const sellHandler = async (
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
 
-  const quoteResult = await JupiterService.swapToken(
+  const jupiterSerivce = new JupiterService();
+  const quoteResult = await jupiterSerivce.swapToken(
     user.private_key,
     mint,
     NATIVE_MINT.toBase58(),

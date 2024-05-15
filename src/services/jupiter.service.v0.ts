@@ -1,6 +1,6 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, Account, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, closeAccount, createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createTransferCheckedInstruction, createTransferInstruction, getAccount, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
-import { AddressLookupTableAccount, ComputeBudgetProgram, Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
-import { AccountMeta, Instruction, QuoteGetRequest, SwapInstructionsResponse, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { QuoteGetRequest, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
 import { ReferralProvider } from "@jup-ag/referral-sdk";
 import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_WALLET, connection } from "../config";
@@ -9,48 +9,11 @@ import { getSignature } from "../utils/get.signature";
 import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
 import redisClient, { ITradeGasSetting } from "./redis";
 import { sendTransactionV0 } from "../utils/v0.transaction";
-import { JitoBundleService } from "./jito.bundle";
 
 const provider = new ReferralProvider(connection);
 
-export class JupiterService {
-  instructionDataToTransactionInstruction(
-    instruction: Instruction | undefined
-  ) {
-    if (instruction === null || instruction === undefined) return null;
-    return new TransactionInstruction({
-      programId: new PublicKey(instruction.programId),
-      keys: instruction.accounts.map((key: AccountMeta) => ({
-        pubkey: new PublicKey(key.pubkey),
-        isSigner: key.isSigner,
-        isWritable: key.isWritable,
-      })),
-      data: Buffer.from(instruction.data, "base64"),
-    });
-  };
-  async getAdressLookupTableAccounts(
-    keys: string[], connection: Connection
-  ): Promise<AddressLookupTableAccount[]> {
-    const addressLookupTableAccountInfos =
-      await connection.getMultipleAccountsInfo(
-        keys.map((key) => new PublicKey(key))
-      );
-
-    return addressLookupTableAccountInfos.reduce((acc, accountInfo, index) => {
-      const addressLookupTableAddress = keys[index];
-      if (accountInfo) {
-        const addressLookupTableAccount = new AddressLookupTableAccount({
-          key: new PublicKey(addressLookupTableAddress),
-          state: AddressLookupTableAccount.deserialize(accountInfo.data),
-        });
-        acc.push(addressLookupTableAccount);
-      }
-
-      return acc;
-    }, new Array<AddressLookupTableAccount>());
-  };
-
-  async swapToken(
+export const JupiterService = {
+  swapToken: async (
     pk: string,
     inputMint: string,
     outputMint: string,
@@ -59,7 +22,7 @@ export class JupiterService {
     _slippage: number,
     gasFee: number,
     isFeeBurn: boolean
-  ) {
+  ) => {
     try {
       let total_fee_in_sol = 0;
       let total_fee_in_token = 0;
@@ -116,49 +79,23 @@ export class JupiterService {
         userPublicKey: wallet.publicKey.toBase58(),
         dynamicComputeUnitLimit: true,
         // prioritizationFeeLamports: Number(gasfeeValue.toFixed(0)),
+        // prioritizationFeeLamports: {
+        //   autoMultiplier: 10,
+        // }
         prioritizationFeeLamports: {
           jitoTipLamports: 1500000,
         }
       }
 
-      const swapInstructions: SwapInstructionsResponse = await jupiterQuoteApi.swapInstructionsPost({ swapRequest: swapReqOpts });
+      const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: swapReqOpts });
       console.log("🚀 Got Swap Result ~", Date.now())
-      const {
-        tokenLedgerInstruction, // If you are using `useTokenLedger = true`.
-        computeBudgetInstructions, // The necessary instructions to setup the compute budget.
-        setupInstructions, // Setup missing ATA for the users.
-        swapInstruction, // The actual swap instruction.
-        cleanupInstruction, // Unwrap the SOL if `wrapAndUnwrapSol = true`.
-        addressLookupTableAddresses, // The lookup table addresses that you can use if you are using versioned transaction.
-      } = swapInstructions;
-
-
-      const instructions: TransactionInstruction[] = [
-        ...computeBudgetInstructions.map(this.instructionDataToTransactionInstruction),
-        ...setupInstructions.map(this.instructionDataToTransactionInstruction),
-        this.instructionDataToTransactionInstruction(swapInstruction),
-        this.instructionDataToTransactionInstruction(cleanupInstruction),
-      ].filter((ix) => ix !== null) as TransactionInstruction[];
-      const addressLookupTableAccounts = await this.getAdressLookupTableAccounts(
-        addressLookupTableAddresses,
-        connection
-      );
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-
-      const messageV0 = new TransactionMessage({
-        payerKey: wallet.publicKey,
-        recentBlockhash: blockhash,
-        instructions,
-      }).compileToV0Message(addressLookupTableAccounts);
-
-      const transaction = new VersionedTransaction(messageV0);
-      transaction.sign([wallet]);
+      // Serialize the transaction
+      const swapTransactionBuf = Buffer.from(swapResult.swapTransaction, "base64");
+      var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
 
       // Sign the transaction
       transaction.sign([wallet]);
       const signature = getSignature(transaction);
-
       // We first simulate whether the transaction would be successful
       const { value: simulatedTransactionResponse } =
         await connection.simulateTransaction(transaction, {
@@ -178,12 +115,30 @@ export class JupiterService {
         return;
       }
 
-      const rawTransaction = transaction.serialize();
-      // Netherland
-      const jitoBundleInstance = new JitoBundleService("ams");
-      const result = await jitoBundleInstance.sendTransaction(rawTransaction);
-      console.log("Transaction Result", result);
-      console.log(`https://solscan.io/tx/${signature}`);
+      const serializedTransaction = Buffer.from(transaction.serialize());
+      const blockhash = transaction.message.recentBlockhash;
+      // if (blockhash) return;
+      const transactionResponse = await transactionSenderAndConfirmationWaiter({
+        connection,
+        serializedTransaction,
+        blockhashWithExpiryBlockHeight: {
+          blockhash,
+          lastValidBlockHeight: swapResult.lastValidBlockHeight,
+        },
+      });
+
+      // If we are not getting a response back, the transaction has not confirmed.
+      if (!transactionResponse) {
+        console.error("Transaction not confirmed");
+        return;
+      }
+
+      if (transactionResponse.meta?.err) {
+        console.error(transactionResponse.meta?.err);
+        return null;
+      }
+
+      // console.log(`https://solscan.io/tx/${signature}`);
       return {
         quote,
         signature,
@@ -194,7 +149,7 @@ export class JupiterService {
       console.log("SwapToken Failed", e);
       return null;
     }
-  };
+  },
   // createReferralAccount: async () => {
   //   const referralAccountKeypair = Keypair.generate();
   //   const tx = await provider.initializeReferralAccount({
@@ -296,7 +251,7 @@ export class JupiterService {
   //     console.log("ClaimAll Failed", e);
   //   }
   // },
-  async transferFeeSOL(fee: number, wallet: Keypair) {
+  transferFeeSOL: async (fee: number, wallet: Keypair) => {
     if (fee <= 0) return;
     let retires = 0;
     do {
@@ -330,8 +285,8 @@ export class JupiterService {
         console.log(`Take BuyFee Failed ${retires}/5`);
       }
     } while (retires < 5);
-  };
-  async transferSOL(fundAmount: number, decimals: number, toPubkey: string, pk: string, lamports: number = 5000, units: number = 20000) {
+  },
+  transferSOL: async (fundAmount: number, decimals: number, toPubkey: string, pk: string, lamports: number = 5000, units: number = 20000) => {
     if (fundAmount <= 0) return;
     let retires = 0;
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
@@ -368,8 +323,8 @@ export class JupiterService {
       }
     } while (retires < 5);
     return null;
-  };
-  async transferSPL(mint: string, fundAmount: number, decimals: number, toPubkey: string, pk: string, isToken2022: boolean) {
+  },
+  transferSPL: async (mint: string, fundAmount: number, decimals: number, toPubkey: string, pk: string, isToken2022: boolean) => {
     if (fundAmount <= 0) return null;
     const wallet = Keypair.fromSecretKey(bs58.decode(pk));
 

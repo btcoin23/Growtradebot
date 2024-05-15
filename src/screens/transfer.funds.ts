@@ -309,9 +309,10 @@ export const withdrawHandler = async (
     }
   )
 
+  const jupiterSerivce = new JupiterService();
   const transferResult = (mint === NATIVE_MINT.toBase58()) ?
-    await JupiterService.transferSOL(amount, 9, topubkey, user.private_key, 100000, 200000) :
-    await JupiterService.transferSPL(mint, amount, decimals, topubkey, user.private_key, isToken2022);
+    await jupiterSerivce.transferSOL(amount, 9, topubkey, user.private_key, 100000, 200000) :
+    await jupiterSerivce.transferSPL(mint, amount, decimals, topubkey, user.private_key, isToken2022);
   if (transferResult) {
     const txn = transferResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${txn}">${txn}</a>\n`;

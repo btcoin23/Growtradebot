@@ -11,6 +11,7 @@ export const connection = new Connection(MAINNET_RPC, COMMITMENT_LEVEL);
 export const RESERVE_WALLET = new PublicKey("B474hx9ktA2pq48ctLm9QXJpfitg59AWwMEQRn7YhyB7");
 export const BIRDEYE_API_URL = "https://public-api.birdeye.so";
 export const BIRDEYE_API_KEY = process.env.BIRD_EVEY_API || "";
+export const JITO_UUID = process.env.JITO_UUID || "";
 export const REQUEST_HEADER = {
   'accept': 'application/json',
   'x-chain': 'solana',
