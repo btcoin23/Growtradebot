@@ -12,7 +12,7 @@ const welcomeKeyboardList = [
   // [{ text: '🏦 Buy/Sell', command: 'buysell' }],
   // snipe_token, my_position
   [{ text: '🎯 Sniper [Soon]', command: 'dummy_button' }, { text: '📊 Positions', command: 'position' }], // position
-  [{ text: '♻️ Withdraw', command: 'transfer_funds' }, { text: '⚙️ Settings & Tools 🛠', command: 'settings' }],
+  [{ text: '♻️ Withdraw', command: 'transfer_funds' }, { text: '🛠 Settings & Tools', command: 'settings' }],
   [{ text: '⛓ Bridge', command: 'bridge' }],
   [{ text: '🎁 Referral Program', command: 'referral' }],
   [{ text: '❌ Close', command: 'dismiss_message' }],
