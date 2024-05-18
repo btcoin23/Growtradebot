@@ -68,6 +68,7 @@ export const showWelcomeReferralProgramMessage = async (
         `<b>Referred Count: ${num.num}\nSol Earned: ${totalAmount.totalAmount}</b>\n\n` +
         `<b>Your referral code 🔖</b>\n${copytoclipboard(uniquecode)}\n\n` +
         `<b>Your referral link 🔗</b>\n${copytoclipboard(referralLink)}\n\n` +
+        `<i>Note: Don't forget set up payout address to get paid</i>\n\n` +
         `- Share your referral link with whoever you want and earn from their swaps 🔁\n` +
         `- Check profits, payouts and change the payout address 📄\n`
 

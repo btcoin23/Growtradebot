@@ -8,7 +8,7 @@ import { autoBuyAmountScreenHandler, generateNewWalletHandler, presetBuyAmountSc
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
 import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
-import { backToHomeHandler, refreshPayoutHandler, sendPayoutAddressManageScreen, setSOLPayoutAddressHandler } from "../screens/payout.screen";
+import { backToReferralHomeScreenHandler, refreshPayoutHandler, sendPayoutAddressManageScreen, setSOLPayoutAddressHandler } from "../screens/payout.screen";
 
 export const callbackQueryHandler = async (
   bot: TelegramBot,
@@ -225,7 +225,7 @@ export const callbackQueryHandler = async (
     }
     // Back home
     else if (data.command === 'back_from_ref') {
-      await backToHomeHandler(
+      await backToReferralHomeScreenHandler(
         bot,
         callbackMessage.chat,
         callbackMessage

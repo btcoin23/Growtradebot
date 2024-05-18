@@ -195,23 +195,23 @@ export const withdrawAddressHandler = async (
       reply_markup: {
         inline_keyboard: [
           [{
-            text: 'Withraw 10%',
+            text: 'Withdraw 10%',
             callback_data: JSON.stringify({
               command: 'withdraw_10'
             })
           }, {
-            text: 'Withraw 50%',
+            text: 'Withdraw 50%',
             callback_data: JSON.stringify({
               command: 'withdraw_50'
             })
           }, {
-            text: 'Withraw 100%',
+            text: 'Withdraw 100%',
             callback_data: JSON.stringify({
               command: 'withdraw_100'
             })
           }],
           [{
-            text: 'Withraw X',
+            text: 'Withdraw X',
             callback_data: JSON.stringify({
               command: 'withdrawtoken_custom'
             })

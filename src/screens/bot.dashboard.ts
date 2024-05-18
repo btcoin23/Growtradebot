@@ -32,10 +32,10 @@ export const openAlertBotDashboard = async (
         })
       }, {
         text: 'Invite AlertBot 🤖',
-        callback_data: JSON.stringify({
-          'command': 'dummy_button'
-        })
-        // url: `https://t.me/${AlertBotID}?startgroup=true`
+        // callback_data: JSON.stringify({
+        //   'command': 'dummy_button'
+        // })
+        url: `https://t.me/${AlertBotID}?startgroup=true`
       }],
       [{
         text: 'Refresh bot info',
@@ -150,7 +150,7 @@ export const updateSchedule = async (bot: TelegramBot, chat: TelegramBot.Chat, s
     const username = chat.username;
     if (!username) return;
     // post
-    const res = await UserService.findAndUpdateOne({ username: username }, { schedule: scheduleTime })
+    const res = await UserService.updateMany({ username: username }, { schedule: scheduleTime })
     if (res) {
       bot.sendMessage(chatId, "Successfully updated!");
     } else {

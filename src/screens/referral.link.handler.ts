@@ -17,15 +17,18 @@ export const OpenReferralWindowHandler = async (bot: TelegramBot, msg: TelegramB
   // }
   // // if already created a link, we show link
   // const { uniquecode } = data;
-  let uniquecode = generateReferralCode(10);
-  let userInfo = await UserService.findOne({ username: username });
+  const userInfo = await UserService.findOne({ username: username });
+  if (!userInfo) return;
+  const { referrer_code } = userInfo;
+
   let referrerCode = "";
-  if (userInfo?.referrer_code) {
-    referrerCode = userInfo?.referrer_code;
+  if (referrer_code && referrer_code !== "") {
+    referrerCode = referrer_code;
   }
   else {
-    await UserService.findAndUpdateOne({ username: username }, { referrer_code: uniquecode })
+    let uniquecode = generateReferralCode(10);
     referrerCode = uniquecode;
+    await UserService.updateMany({ username: username }, { referrer_code: uniquecode })
   }
 
   showWelcomeReferralProgramMessage(bot, chat, referrerCode);

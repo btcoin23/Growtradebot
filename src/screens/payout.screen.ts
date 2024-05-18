@@ -133,7 +133,7 @@ const updateSOLaddressForPayout = async (bot: TelegramBot, chat: TelegramBot.Cha
         const username = chat.username;
         if (!username) return;
         // post
-        const res = await UserService.findAndUpdateOne({ username: username }, {
+        const res = await UserService.updateMany({ username: username }, {
             referrer_wallet: address
         });
         // const res = await update_payout_address(
@@ -155,7 +155,7 @@ const updateSOLaddressForPayout = async (bot: TelegramBot, chat: TelegramBot.Cha
     }
 }
 
-export const backToHomeHandler = async (
+export const backToReferralHomeScreenHandler = async (
     bot: TelegramBot,
     chat: TelegramBot.Chat,
     msg: TelegramBot.Message
