@@ -9,6 +9,7 @@ import { UserService } from "./services/user.service";
 import { alertBot, runAlertBotForChannel, runAlertBotSchedule } from "./cron/alert.bot.cron";
 import { newReferralChannelHandler, removeReferralChannelHandler } from "./services/alert.bot.module";
 import { runSOLPriceUpdateSchedule } from "./cron/sol.price.cron";
+import { settingScreenHandler } from "./screens/settings.screen";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -55,6 +56,10 @@ const startTradeBot = () => {
   });
   bot.onText(/\/position/, async (msg: TelegramBot.Message) => {
     await positionScreenHandler(bot, msg);
+  });
+
+  bot.onText(/\/settings/, async (msg: TelegramBot.Message) => {
+    await settingScreenHandler(bot, msg)
   });
 
   alertBot.onText(/\/start/, async (msg: TelegramBot.Message) => {

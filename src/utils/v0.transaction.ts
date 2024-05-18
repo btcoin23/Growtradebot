@@ -1,6 +1,8 @@
 import { AddressLookupTableProgram, Connection, Keypair, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction } from "@solana/web3.js";
 import { getSignature } from "./get.signature";
 import { transactionSenderAndConfirmationWaiter } from "./jupiter.transaction.sender";
+import { wait } from "./wait";
+import { connection } from "../config";
 
 const COMMITMENT_LEVEL = 'confirmed';
 
@@ -62,4 +64,33 @@ export async function sendTransactionV0(
   }
 
   return signature;
+}
+
+export const getSignatureStatus = async (signature: string) => {
+  try {
+    const maxRetry = 30;
+    let retries = 0;
+    while (retries < maxRetry) {
+      await wait(1_000);
+      retries++;
+
+      const tx = await connection.getSignatureStatus(signature, {
+        searchTransactionHistory: false,
+      });
+      if (tx?.value?.err) {
+        console.log("JitoTransaction Failed");
+        break;
+      }
+      if (tx?.value?.confirmationStatus === "confirmed") {
+        retries = 0;
+        console.log("JitoTransaction confirmed!!!");
+        break;
+      }
+    }
+
+    if (retries > 0) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
 }

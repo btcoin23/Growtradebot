@@ -3,6 +3,26 @@
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
+// Wallet Subschema
+// const WalletSchema = new Schema({
+//   private_key: {
+//     type: String,
+//     default: "",
+//     required: true,
+//     unique: true,
+//   },
+//   wallet_address: {
+//     type: String,
+//     default: "",
+//     required: true,
+//     unique: true,
+//   },
+//   nonce: {
+//     type: Number,
+//     default: 0,
+//   },
+// });
+
 // Basic Schema
 const User = new Schema({
   // chat id
@@ -25,6 +45,7 @@ const User = new Schema({
     default: "",
     required: true
   },
+  // wallets: [WalletSchema], // Array of WalletSchema objects
   private_key: {
     type: String,
     default: "",

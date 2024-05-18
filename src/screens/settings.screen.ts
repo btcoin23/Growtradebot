@@ -13,7 +13,7 @@ import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.sett
 export const settingScreenHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message,
-  replaceId: number
+  replaceId?: number
 ) => {
   try {
     const { chat, } = msg;
@@ -68,16 +68,28 @@ export const settingScreenHandler = async (
       ]
     }
 
-    bot.editMessageText(
-      caption,
-      {
-        message_id: replaceId,
+    if (replaceId) {
+      bot.editMessageText(
+        caption,
+        {
+          message_id: replaceId,
+          chat_id,
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup
+        }
+      );
+    } else {
+      bot.sendMessage(
         chat_id,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup
-      }
-    );
+        caption,
+        {
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
+          reply_markup
+        }
+      );
+    }
   } catch (e) { console.log("~ settingScreenHandler ~", e) }
 }
 
@@ -203,7 +215,7 @@ export const walletViewHandler = async (bot: TelegramBot,
   msg: TelegramBot.Message) => {
   try {
 
-    const { chat } = msg;
+    const { chat, message_id } = msg;
     const { id: chat_id, username } = chat;
     if (!username) {
       await sendUsernameRequiredNotification(bot, msg);
@@ -216,10 +228,15 @@ export const walletViewHandler = async (bot: TelegramBot,
 
     const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>Your active wallet:</b>\n` +
       `${copytoclipboard(wallet_address)}`;
-    const sentMessage = await bot.sendMessage(
-      chat_id,
+    // const sentMessage = await bot.sendMessage(
+    // chat_id,
+    // caption,
+    // {
+    await bot.editMessageText(
       caption,
       {
+        chat_id,
+        message_id,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
         reply_markup: {
@@ -238,7 +255,7 @@ export const walletViewHandler = async (bot: TelegramBot,
               },
               {
                 text: `🗝 Private key`, callback_data: JSON.stringify({
-                  'command': `revealpk`
+                  'command': `revealpk_${nonce}`
                 })
               }]
             }),
@@ -247,12 +264,19 @@ export const walletViewHandler = async (bot: TelegramBot,
                 'command': 'generate_wallet'
               })
             }],
-            [{
-              text: `❌ Dismiss message`,
-              callback_data: JSON.stringify({
-                'command': 'dismiss_message'
-              })
-            }]
+            [
+              {
+                text: `↩️ Back`,
+                callback_data: JSON.stringify({
+                  'command': 'settings'
+                })
+              },
+              {
+                text: `❌ Close`,
+                callback_data: JSON.stringify({
+                  'command': 'dismiss_message'
+                })
+              }]
           ]
         }
       }
@@ -305,17 +329,43 @@ export const generateNewWalletHandler = async (
       if (!wallet) {
         // add
         const nonce = users.length;
-        const newUser = {
-          chat_id,
-          username,
-          first_name,
-          last_name,
-          wallet_address,
-          private_key,
-          nonce,
-          retired: true
-        };
-        userdata = await UserService.create(newUser); // true; // 
+        if (users.length > 0) {
+          const olduser = users[0];
+          const newUser = {
+            chat_id,
+            first_name,
+            last_name,
+            username,
+            wallet_address,
+            private_key,
+            nonce,
+            retired: true,
+            preset_setting: olduser.preset_setting,
+            referrer_code: olduser.referrer_code,
+            referrer_wallet: olduser.referrer_wallet,
+            referral_code: olduser.referral_code,
+            referral_date: olduser.referral_date,
+            schedule: olduser.schedule,
+            auto_buy: olduser.auto_buy,
+            auto_buy_amount: olduser.auto_buy_amount,
+            auto_sell_amount: olduser.auto_sell_amount,
+            burn_fee: olduser.burn_fee,
+          }
+
+          userdata = await UserService.create(newUser); // true; // 
+        } else {
+          const newUser = {
+            chat_id,
+            username,
+            first_name,
+            last_name,
+            wallet_address,
+            private_key,
+            nonce,
+            retired: true
+          };
+          userdata = await UserService.create(newUser); // true; // 
+        }
       } else {
         retries++;
       }
@@ -372,8 +422,9 @@ export const revealWalletPrivatekyHandler = async (
       await sendUsernameRequiredNotification(bot, msg);
       return;
     }
-
-    const user = await UserService.findOne({ username, nonce });
+    console.log(username, nonce);
+    const user = await UserService.findLastOne({ username, nonce });
+    console.log(user);
     if (!user) return;
     // send private key & wallet address
     const caption = `🗝 <b>Your private key</b>\n` +
@@ -397,7 +448,7 @@ export const revealWalletPrivatekyHandler = async (
         }
       }
     );
-    settingScreenHandler(bot, msg, msg.message_id);
+    // settingScreenHandler(bot, msg, msg.message_id);
   } catch (e) {
     console.log("~revealWalletPrivatekyHandler~", e);
   }
@@ -448,7 +499,7 @@ export const setCustomBuyPresetHandler = async (
     const user = await UserService.findOne({ username });
     let presetSetting = user?.preset_setting ?? [0.1, 1, 5, 10];
     presetSetting.splice(parseInt(preset_index), 1, amount);
-    await UserService.findAndUpdateOne({ username }, { preset_setting: presetSetting });
+    await UserService.updateMany({ username }, { preset_setting: presetSetting });
     const sentSuccessMsg = await bot.sendMessage(chat_id, "Preset value changed successfully!");
 
     setTimeout(() => {
@@ -609,7 +660,7 @@ export const setCustomAutoBuyAmountHandler = async (
       await sendUsernameRequiredNotification(bot, msg);
       return;
     }
-    await UserService.findAndUpdateOne({ username }, { auto_buy_amount: amount });
+    await UserService.updateMany({ username }, { auto_buy_amount: amount });
     const sentSuccessMsg = await bot.sendMessage(chat_id, "AutoBuy amount changed successfully!");
 
     const key = "autobuy_amount" + username;
@@ -660,7 +711,7 @@ export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.M
       return;
     }
 
-    await UserService.findAndUpdateOne(
+    await UserService.updateMany(
       { username },
       { burn_fee: !user.burn_fee }
     )
@@ -751,7 +802,7 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
       return;
     }
 
-    await UserService.findAndUpdateOne(
+    await UserService.updateMany(
       { username },
       { auto_buy: !user.auto_buy }
     )

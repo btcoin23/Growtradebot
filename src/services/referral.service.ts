@@ -110,29 +110,29 @@ export const checkReferralFeeSent = async (
 ) => {
     try {
         console.log("Calculate Referral Fee to wallet starts");
-        const maxRetry = 30;
-        let retries = 0;
-        while (retries < maxRetry) {
-            await wait(2_000);
-            retries++;
+        // const maxRetry = 30;
+        // let retries = 0;
+        // while (retries < maxRetry) {
+        //     await wait(2_000);
+        //     retries++;
 
-            const tx = await connection.getSignatureStatus(signature, {
-                searchTransactionHistory: false,
-            });
-            if (tx?.value?.err) {
-                console.log("Transaction not confirmed: Failed");
-                retries = maxRetry * 2;
-                break;
-            }
-            if (tx?.value?.confirmationStatus === "confirmed") {
-                retries = 0;
-                console.log("Transaction confirmed!!!");
-                break;
-            }
-        }
+        //     const tx = await connection.getSignatureStatus(signature, {
+        //         searchTransactionHistory: false,
+        //     });
+        //     if (tx?.value?.err) {
+        //         console.log("Transaction not confirmed: Failed");
+        //         retries = maxRetry * 2;
+        //         break;
+        //     }
+        //     if (tx?.value?.confirmationStatus === "confirmed") {
+        //         retries = 0;
+        //         console.log("Transaction confirmed!!!");
+        //         break;
+        //     }
+        // }
 
-        if (retries == maxRetry * 2) return null;
-        if (retries > 0) return undefined;
+        // if (retries == maxRetry * 2) return null;
+        // if (retries > 0) return undefined;
 
         connection.getSignatureStatus(signature, {
             searchTransactionHistory: false,

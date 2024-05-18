@@ -77,6 +77,16 @@ export const UserService = {
       throw new Error(err.message);
     }
   },
+  updateMany: async (filter: any, props: any) => {
+    try {
+      const result = await UserSchema.updateMany(filter, {
+        $set: props
+      });
+      return result;
+    } catch (err: any) {
+      throw new Error(err.message);
+    }
+  },
   deleteOne: async (props: any) => {
     try {
       const result = await UserSchema.findOneAndDelete({ props });

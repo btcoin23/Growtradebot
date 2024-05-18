@@ -8,7 +8,7 @@ import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transac
 import { getSignature } from "../utils/get.signature";
 import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
 import redisClient, { ITradeGasSetting } from "./redis";
-import { sendTransactionV0 } from "../utils/v0.transaction";
+import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import { JitoBundleService, tipAccounts } from "./jito.bundle";
 import { FeeService } from "./fee.service";
 
@@ -180,7 +180,6 @@ export class JupiterService {
       transaction.sign([wallet]);
 
       // Sign the transaction
-      transaction.sign([wallet]);
       const signature = getSignature(transaction);
 
       // We first simulate whether the transaction would be successful
@@ -206,6 +205,8 @@ export class JupiterService {
       // Netherland
       const jitoBundleInstance = new JitoBundleService("ams");
       const result = await jitoBundleInstance.sendTransaction(rawTransaction);
+      const status = await getSignatureStatus(signature);
+      if (!status) return null;
       console.log("Transaction Result", result);
       console.log(`https://solscan.io/tx/${signature}`);
       return {

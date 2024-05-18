@@ -109,6 +109,7 @@ export const callbackQueryHandler = async (
     }
 
     if (data.command.includes('settings')) {
+      console.log("Settings");
       const replaceId = callbackMessage.message_id;
       await settingScreenHandler(bot, callbackMessage, replaceId)
     }

@@ -236,7 +236,7 @@ export const buyHandler = async (
 
     // Just in case
     try {
-      bot.editMessageText(
+      await bot.editMessageText(
         successCaption,
         {
           message_id: pendingTxMsgId,
@@ -266,7 +266,7 @@ export const buyHandler = async (
 
       // Just in case
       try {
-        bot.editMessageText(
+        await bot.editMessageText(
           successCaption,
           {
             message_id: pendingTxMsgId,
@@ -280,7 +280,7 @@ export const buyHandler = async (
     }
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
-    bot.editMessageText(
+    await bot.editMessageText(
       failedCaption,
       {
         message_id: pendingTxMsgId,
@@ -370,7 +370,7 @@ export const autoBuyHandler = async (
 
     // Just in case
     try {
-      bot.editMessageText(
+      await bot.editMessageText(
         successCaption,
         {
           message_id: pendingTxMsgId,
@@ -401,7 +401,7 @@ export const autoBuyHandler = async (
 
       // Just in case
       try {
-        bot.editMessageText(
+        await bot.editMessageText(
           successCaption,
           {
             message_id: pendingTxMsgId,
@@ -415,7 +415,7 @@ export const autoBuyHandler = async (
     }
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
-    bot.editMessageText(
+    await bot.editMessageText(
       failedCaption,
       {
         message_id: pendingTxMsgId,
@@ -517,7 +517,7 @@ export const sellHandler = async (
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
-    bot.editMessageText(
+    await bot.editMessageText(
       successCaption,
       {
         message_id: pendingMessage.message_id,
@@ -545,7 +545,7 @@ export const sellHandler = async (
 
       // Just in case
       try {
-        bot.editMessageText(
+        await bot.editMessageText(
           failedCaption,
           {
             message_id: pendingMessage.message_id,
@@ -559,7 +559,7 @@ export const sellHandler = async (
     }
   } else {
     const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
-    bot.editMessageText(
+    await bot.editMessageText(
       failedCaption,
       {
         message_id: pendingMessage.message_id,
