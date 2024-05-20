@@ -33,7 +33,7 @@ const startTradeBot = () => {
   // bot menu
   runAlertBotSchedule();
   // runAlertBotForChannel();
-  // runSOLPriceUpdateSchedule();
+  runSOLPriceUpdateSchedule();
   bot.setMyCommands(BotMenu);
 
 
@@ -78,7 +78,9 @@ const startTradeBot = () => {
 
   alertBot.onText(/\/start/, async (msg: TelegramBot.Message) => {
     const { from, chat, text, message_id } = msg;
+    console.log("AlertBotStart", `/start@${AlertBotID}`);
     if (text && text.includes(`/start@${AlertBotID}`)) {
+      console.log("AlertBotStart Delete");
       alertBot.deleteMessage(chat.id, message_id);
       if (!from) return;
       if (!text.includes(' ')) return;
