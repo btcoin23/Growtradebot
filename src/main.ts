@@ -26,8 +26,6 @@ export interface ReferralIdenticalType {
   channelName: string,
 }
 
-const referrerList: ReferralIdenticalType[] = [];
-
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
   // bot menu
@@ -122,11 +120,14 @@ const startTradeBot = () => {
     }
   });
   alertBot.on('new_chat_members', async (msg: TelegramBot.Message) => {
+    console.log("new Members", msg);
     const data = await newReferralChannelHandler(msg);
     if (!data) return;
 
     try {
+      console.log("New member created");
       await ReferrerListService.create(data);
+      console.log("New member added ended");
     } catch (e) { }
   });
   alertBot.on('left_chat_member', async (msg: TelegramBot.Message) => {
