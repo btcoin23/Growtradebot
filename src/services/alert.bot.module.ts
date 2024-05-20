@@ -38,46 +38,56 @@ const processReferral = async (referral: ReferralData, bot: TelegramBot) => {
     const isValid = await validateSchedule(referral_code, scheduleInseconds)
     if (!isValid) return;
 
-    const botId = Number(platform) === ReferralPlatform.TradeBot ? TradeBotID : BridgeBotID;
-    const botImg = Number(platform) === ReferralPlatform.TradeBot ? ALERT_GT_IMAGE : ALERT_GB_IMAGE;
-    const txt = Number(platform) === ReferralPlatform.TradeBot ? "Try GrowTrade now" : "Try GrowBridge now";
-    const referralLink = `https://t.me/${botId}?start=${referral_code}`;
+    const isTradeBot = Number(platform) === ReferralPlatform.TradeBot;
     for (let idx = 0; idx < channels.length; idx++) {
       const { chat_id } = channels[idx];
 
-      sendAlert(bot, chat_id, referralLink, creator, idx, botImg, txt);
+      sendAlert(bot, chat_id, referral_code, creator, idx, isTradeBot);
     }
   } catch (e) {
     console.log("processReferral", e);
   }
 }
 
-const sendAlert = async (bot: TelegramBot, channelChatId: string, referralLink: string, creator: string, idx: number, botImg: string, txt: string) => {
+const sendAlert = async (bot: TelegramBot, channelChatId: string, referral_code: string, creator: string, idx: number, isTradeBot: boolean) => {
   try {
     if (!channelChatId || channelChatId === "") return;
     await bot.getChat(channelChatId);
+
+
+    const botId = isTradeBot ? TradeBotID : BridgeBotID;
+    const botImg = isTradeBot ? ALERT_GT_IMAGE : ALERT_GB_IMAGE;
+    const txt = isTradeBot ? "Try GrowTrade Now" : "Try GrowBridge Now";
+    const referralLink = `https://t.me/${botId}?start=${referral_code}`;
+
+    const inline_keyboard = [
+      [{
+        text: txt,
+        url: referralLink
+      }],
+    ]
+    if (isTradeBot) {
+      inline_keyboard.push(
+        [{
+          text: "Trade with us 📈",
+          url: "https://t.me/GrowTradeOfficial"
+        }],
+      )
+    }
+
     bot.sendPhoto(
       channelChatId,
       botImg,
       {
         caption: '',
         reply_markup: {
-          inline_keyboard: [
-            [{
-              text: txt,
-              url: referralLink
-            }],
-            // [{
-            //   text: 'Start Trading With GrowTrade',
-            //   url: "https://t.me/growtradeapp_bot"
-            // }],
-          ]
+          inline_keyboard
         },
         parse_mode: 'HTML',
       }
     )
   } catch (error) {
-    console.log("sendAlert", channelChatId, referralLink);
+    console.log("sendAlert Error:", channelChatId, referral_code);
     await handleError(error, creator, idx, channelChatId);
   }
 }
