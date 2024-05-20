@@ -10,18 +10,30 @@ import { alertBot, runAlertBotForChannel, runAlertBotSchedule } from "./cron/ale
 import { newReferralChannelHandler, removeReferralChannelHandler } from "./services/alert.bot.module";
 import { runSOLPriceUpdateSchedule } from "./cron/sol.price.cron";
 import { settingScreenHandler } from "./screens/settings.screen";
+import { ReferralChannelService, ReferralPlatform } from "./services/referral.channel.service";
+import { ReferrerListService } from "./services/referrer.list.service";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
 if (!token) {
   throw new Error('TELEGRAM_BOT API_KEY is not defined in the environment variables');
 }
+
+export interface ReferralIdenticalType {
+  referrer: string,
+  chatId: string,
+  messageId: string,
+  channelName: string,
+}
+
+const referrerList: ReferralIdenticalType[] = [];
+
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
   // bot menu
-  // runAlertBotSchedule();
+  runAlertBotSchedule();
   // runAlertBotForChannel();
-  runSOLPriceUpdateSchedule();
+  // runSOLPriceUpdateSchedule();
   bot.setMyCommands(BotMenu);
 
 
@@ -37,22 +49,24 @@ const startTradeBot = () => {
 
   // bot commands
   bot.onText(/\/start/, async (msg: TelegramBot.Message) => {
+    // Need to remove "/start" text
+    bot.deleteMessage(msg.chat.id, msg.message_id);
+    await WelcomeScreenHandler(bot, msg);
+
     // https://t.me/growswapver1_bot?start=mqMyH7jKzWN3tNA
     const referralcode = UserService.extractUniqueCode(msg.text ?? "");
     if (referralcode && referralcode !== "") {
       // store info
       const chat = msg.chat;
       if (chat.username) {
-        await UserService.findAndUpdateOne({ username: chat.username }, {
+        const data = await UserService.findLastOne({ username: chat.username });
+        if (data && data.referral_code && data.referral_code !== "") return;
+        await UserService.updateMany({ username: chat.username }, {
           referral_code: referralcode,
           referral_date: new Date()
         });
       }
     }
-
-    // Need to remove "/start" text
-    bot.deleteMessage(msg.chat.id, msg.message_id);
-    await WelcomeScreenHandler(bot, msg);
   });
   bot.onText(/\/position/, async (msg: TelegramBot.Message) => {
     await positionScreenHandler(bot, msg);
@@ -63,12 +77,55 @@ const startTradeBot = () => {
   });
 
   alertBot.onText(/\/start/, async (msg: TelegramBot.Message) => {
-    if (msg.text && msg.text.includes(`/start@${AlertBotID}`)) {
-      alertBot.deleteMessage(msg.chat.id, msg.message_id);
+    const { from, chat, text, message_id } = msg;
+    if (text && text.includes(`/start@${AlertBotID}`)) {
+      alertBot.deleteMessage(chat.id, message_id);
+      if (!from) return;
+      if (!text.includes(' ')) return;
+      const referrerInfo = await ReferrerListService.findLastOne({
+        referrer: from.username,
+        chatId: chat.id.toString()
+      })
+      if (!referrerInfo) return;
+      // for (const referrerInfo of referrerList) {
+      const { referrer, chatId, channelName } = referrerInfo;
+      // if (referrer === from.username && chat.id.toString() === chatId) {
+      const parts = text.split(' ');
+      if (parts.length < 1) {
+        return;
+      }
+      if (parts[0] !== `/start@${AlertBotID}`) {
+        return;
+      }
+      const botType = parts[1];
+      if (botType === "tradebot") {
+        const referralChannelService = new ReferralChannelService();
+        await referralChannelService.addReferralChannel({
+          creator: referrer,
+          platform: ReferralPlatform.TradeBot,
+          chat_id: chatId,
+          channel_name: channelName,
+        });
+      } else if (botType === "bridgebot") {
+        const referralChannelService = new ReferralChannelService();
+        await referralChannelService.addReferralChannel({
+          creator: referrer,
+          platform: ReferralPlatform.BridgeBot,
+          chat_id: chatId,
+          channel_name: channelName,
+        });
+      }
+      // }
+      // }
     }
   });
   alertBot.on('new_chat_members', async (msg: TelegramBot.Message) => {
-    await newReferralChannelHandler(msg);
+    const data = await newReferralChannelHandler(msg);
+    if (!data) return;
+
+    try {
+      await ReferrerListService.create(data);
+    } catch (e) { }
   });
   alertBot.on('left_chat_member', async (msg: TelegramBot.Message) => {
     await removeReferralChannelHandler(msg);

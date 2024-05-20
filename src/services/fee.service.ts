@@ -32,6 +32,7 @@ export class FeeService {
       const referralFee = Number((total_fee_in_sol * referralFeePercent / 100).toFixed(0));
       const reserverStakingFee = total_fee_in_sol - referralFee;
 
+      console.log("Fee total:", total_fee_in_sol, total_fee_in_token, referralFee, reserverStakingFee);
       const instructions: TransactionInstruction[] = [];
       if (reserverStakingFee > 0) {
         instructions.push(

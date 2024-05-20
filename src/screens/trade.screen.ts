@@ -15,7 +15,7 @@ import { copytoclipboard } from "../utils";
 import { PositionService } from "../services/position.service";
 import bs58 from "bs58";
 import { RESERVE_WALLET, connection } from "../config";
-import { sendTransactionV0 } from "../utils/v0.transaction";
+import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import { checkReferralFeeSent, get_referral_info } from "../services/referral.service";
 import { ReferralHistoryControler } from "../controllers/referral.history";
 
@@ -245,10 +245,25 @@ export const buyHandler = async (
           disable_web_page_preview: true,
           reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
         }
-      )
+      );
+
     } catch (e) { }
 
-    const result = await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    const status = await getSignatureStatus(signature);
+    if (!status) {
+      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
+      await bot.editMessageCaption(
+        failedCaption,
+        {
+          message_id: pendingTxMsgId,
+          chat_id,
+          parse_mode: 'HTML',
+        }
+      )
+      return;
+    }
+
+    const result = await checkReferralFeeSent(total_fee_in_sol, username);
     if (result === true) {
       const volume = amount * solprice;
       const buydata = {
@@ -260,23 +275,6 @@ export const buyHandler = async (
         amount
       };
       await PositionService.updateBuyPosition(buydata);
-    } else if (result === null) {
-      const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-      const successCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
-
-      // Just in case
-      try {
-        await bot.editMessageText(
-          successCaption,
-          {
-            message_id: pendingTxMsgId,
-            chat_id,
-            parse_mode: 'HTML',
-            disable_web_page_preview: true,
-            reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-          }
-        )
-      } catch (e) { }
     }
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
@@ -382,8 +380,21 @@ export const autoBuyHandler = async (
       )
     } catch (e) { }
 
+    const status = await getSignatureStatus(signature);
+    if (!status) {
+      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
+      await bot.editMessageCaption(
+        failedCaption,
+        {
+          message_id: pendingTxMsgId,
+          chat_id,
+          parse_mode: 'HTML',
+        }
+      )
+      return;
+    }
 
-    const result = await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    const result = await checkReferralFeeSent(total_fee_in_sol, username);
     if (result === true) {
       const volume = amount * solprice;
       const buydata = {
@@ -395,23 +406,6 @@ export const autoBuyHandler = async (
         amount
       };
       await PositionService.updateBuyPosition(buydata);
-    } else if (result === null) {
-      const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-      const successCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
-
-      // Just in case
-      try {
-        await bot.editMessageText(
-          successCaption,
-          {
-            message_id: pendingTxMsgId,
-            chat_id,
-            parse_mode: 'HTML',
-            disable_web_page_preview: true,
-            reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-          }
-        )
-      } catch (e) { }
     }
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
@@ -528,7 +522,21 @@ export const sellHandler = async (
       }
     )
 
-    const result = await checkReferralFeeSent(total_fee_in_sol, username, signature);
+    const status = await getSignatureStatus(signature);
+    if (!status) {
+      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
+      await bot.editMessageCaption(
+        failedCaption,
+        {
+          message_id: pendingMessage.message_id,
+          chat_id,
+          parse_mode: 'HTML',
+        }
+      )
+      return;
+    }
+
+    const result = await checkReferralFeeSent(total_fee_in_sol, username);
     if (result === true) {
       // sell updates
       const selldata = {
@@ -539,23 +547,6 @@ export const sellHandler = async (
         percent
       };
       await PositionService.updateSellPosition(selldata);
-    } else if (result === null) {
-      const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
-
-      // Just in case
-      try {
-        await bot.editMessageText(
-          failedCaption,
-          {
-            message_id: pendingMessage.message_id,
-            chat_id,
-            parse_mode: 'HTML',
-            disable_web_page_preview: true,
-            reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-          }
-        )
-      } catch (e) { }
     }
   } else {
     const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);

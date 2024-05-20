@@ -6,6 +6,7 @@ import { ReferralHistoryControler } from '../controllers/referral.history';
 import { PublicKey } from '@solana/web3.js';
 import { connection } from '../config';
 import { wait } from '../utils/wait';
+import { ReferralChannelService } from './referral.channel.service';
 
 export type ReferralData = {
     username: string,
@@ -81,14 +82,24 @@ export const get_referral_amount = async (uniquecode: string) => {
 }
 
 export const getReferralList = async () => {
-    let userInfo = await UserService.find({});
-    let res = userInfo?.map((item) => ({
-        username: item.username,
-        uniquecode: item.referrer_code,
-        schedule: item.schedule ?? "60"
-    }))
-    return res;
+    try {
+        const referralChannelService = new ReferralChannelService();
+        const result = await referralChannelService.getAllReferralChannels();
+        return result;
+    } catch (e) {
+        return null;
+    }
 }
+
+// export const getReferralList = async () => {
+//     let userInfo = await UserService.find({});
+//     let res = userInfo?.map((item) => ({
+//         username: item.username,
+//         uniquecode: item.referrer_code,
+//         schedule: item.schedule ?? "60"
+//     }))
+//     return res;
+// }
 
 export const update_channel_id = async (username: string, idx: number, channelId: string) => {
     try {
@@ -106,7 +117,7 @@ export const update_channel_id = async (username: string, idx: number, channelId
 export const checkReferralFeeSent = async (
     total_fee_in_sol: number,
     username: string,
-    signature: string
+    // signature: string
 ) => {
     try {
         console.log("Calculate Referral Fee to wallet starts");
@@ -134,9 +145,9 @@ export const checkReferralFeeSent = async (
         // if (retries == maxRetry * 2) return null;
         // if (retries > 0) return undefined;
 
-        connection.getSignatureStatus(signature, {
-            searchTransactionHistory: false,
-        })
+        // connection.getSignatureStatus(signature, {
+        //     searchTransactionHistory: false,
+        // })
         let ref_info = await get_referral_info(username);
         if (!ref_info) return undefined;
 

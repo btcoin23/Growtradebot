@@ -2,6 +2,7 @@ import TelegramBot from "node-telegram-bot-api";
 import { showWelcomeReferralProgramMessage } from "./welcome.referral.screen";
 import { generateReferralCode } from "../utils";
 import { UserService } from "../services/user.service";
+import { ReferralChannelService } from "../services/referral.channel.service";
 
 export const OpenReferralWindowHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   const chat = msg.chat;
@@ -28,6 +29,13 @@ export const OpenReferralWindowHandler = async (bot: TelegramBot, msg: TelegramB
   else {
     let uniquecode = generateReferralCode(10);
     referrerCode = uniquecode;
+    const referralChannelService = new ReferralChannelService();
+    const res = await referralChannelService.createReferralChannel(
+      username,
+      uniquecode
+    );
+    console.log(res)
+    if (!res) return;
     await UserService.updateMany({ username: username }, { referrer_code: uniquecode })
   }
 

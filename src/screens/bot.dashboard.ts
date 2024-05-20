@@ -1,9 +1,10 @@
 import TelegramBot from "node-telegram-bot-api";
-import { ALERT_BOT_IMAGE, AlertBotID, WELCOME_REFERRAL } from "../bot.opts";
+import { AlertBotID, WELCOME_REFERRAL } from "../bot.opts";
 import { get_referrer_info } from "../services/referral.service";
 import { ReferralChannelController } from "../controllers/referral.channel";
 import { UserService } from "../services/user.service";
 import { schedule } from "node-cron";
+import { ReferralChannelService, ReferralPlatform } from "../services/referral.channel.service";
 
 export const openAlertBotDashboard = async (
   bot: TelegramBot,
@@ -35,7 +36,7 @@ export const openAlertBotDashboard = async (
         // callback_data: JSON.stringify({
         //   'command': 'dummy_button'
         // })
-        url: `https://t.me/${AlertBotID}?startgroup=true`
+        url: `https://t.me/${AlertBotID}?startgroup=tradebot`
       }],
       [{
         text: 'Refresh bot info',
@@ -149,6 +150,15 @@ export const updateSchedule = async (bot: TelegramBot, chat: TelegramBot.Chat, s
     const chatId = chat.id;
     const username = chat.username;
     if (!username) return;
+    // update channel DB as well
+    const referralChannelService = new ReferralChannelService();
+    const result = await referralChannelService.updateReferralChannel({
+      creator: username,
+      platform: ReferralPlatform.TradeBot,
+      schedule: scheduleTime
+    })
+    console.log(result);
+    if (!result) return;
     // post
     const res = await UserService.updateMany({ username: username }, { schedule: scheduleTime })
     if (res) {

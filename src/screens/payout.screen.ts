@@ -30,8 +30,9 @@ export const sendPayoutAddressManageScreen = async (
         //     // `Available profits: $${profitdata?.available_profit.toFixed(3) ?? "0"}` +
         //     `\n\n` +
         const caption = '<b>Payout address</b>👇\n' +
-            `<b>SOL</b> wallet (Solana) 🔹\n${copytoclipboard(payout_wallet)}\n\n` +
-            `<b>Current referral percentage: First Month: 25%</b>`
+            `<b>SOL</b> wallet (Solana) 🔹\n${copytoclipboard(payout_wallet)}`;
+        // \n\n` +
+        // `<b>Current referral percentage: First Month: 25%</b>`
 
         // `<b>USDT</b> wallet (BNB-chain) 🔸\n${copytoclipboard(busdpayout)}\n\n` +
         // `Note: Payouts can be requests when profits reach a value of 20$.`

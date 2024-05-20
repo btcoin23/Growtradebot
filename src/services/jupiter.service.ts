@@ -205,8 +205,8 @@ export class JupiterService {
       // Netherland
       const jitoBundleInstance = new JitoBundleService("ams");
       const result = await jitoBundleInstance.sendTransaction(rawTransaction);
-      const status = await getSignatureStatus(signature);
-      if (!status) return null;
+      // const status = await getSignatureStatus(signature);
+      // if (!status) return null;
       console.log("Transaction Result", result);
       console.log(`https://solscan.io/tx/${signature}`);
       return {
