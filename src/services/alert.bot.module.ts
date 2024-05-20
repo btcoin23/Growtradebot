@@ -40,19 +40,19 @@ const processReferral = async (referral: ReferralData, bot: TelegramBot) => {
 
     const botId = Number(platform) === ReferralPlatform.TradeBot ? TradeBotID : BridgeBotID;
     const botImg = Number(platform) === ReferralPlatform.TradeBot ? ALERT_GT_IMAGE : ALERT_GB_IMAGE;
-
+    const txt = Number(platform) === ReferralPlatform.TradeBot ? "Try GrowTrade now" : "Try GrowBridge now";
     const referralLink = `https://t.me/${botId}?start=${referral_code}`;
     for (let idx = 0; idx < channels.length; idx++) {
       const { chat_id } = channels[idx];
 
-      sendAlert(bot, chat_id, referralLink, creator, idx, botImg);
+      sendAlert(bot, chat_id, referralLink, creator, idx, botImg, txt);
     }
   } catch (e) {
     console.log("processReferral", e);
   }
 }
 
-const sendAlert = async (bot: TelegramBot, channelChatId: string, referralLink: string, creator: string, idx: number, botImg: string) => {
+const sendAlert = async (bot: TelegramBot, channelChatId: string, referralLink: string, creator: string, idx: number, botImg: string, txt: string) => {
   try {
     if (!channelChatId || channelChatId === "") return;
     await bot.getChat(channelChatId);
@@ -64,7 +64,7 @@ const sendAlert = async (bot: TelegramBot, channelChatId: string, referralLink: 
         reply_markup: {
           inline_keyboard: [
             [{
-              text: 'Try GrowTrade now!',
+              text: txt,
               url: referralLink
             }],
             // [{
