@@ -7,6 +7,10 @@ import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.sett
 import { MsgLogService } from "../services/msglog.service";
 import { PositionService } from "../services/position.service";
 import { autoBuyHandler, buyHandler } from "./trade.screen";
+import { JupiterService } from "../services/jupiter.service";
+import { NATIVE_MINT } from "@solana/spl-token";
+import { QuoteResponse } from "@jup-ag/api";
+import { PNLService } from "../services/pnl.service";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -58,7 +62,7 @@ export const contractInfoScreenHandler = async (
     }
 
     const { overview, secureinfo } = tokeninfo;
-    const { symbol, name, price, mc, liquidity } = overview;
+    const { symbol, name, price, mc, decimals } = overview;
     const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData, top10HolderBalance, top10HolderPercent } = secureinfo;
 
     let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
@@ -69,35 +73,69 @@ export const contractInfoScreenHandler = async (
     const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
     const solbalance = await TokenService.getSOLBalance(user.wallet_address);
 
-    // let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
-    const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
-    if (position) {
-      const { sol_amount } = position;
-      if (sol_amount > 0) {
-        let pnl = (price / solprice * splbalance * 100) / sol_amount;
+    const jupiterService = new JupiterService();
+    // SELL simulate
+    const splvalue = splbalance * price;
+    const quote = splvalue > 1 ? await jupiterService.getQuote(
+      mint,
+      NATIVE_MINT.toBase58(),
+      splbalance,
+      decimals,
+      9
+    ) : null;
+    let priceImpact: number = 0;
+    if (quote) {
+      priceImpact = quote.priceImpactPct;
 
-        if (transferFeeEnable && transferFeeData) {
-          const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-          pnl *= feerate;
-        }
-
-        if (pnl >= 100) {
-          let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
-          let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
-          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
+      const { wallet_address } = user;
+      const pnlService = new PNLService(
+        wallet_address,
+        mint,
+        quote
+      )
+      await pnlService.initialize();
+      const pnldata = await pnlService.getPNLInfo();
+      if (pnldata) {
+        const { profitInSOL, percent } = pnldata;
+        const profitInUSD = profitInSOL * Number(solprice);
+        if (profitInSOL < 0) {
+          caption += `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n\n`
         } else {
-          let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
-          let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
-          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
+          caption += `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n\n`
         }
       }
+    } else {
+      caption += `<b>PNL:</b> 0%\n\n`
     }
+    // let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
+    // const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
+    // if (position) {
+    //   const { sol_amount } = position;
+    //   if (sol_amount > 0) {
+    //     let pnl = (price / solprice * splbalance * 100) / sol_amount;
+
+    //     if (transferFeeEnable && transferFeeData) {
+    //       const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+    //       pnl *= feerate;
+    //     }
+
+    //     if (pnl >= 100) {
+    //       let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
+    //       let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
+    //       caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
+    //     } else {
+    //       let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
+    //       let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
+    //       caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
+    //     }
+    //   }
+    // }
 
     caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
-      `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🟥' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n` +
-      // `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
+      `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n` +
+      `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-      // `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
+      `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
       `💳 <b>Balance: loading... </b>\n` +
       `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;

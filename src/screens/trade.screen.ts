@@ -1,5 +1,5 @@
 import TelegramBot, { InlineKeyboardMarkup } from "node-telegram-bot-api";
-import { JupiterService } from "../services/jupiter.service";
+import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
 import { closeReplyMarkup, deleteDelayMessage } from "./common.screen";
 import { UserService } from "../services/user.service";
@@ -11,13 +11,14 @@ import { amount } from "@metaplex-foundation/js";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { inline_keyboards } from "./contract.info.screen";
-import { copytoclipboard } from "../utils";
+import { copytoclipboard, fromWeiToValue } from "../utils";
 import { PositionService } from "../services/position.service";
 import bs58 from "bs58";
 import { RESERVE_WALLET, connection } from "../config";
 import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import { checkReferralFeeSent, get_referral_info } from "../services/referral.service";
 import { ReferralHistoryControler } from "../controllers/referral.history";
+import { PNLService } from "../services/pnl.service";
 
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
@@ -230,7 +231,7 @@ export const buyHandler = async (
   );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
+    const { signature, total_fee_in_sol, quote } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -263,19 +264,21 @@ export const buyHandler = async (
       return;
     }
 
-    const result = await checkReferralFeeSent(total_fee_in_sol, username);
-    if (result === true) {
-      const volume = amount * solprice;
-      const buydata = {
-        username,
-        chat_id,
-        mint,
-        wallet_address: user.wallet_address,
-        volume,
-        amount
-      };
-      await PositionService.updateBuyPosition(buydata);
-    }
+    // Buy with SOL.
+    const {
+      inAmount, outAmount
+    } = quote;
+    const inAmountNum = fromWeiToValue(inAmount, 9);
+    const outAmountNum = fromWeiToValue(outAmount, decimals);
+
+    const pnlservice = new PNLService(
+      user.wallet_address,
+      mint,
+    )
+    await pnlservice.afterBuy(inAmountNum, outAmountNum);
+
+    // Update Referral System
+    await checkReferralFeeSent(total_fee_in_sol, username);
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     await bot.editMessageText(
@@ -362,7 +365,7 @@ export const autoBuyHandler = async (
   );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
+    const { signature, total_fee_in_sol, quote } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -394,19 +397,21 @@ export const autoBuyHandler = async (
       return;
     }
 
-    const result = await checkReferralFeeSent(total_fee_in_sol, username);
-    if (result === true) {
-      const volume = amount * solprice;
-      const buydata = {
-        username,
-        chat_id,
-        mint,
-        wallet_address: user.wallet_address,
-        volume,
-        amount
-      };
-      await PositionService.updateBuyPosition(buydata);
-    }
+    // Buy with SOL.
+    const {
+      inAmount, outAmount
+    } = quote;
+    const inAmountNum = fromWeiToValue(inAmount, 9);
+    const outAmountNum = fromWeiToValue(outAmount, decimals);
+
+    const pnlservice = new PNLService(
+      user.wallet_address,
+      mint,
+    )
+    await pnlservice.afterBuy(inAmountNum, outAmountNum);
+
+    // Update Referral System
+    await checkReferralFeeSent(total_fee_in_sol, username);
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     await bot.editMessageText(
@@ -507,7 +512,7 @@ export const sellHandler = async (
     isToken2022
   );
   if (quoteResult) {
-    const { signature, total_fee_in_sol, total_fee_in_token } = quoteResult;
+    const { signature, total_fee_in_sol, quote } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
@@ -536,18 +541,23 @@ export const sellHandler = async (
       return;
     }
 
-    const result = await checkReferralFeeSent(total_fee_in_sol, username);
-    if (result === true) {
-      // sell updates
-      const selldata = {
-        username,
-        chat_id,
-        mint,
-        wallet_address: user.wallet_address,
-        percent
-      };
-      await PositionService.updateSellPosition(selldata);
-    }
+
+    // Sell token for SOL.
+    const {
+      inAmount, outAmount
+    } = quote;
+    const inAmountNum = fromWeiToValue(inAmount, decimals);
+    const outAmountNum = fromWeiToValue(outAmount, 9);
+
+    const pnlservice = new PNLService(
+      user.wallet_address,
+      mint,
+    )
+    await pnlservice.afterSell(outAmountNum, percent);
+
+    // Update Referral System
+    await checkReferralFeeSent(total_fee_in_sol, username);
+
   } else {
     const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
     await bot.editMessageText(

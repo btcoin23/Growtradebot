@@ -95,3 +95,11 @@ export const copytoclipboard = (
 ) => {
   return `<code class="text-entity-code clickable" role="textbox" tabindex="0" data-entity-type="MessageEntityCode">${text}</code>`;
 }
+
+export const isEqual = (a: number, b: number) => {
+  return Math.abs(b - a) < 0.001;
+}
+
+export const fromWeiToValue = (wei: string, decimal: number) => {
+  return Number(wei) / 10 ** decimal;
+}

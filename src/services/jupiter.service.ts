@@ -2,17 +2,22 @@ import { ASSOCIATED_TOKEN_PROGRAM_ID, Account, NATIVE_MINT, TOKEN_2022_PROGRAM_I
 import { AddressLookupTableAccount, ComputeBudgetProgram, Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { AccountMeta, Instruction, QuoteGetRequest, SwapInstructionsResponse, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
-import { ReferralProvider } from "@jup-ag/referral-sdk";
+// import { ReferralProvider } from "@jup-ag/referral-sdk";
 import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_WALLET, connection } from "../config";
-import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
+// import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
-import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
-import redisClient, { ITradeGasSetting } from "./redis";
+// import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
+// import redisClient, { ITradeGasSetting } from "./redis";
 import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import { JitoBundleService, tipAccounts } from "./jito.bundle";
 import { FeeService } from "./fee.service";
+import { fromWeiToValue } from "../utils";
 
-const provider = new ReferralProvider(connection);
+// const provider = new ReferralProvider(connection);
+
+const config = {
+  basePath: "https://growtradebot.fly.dev"
+}
 
 export class JupiterService {
   instructionDataToTransactionInstruction(
@@ -210,6 +215,7 @@ export class JupiterService {
       // if (!status) return null;
       console.log("Transaction Result", result);
       console.log(`https://solscan.io/tx/${signature}`);
+
       return {
         quote,
         signature,
@@ -218,6 +224,50 @@ export class JupiterService {
       };
     } catch (e) {
       console.log("SwapToken Failed", e);
+      return null;
+    }
+  };
+
+  async getQuote(
+    inputMint: string,
+    outputMint: string,
+    inputAmount: number,
+    inDecimal: number,
+    outDecimal: number
+  ) {
+    try {
+      if (inputAmount < 0.000001) return null;
+
+      const jupiterQuoteApi = createJupiterApiClient(config);
+      const amount = Number((inputAmount * (10 ** inDecimal)).toFixed(0));
+      // const jupiterQuoteApi = createJupiterApiClient();
+      const quotegetOpts: QuoteGetRequest = {
+        inputMint,
+        outputMint,
+        amount,
+        slippageBps: 2000,
+        onlyDirectRoutes: false,
+        asLegacyTransaction: false,
+      }
+      // console.log("Quote start", Date.now())
+      const quote = await jupiterQuoteApi.quoteGet(quotegetOpts);
+      // console.log("Quote end", Date.now())
+
+      const {
+        inAmount, outAmount, priceImpactPct
+      } = quote;
+      const inAmountNum = fromWeiToValue(inAmount, inDecimal);
+      const outAmountNum = fromWeiToValue(outAmount, outDecimal);
+
+      return {
+        inputMint,
+        outputMint,
+        inAmount: inAmountNum,
+        outAmount: outAmountNum,
+        priceImpactPct: Number(priceImpactPct)
+      } as QuoteRes;
+    } catch (e) {
+      // console.log("Simulate Get Quote", e)
       return null;
     }
   };
@@ -495,4 +545,12 @@ export class JupiterService {
       }
     } while (retires < 5);
   }
+}
+
+export interface QuoteRes {
+  inputMint: string;
+  inAmount: number;
+  outputMint: string;
+  outAmount: number;
+  priceImpactPct: number;
 }

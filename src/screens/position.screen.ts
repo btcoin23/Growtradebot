@@ -5,6 +5,9 @@ import { UserService } from "../services/user.service";
 import { sendUsernameRequiredNotification } from "./common.screen";
 import { GrowTradeVersion } from "../config";
 import { PositionService } from "../services/position.service";
+import { JupiterService } from "../services/jupiter.service";
+import { NATIVE_MINT } from "@solana/spl-token";
+import { PNLService } from "../services/pnl.service";
 
 export const positionScreenHandler = async (
   bot: TelegramBot,
@@ -74,28 +77,57 @@ export const positionScreenHandler = async (
     const positions = await PositionService.find({ wallet_address: user.wallet_address });
     let idx = 0;
     for (const item of tokenaccounts) {
-      const { mint: mintAddress, amount: tokenBalance, symbol, price, transferFeeData, transferFeeEnable } = item;
+      const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       const position = positions.filter(ps => ps.mint === mintAddress);
-      if (position.length > 0) {
-        const { sol_amount } = position[0];
-        if (sol_amount > 0) {
-          let pnl = (price / solprice * tokenBalance * 100) / sol_amount;
-          if (transferFeeEnable && transferFeeData) {
-            const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-            pnl *= feerate;
-          }
-          if (pnl >= 100) {
-            let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
-            let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
-            caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
+      const splvalue = tokenBalance * price;
+
+      // If value is over 5$.
+      const jupiterService = new JupiterService();
+      const quote = splvalue > 1 ? await jupiterService.getQuote(
+        mintAddress,
+        NATIVE_MINT.toBase58(),
+        tokenBalance,
+        decimals,
+        9
+      ) : null;
+      if (quote) {
+        const { wallet_address } = user;
+        const pnlService = new PNLService(
+          wallet_address,
+          mintAddress,
+          quote
+        )
+        await pnlService.initialize();
+        const pnldata = await pnlService.getPNLInfo();
+        if (pnldata) {
+          const { profitInSOL, percent } = pnldata;
+          const profitInUSD = profitInSOL * Number(solprice);
+          if (profitInSOL < 0) {
+            caption += `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n`
           } else {
-            let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
-            let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
-            caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
+            caption += `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n`
           }
         }
+      } else {
+        caption += `<b>PNL:</b> 0%\n`
       }
+      // if (sol_amount > 0) {
+      //   let pnl = (price / solprice * tokenBalance * 100) / sol_amount;
+      //   if (transferFeeEnable && transferFeeData) {
+      //     const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
+      //     pnl *= feerate;
+      //   }
+      //   if (pnl >= 100) {
+      //     let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
+      //     let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
+      //     caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
+      //   } else {
+      //     let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
+      //     let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
+      //     caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
+      //   }
+      // }
       caption += `<i>${copytoclipboard(mintAddress)}</i>\n`;
       // Check if the current nested array exists
       if (!transferInlineKeyboards[Math.floor(idx / 3)]) {

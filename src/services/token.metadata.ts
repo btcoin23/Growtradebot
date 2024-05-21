@@ -11,6 +11,7 @@ export interface ITokenAccountInfo {
   mint: string,
   owner: string,
   amount: number,
+  decimals: number,
   delegated_amount: number,
   frozen: boolean,
   symbol?: string,
@@ -322,6 +323,7 @@ const getaccounts = async (owner: string) => {
         const temp = account;
         temp.symbol = symbol;
         temp.amount = balance;
+        temp.decimals = decimals;
         temp.price = tokeninfo.overview.price;
         temp.transferFeeEnable = tokeninfo.secureinfo.transferFeeEnable;
         temp.transferFeeData = tokeninfo.secureinfo.transferFeeData;
