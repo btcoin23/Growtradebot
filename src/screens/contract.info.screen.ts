@@ -135,7 +135,7 @@ export const contractInfoScreenHandler = async (
       `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n` +
       `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n\n` +
       `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-      `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
+      `💸 Price Impact: [${priceImpact.toFixed(4)} % of price impact if sold]\n` +
       `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
       `💳 <b>Balance: loading... </b>\n` +
       `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
