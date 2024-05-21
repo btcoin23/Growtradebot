@@ -203,7 +203,8 @@ export class JupiterService {
 
       const rawTransaction = transaction.serialize();
       // Netherland
-      const jitoBundleInstance = new JitoBundleService("ams");
+      // const jitoBundleInstance = new JitoBundleService("ams");
+      const jitoBundleInstance = new JitoBundleService();
       const result = await jitoBundleInstance.sendTransaction(rawTransaction);
       // const status = await getSignatureStatus(signature);
       // if (!status) return null;

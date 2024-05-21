@@ -1,6 +1,6 @@
 import bs58 from "bs58";
 import axios from "axios";
-import { JITO_UUID } from "../config";
+// import { JITO_UUID } from "../config";
 
 type Region = "ams" | "default" | "ger" | "ny" | "tokyo";
 
@@ -12,6 +12,9 @@ export const endpoints = {
   "ny": "https://ny.mainnet.block-engine.jito.wtf",
   "tokyo": "https://tokyo.mainnet.block-engine.jito.wtf",
 }
+
+const regions = ["ams", "default", "ger", "ny", "tokyo"] as Region[];
+let idx = 0;
 
 export const tipAccounts = [
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
@@ -27,8 +30,13 @@ export const tipAccounts = [
 export class JitoBundleService {
   endpoint: string;
 
-  constructor(_region: Region) {
+  // constructor(_region: Region) {
+  constructor() {
+    idx = (idx + 1) % 5;
+    const _region = regions[idx];
+
     this.endpoint = endpoints[_region];
+    console.log("JitoRegion", _region);
   }
 
   async sendTransaction(serializedTransaction: Uint8Array) {
