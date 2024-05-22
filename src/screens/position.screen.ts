@@ -84,34 +84,34 @@ export const positionScreenHandler = async (
 
       // If value is over 5$.
       const jupiterService = new JupiterService();
-      const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
-        mintAddress,
-        NATIVE_MINT.toBase58(),
-        tokenBalance,
-        decimals,
-        9
-      ) : null;
-      if (quote) {
-        const { wallet_address } = user;
-        const pnlService = new PNLService(
-          wallet_address,
-          mintAddress,
-          quote
-        )
-        await pnlService.initialize();
-        const pnldata = await pnlService.getPNLInfo();
-        if (pnldata) {
-          const { profitInSOL, percent } = pnldata;
-          const profitInUSD = profitInSOL * Number(solprice);
-          if (profitInSOL < 0) {
-            caption += `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n`
-          } else {
-            caption += `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n`
-          }
-        }
-      } else {
-        caption += `<b>PNL:</b> 0%\n`
-      }
+      // const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
+      //   mintAddress,
+      //   NATIVE_MINT.toBase58(),
+      //   tokenBalance,
+      //   decimals,
+      //   9
+      // ) : null;
+      // if (quote) {
+      //   const { wallet_address } = user;
+      //   const pnlService = new PNLService(
+      //     wallet_address,
+      //     mintAddress,
+      //     quote
+      //   )
+      //   await pnlService.initialize();
+      //   const pnldata = await pnlService.getPNLInfo();
+      //   if (pnldata) {
+      //     const { profitInSOL, percent } = pnldata;
+      //     const profitInUSD = profitInSOL * Number(solprice);
+      //     if (profitInSOL < 0) {
+      //       caption += `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n`
+      //     } else {
+      //       caption += `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n`
+      //     }
+      //   }
+      // } else {
+      //   caption += `<b>PNL:</b> 0%\n`
+      // }
       // if (sol_amount > 0) {
       //   let pnl = (price / solprice * tokenBalance * 100) / sol_amount;
       //   if (transferFeeEnable && transferFeeData) {
