@@ -14,11 +14,14 @@ import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard, fromWeiToValue } from "../utils";
 import { PositionService } from "../services/position.service";
 import bs58 from "bs58";
-import { RESERVE_WALLET, connection } from "../config";
+import { RAYDIUM_PASS_TIME, RESERVE_WALLET, connection, private_connection } from "../config";
 import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import { checkReferralFeeSent, get_referral_info } from "../services/referral.service";
 import { ReferralHistoryControler } from "../controllers/referral.history";
 import { PNLService } from "../services/pnl.service";
+import { RaydiumSwapService, getPriceInSOL } from "../raydium/raydium.service";
+import { RaydiumTokenService } from "../services/raydium.token.service";
+import { getMintMetadata } from "../raydium";
 
 
 export const buyCustomAmountScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
@@ -182,12 +185,38 @@ export const buyHandler = async (
     return;
   }
 
-  const mintinfo = await TokenService.getMintInfo(mint);
-  if (!mintinfo) return;
+  let name = '';
+  let symbol = '';
+  let decimals = 9;
+  let isToken2022 = false;
+  let isRaydium = true;
+  const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
+  if (raydiumPoolInfo) {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    if (duration < RAYDIUM_PASS_TIME) {
+      // Metadata
+      const metadata = await getMintMetadata(
+        private_connection,
+        new PublicKey(mint)
+      );
+      if (!metadata) return;
+      isToken2022 = metadata.program === 'spl-token-2022';
+      name = raydiumPoolInfo.name;
+      symbol = raydiumPoolInfo.symbol;
+      decimals = metadata.parsed.info.decimals;
+    }
+  } else {
+    const mintinfo = await TokenService.getMintInfo(mint);
+    if (!mintinfo) return;
+    isRaydium = false;
+    name = mintinfo.overview.name || "";
+    symbol = mintinfo.overview.symbol || "";
+    decimals = mintinfo.overview.decimals || 9;
+    isToken2022 = mintinfo.secureinfo.isToken2022;
+  }
   console.log("Buy5:", Date.now())
 
-  const { name, symbol, decimals } = mintinfo.overview;
-  const { isToken2022 } = mintinfo.secureinfo;
   const solprice = await TokenService.getSOLPrice();
   console.log("Buy6:", Date.now())
 
@@ -216,19 +245,33 @@ export const buyHandler = async (
   const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
   console.log("Buy start:", Date.now())
   // buy token
+  const raydiumService = new RaydiumSwapService();
   const jupiterSerivce = new JupiterService();
-  const quoteResult = await jupiterSerivce.swapToken(
-    user.private_key,
-    NATIVE_MINT.toBase58(),
-    mint,
-    9, // SOL decimal
-    amount,
-    slippage,
-    gasvalue,
-    user.burn_fee ?? true,
-    username,
-    isToken2022
-  );
+  const quoteResult = isRaydium ?
+    await raydiumService.swapToken(
+      user.private_key,
+      NATIVE_MINT.toBase58(),
+      mint,
+      9, // SOL decimal
+      amount,
+      slippage,
+      gasvalue,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    ) :
+    await jupiterSerivce.swapToken(
+      user.private_key,
+      NATIVE_MINT.toBase58(),
+      mint,
+      9, // SOL decimal
+      amount,
+      slippage,
+      gasvalue,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    );
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote } = quoteResult;
@@ -303,7 +346,6 @@ export const autoBuyHandler = async (
   amount: number,
   sol_amount: number,
   gasvalue: number,
-  mintinfo: any,
   slippage: number,
 ) => {
   const chat_id = msg.chat.id;
@@ -323,8 +365,37 @@ export const autoBuyHandler = async (
     return;
   }
 
-  const { name, symbol, decimals } = mintinfo.overview;
-  const { isToken2022 } = mintinfo.secureinfo;
+  let name = '';
+  let symbol = '';
+  let decimals = 9;
+  let isToken2022 = false;
+  let isRaydium = true;
+  const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
+  if (raydiumPoolInfo) {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    if (duration < RAYDIUM_PASS_TIME) {
+      // Metadata
+      const metadata = await getMintMetadata(
+        private_connection,
+        new PublicKey(mint)
+      );
+      if (!metadata) return;
+      isToken2022 = metadata.program === 'spl-token-2022';
+      name = raydiumPoolInfo.name;
+      symbol = raydiumPoolInfo.symbol;
+      decimals = metadata.parsed.info.decimals;
+    }
+  } else {
+    const mintinfo = await TokenService.getMintInfo(mint);
+    if (!mintinfo) return;
+    isRaydium = false;
+    name = mintinfo.overview.name || "";
+    symbol = mintinfo.overview.symbol || "";
+    decimals = mintinfo.overview.decimals || 9;
+    isToken2022 = mintinfo.secureinfo.isToken2022;
+  }
+
   const solprice = await TokenService.getSOLPrice();
   console.log("AutoBuy1:", Date.now())
 
@@ -350,19 +421,33 @@ export const autoBuyHandler = async (
   console.log("Buy start:", Date.now())
 
   // buy token
+  const raydiumService = new RaydiumSwapService();
   const jupiterSerivce = new JupiterService();
-  const quoteResult = await jupiterSerivce.swapToken(
-    user.private_key,
-    NATIVE_MINT.toBase58(),
-    mint,
-    9, // SOL decimal
-    amount,
-    slippage,
-    gasvalue,
-    user.burn_fee ?? true,
-    username,
-    isToken2022
-  );
+  const quoteResult = isRaydium ?
+    await raydiumService.swapToken(
+      user.private_key,
+      NATIVE_MINT.toBase58(),
+      mint,
+      9, // SOL decimal
+      amount,
+      slippage,
+      gasvalue,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    ) :
+    await jupiterSerivce.swapToken(
+      user.private_key,
+      NATIVE_MINT.toBase58(),
+      mint,
+      9, // SOL decimal
+      amount,
+      slippage,
+      gasvalue,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    );
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote } = quoteResult;
@@ -465,11 +550,50 @@ export const sellHandler = async (
     return;
   }
 
-  const mintinfo = await TokenService.getMintInfo(mint);
+  // const mintinfo = await TokenService.getMintInfo(mint);
 
-  if (!mintinfo) return;
-  const { name, symbol, price, decimals } = mintinfo.overview;
-  const { isToken2022 } = mintinfo.secureinfo;
+  // if (!mintinfo) return;
+  // const { name, symbol, price, decimals } = mintinfo.overview;
+  // const { isToken2022 } = mintinfo.secureinfo;
+  let name = '';
+  let symbol = '';
+  let decimals = 9;
+  let price = 0;
+  let isToken2022 = false;
+  let isRaydium = true;
+  const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
+  if (raydiumPoolInfo) {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    if (duration < RAYDIUM_PASS_TIME) {
+      // Metadata
+      const metadata = await getMintMetadata(
+        private_connection,
+        new PublicKey(mint)
+      );
+      if (!metadata) return;
+      isToken2022 = metadata.program === 'spl-token-2022';
+      name = raydiumPoolInfo.name;
+      symbol = raydiumPoolInfo.symbol;
+      decimals = metadata.parsed.info.decimals;
+
+      const {
+        priceInSOL,
+        // baseBalance
+      } = await getPriceInSOL(raydiumPoolInfo, private_connection);
+      const solprice = await TokenService.getSOLPrice();
+      price = priceInSOL * solprice;
+    }
+  } else {
+    const mintinfo = await TokenService.getMintInfo(mint);
+    if (!mintinfo) return;
+    isRaydium = false;
+    name = mintinfo.overview.name || "";
+    symbol = mintinfo.overview.symbol || "";
+    decimals = mintinfo.overview.decimals || 9;
+    isToken2022 = mintinfo.secureinfo.isToken2022;
+    price = mintinfo.overview.price || 0;
+  }
 
   const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
   const sellAmount = splbalance * percent / 100;
@@ -493,24 +617,39 @@ export const sellHandler = async (
     }
   )
 
-  // buy token
+  // sell token
   const { slippage } = await UserTradeSettingService.getSlippage(username, mint);
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
 
+  const raydiumService = new RaydiumSwapService();
   const jupiterSerivce = new JupiterService();
-  const quoteResult = await jupiterSerivce.swapToken(
-    user.private_key,
-    mint,
-    NATIVE_MINT.toBase58(),
-    decimals,
-    sellAmount,
-    slippage,
-    gasvalue,
-    user.burn_fee ?? true,
-    username,
-    isToken2022
-  );
+  const quoteResult = isRaydium ?
+    await raydiumService.swapToken(
+      user.private_key,
+      mint,
+      NATIVE_MINT.toBase58(),
+      decimals,
+      sellAmount,
+      slippage,
+      gasvalue,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    ) :
+    await jupiterSerivce.swapToken(
+      user.private_key,
+      mint,
+      NATIVE_MINT.toBase58(),
+      decimals,
+      sellAmount,
+      slippage,
+      gasvalue,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    );
+
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;

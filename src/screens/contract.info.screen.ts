@@ -5,12 +5,17 @@ import { UserService } from "../services/user.service";
 import { sendNoneExistTokenNotification, sendNoneUserNotification, sendUsernameRequiredNotification } from "./common.screen";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
-import { PositionService } from "../services/position.service";
 import { autoBuyHandler, buyHandler } from "./trade.screen";
-import { JupiterService } from "../services/jupiter.service";
+import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { NATIVE_MINT } from "@solana/spl-token";
-import { QuoteResponse } from "@jup-ag/api";
 import { PNLService } from "../services/pnl.service";
+import { RaydiumTokenService } from "../services/raydium.token.service";
+import { PNL_SHOW_THRESHOLD_USD, RAYDIUM_PASS_TIME, connection, private_connection } from "../config";
+import { PublicKey } from "@solana/web3.js";
+import { LIQUIDITY_STATE_LAYOUT_V4 } from "@raydium-io/raydium-sdk";
+import { getMintMetadata, getTop10HoldersPercent } from "../raydium";
+import { estimateSwapRate, getPriceInSOL } from "../raydium/raydium.service";
+import { OpenMarketService } from "../services/openmarket.service";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -40,7 +45,54 @@ export const contractInfoScreenHandler = async (
       return;
     }
 
-    let preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
+
+    let caption = ''
+    let solbalance = 0;
+    let splbalance = 0;
+    // Here, we need to get info from raydium token list
+    const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
+    if (raydiumPoolInfo) {
+      const { creation_ts } = raydiumPoolInfo;
+      const duration = Date.now() - creation_ts;
+
+      const pending = await bot.sendMessage(chat_id, "Loading...");
+      // 120minutes
+      if (duration < RAYDIUM_PASS_TIME) {
+        const captionForRaydium = await getRaydiumTokenInfoCaption(
+          raydiumPoolInfo,
+          user.wallet_address
+        );
+        if (!captionForRaydium) {
+          bot.deleteMessage(chat_id, pending.message_id);
+          return;
+        }
+        caption = captionForRaydium.caption;
+        solbalance = captionForRaydium.solbalance;
+        splbalance = captionForRaydium.splbalance;
+      }
+      bot.deleteMessage(chat_id, pending.message_id);
+    } else {
+      // check token metadata
+      const tokeninfo = await TokenService.getMintInfo(mint);
+      if (!tokeninfo) {
+        await sendNoneExistTokenNotification(bot, msg);
+        return;
+      }
+      const captionForJuipter = await getJupiterTokenInfoCaption(
+        tokeninfo,
+        mint,
+        user.wallet_address
+      );
+
+      if (!captionForJuipter) return;
+
+      caption = captionForJuipter.caption;
+      solbalance = captionForJuipter.solbalance;
+      splbalance = captionForJuipter.splbalance;
+    }
+
+
+    const preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
 
     if (switchBtn == "switch_buy") {
       inline_keyboards[2] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
@@ -53,92 +105,6 @@ export const contractInfoScreenHandler = async (
       inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
       inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
     }
-
-    // check token metadata
-    const tokeninfo = await TokenService.getMintInfo(mint);
-    if (!tokeninfo) {
-      // await sendNoneExistTokenNotification(bot, msg);
-      return;
-    }
-
-    const { overview, secureinfo } = tokeninfo;
-    const { symbol, name, price, mc, decimals } = overview;
-    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData, top10HolderBalance, top10HolderPercent } = secureinfo;
-
-    let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
-      `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${copytoclipboard(mint)}</i>\n\n`;
-
-    const solprice = await TokenService.getSOLPrice();
-    const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
-    const solbalance = await TokenService.getSOLBalance(user.wallet_address);
-
-    const jupiterService = new JupiterService();
-    // SELL simulate
-    const splvalue = splbalance * price;
-    const quote = splvalue > 1 ? await jupiterService.getQuote(
-      mint,
-      NATIVE_MINT.toBase58(),
-      splbalance,
-      decimals,
-      9
-    ) : null;
-    let priceImpact: number = 0;
-    if (quote) {
-      priceImpact = quote.priceImpactPct;
-
-      const { wallet_address } = user;
-      const pnlService = new PNLService(
-        wallet_address,
-        mint,
-        quote
-      )
-      await pnlService.initialize();
-      const pnldata = await pnlService.getPNLInfo();
-      if (pnldata) {
-        const { profitInSOL, percent } = pnldata;
-        const profitInUSD = profitInSOL * Number(solprice);
-        if (profitInSOL < 0) {
-          caption += `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n\n`
-        } else {
-          caption += `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n\n`
-        }
-      }
-    } else {
-      caption += `<b>PNL:</b> 0%\n\n`
-    }
-    // let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
-    // const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
-    // if (position) {
-    //   const { sol_amount } = position;
-    //   if (sol_amount > 0) {
-    //     let pnl = (price / solprice * splbalance * 100) / sol_amount;
-
-    //     if (transferFeeEnable && transferFeeData) {
-    //       const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-    //       pnl *= feerate;
-    //     }
-
-    //     if (pnl >= 100) {
-    //       let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
-    //       let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
-    //       caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
-    //     } else {
-    //       let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
-    //       let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
-    //       caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
-    //     }
-    //   }
-    // }
-
-    caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
-      `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n` +
-      `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n\n` +
-      `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-      `💸 Price Impact: [${priceImpact.toFixed(4)} % of price impact if sold]\n` +
-      `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
-      `💳 <b>Balance: loading... </b>\n` +
-      `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
 
     const slippageSetting = await UserTradeSettingService.getSlippage(username, mint);
     const gasSetting = await UserTradeSettingService.getGas(username);
@@ -180,48 +146,11 @@ export const contractInfoScreenHandler = async (
         spl_amount: splbalance,
         extra_key: switchBtn
       });
-      // await MsgLogService.findOneAndUpdate({
-      //   filter: {
-      //     username,
-      //     mint,
-      //     wallet_address: user.wallet_address,
-      //     chat_id,
-      //     msg_id: msg.message_id,
-      //   },
-      //   data: {
-      //     extra_key: switchBtn
-      //   }
-      // });
     } else {
       const sentMessage = await bot.sendMessage(
         chat_id,
         caption,
         {
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-          reply_markup: {
-            inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
-              return {
-                text: item.text,
-                callback_data: JSON.stringify({
-                  'command': item.command ?? "dummy_button"
-                })
-              }
-            }))
-          }
-        }
-      );
-
-
-      bot.editMessageText(
-        caption.replace(
-          "Balance: loading...",
-          `Balance: ${solbalance.toFixed(6)} SOL\n` +
-          `💳 Token: ${splbalance} ${symbol ?? "\n"}`
-        ),
-        {
-          message_id: sentMessage.message_id,
-          chat_id,
           parse_mode: 'HTML',
           disable_web_page_preview: true,
           reply_markup: {
@@ -262,7 +191,6 @@ export const contractInfoScreenHandler = async (
           autoBuyAmount,
           solbalance,
           gasvalue,
-          tokeninfo,
           slippage
         )
       }
@@ -271,6 +199,201 @@ export const contractInfoScreenHandler = async (
     console.log("~ contractInfoScreenHandler ~", e);
   }
 }
+
+const getRaydiumTokenInfoCaption = async (
+  raydiumPoolInfo: any,
+  wallet_address: string,
+) => {
+  try {
+    // Raydium Info
+    const {
+      name,
+      symbol,
+      mint,
+      poolState
+    } = raydiumPoolInfo;
+    // console.log("M1", Date.now())
+
+    // Metadata
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    // console.log("M2", Date.now())
+    if (!metadata) return;
+
+    const isToken2022 = metadata.program === 'spl-token-2022';
+
+    // Balance
+    const solprice = await TokenService.getSOLPrice();
+    const splbalance = await TokenService.getSPLBalance(mint, wallet_address, isToken2022, true);
+    const solbalance = await TokenService.getSOLBalance(wallet_address);
+    // console.log("M3", Date.now())
+
+    // Price in sol
+    const {
+      priceInSOL,
+      // baseBalance
+    } = await getPriceInSOL(raydiumPoolInfo, private_connection);
+    // console.log("M4", Date.now())
+
+    const priceInUsd = priceInSOL * solprice;
+    const splvalue = priceInUsd * splbalance;
+
+    // PoolInfo, marketInfo
+    const marketinfo = await OpenMarketService.findLastOne({ mint });
+    // console.log("M5", Date.now())
+
+    const quote = splvalue >= PNL_SHOW_THRESHOLD_USD ? await estimateSwapRate(
+      private_connection,
+      raydiumPoolInfo,
+      marketinfo,
+      splbalance,
+      false,
+    ) : null;
+    // console.log("M6", Date.now())
+
+    const priceImpact = quote ? quote.priceImpactPct : 0;
+
+    const decimals = metadata.parsed.info.decimals;
+    const supply = Number(metadata.parsed.info.supply) / (10 ** Number(decimals));
+    // const liquidity = baseBalance;
+    const circulateSupply = supply; // - liquidity;
+
+    const freezeAuthority = metadata.parsed.info.freezeAuthority;
+    const mintAuthority = metadata.parsed.info.mintAuthority;
+    // console.log("M7", Date.now())
+
+    const top10HolderPercent = await getTop10HoldersPercent(
+      private_connection,
+      mint,
+      supply,
+      poolState.baseVault
+    );
+    const price = priceInUsd;
+    const mc = circulateSupply * price;
+    // console.log(mc);
+
+    const caption = await buildCaption(
+      name,
+      symbol,
+      isToken2022,
+      mint,
+      quote,
+      wallet_address,
+      mintAuthority,
+      freezeAuthority,
+      top10HolderPercent,
+      price,
+      priceImpact,
+      mc,
+      solprice,
+      solbalance,
+      splbalance
+    );
+    // console.log("M7", Date.now())
+
+    return {
+      caption,
+      solbalance,
+      splbalance
+    }
+  } catch (e) {
+    console.log(e)
+    return null;
+  }
+}
+
+const getJupiterTokenInfoCaption = async (
+  tokeninfo: any,
+  mint: string,
+  wallet_address: string,
+) => {
+  try {
+    const { overview, secureinfo } = tokeninfo;
+    const { symbol, name, price, mc, decimals } = overview;
+    const { isToken2022, ownerAddress, freezeAuthority, top10HolderPercent } = secureinfo;
+
+    const solprice = await TokenService.getSOLPrice();
+    const splbalance = await TokenService.getSPLBalance(mint, wallet_address, isToken2022, true);
+    const solbalance = await TokenService.getSOLBalance(wallet_address);
+
+    // SELL simulate
+    const splvalue = splbalance * price;
+    const jupiterService = new JupiterService();
+    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
+      mint,
+      NATIVE_MINT.toBase58(),
+      splbalance,
+      decimals,
+      9
+    ) : null;
+    const priceImpact = quote ? quote.priceImpactPct : 0;
+
+    const caption = await buildCaption(
+      name,
+      symbol,
+      isToken2022,
+      mint,
+      quote,
+      wallet_address,
+      ownerAddress,
+      freezeAuthority,
+      top10HolderPercent,
+      price,
+      priceImpact,
+      mc,
+      solprice,
+      solbalance,
+      splbalance
+    );
+    return {
+      caption,
+      solbalance,
+      splbalance
+    }
+  } catch (e) {
+    return null;
+  }
+}
+
+const buildCaption = async (
+  name: string,
+  symbol: string,
+  isToken2022: boolean,
+  mint: string,
+  quote: QuoteRes | null,
+  wallet_address: string,
+  mintAuthority: any,
+  freezeAuthority: any,
+  top10HolderPercent: number,
+  price: number,
+  priceImpact: number,
+  mc: number,
+  solprice: number,
+  solbalance: number,
+  splbalance: number
+) => {
+  let caption = '';
+
+  caption += `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
+    `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
+    `<i>${copytoclipboard(mint)}</i>\n\n`;
+  caption += await getPNLCaptionFromQuote(quote, wallet_address, mint, solprice);
+
+  caption += `🌳 Mint Disabled: ${mintAuthority ? "🔴" : "🍏"}\n` +
+    `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n` +
+    `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n\n` +
+    `💲 Price: <b>$${formatPrice(price)}</b>\n` +
+    `💸 Price Impact: [${priceImpact.toFixed(4)} % of price impact on sell]\n` +
+    `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
+    `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
+    `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +
+    `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
+
+  return caption;
+}
+
 
 export const changeBuySellHandler = async (bot: TelegramBot, msg: TelegramBot.Message, command: String) => {
   console.log("🚀 ~ changeBuySellHandler ~ command:", command)
@@ -340,11 +463,50 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     if (!msglog) return;
     const { mint } = msglog;
 
-    // check token metadata
-    const tokeninfo = await TokenService.getMintInfo(mint);
-    if (!tokeninfo) {
-      await sendNoneExistTokenNotification(bot, msg);
-      return;
+
+    let caption = ''
+    let solbalance = 0;
+    let splbalance = 0;
+    // Here, we need to get info from raydium token list
+    const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
+    if (raydiumPoolInfo) {
+      const { creation_ts } = raydiumPoolInfo;
+      const duration = Date.now() - creation_ts;
+
+      const pending = await bot.sendMessage(chat_id, "Loading...");
+      // 120minutes
+      if (duration < RAYDIUM_PASS_TIME) {
+        const captionForRaydium = await getRaydiumTokenInfoCaption(
+          raydiumPoolInfo,
+          user.wallet_address
+        );
+        if (!captionForRaydium) {
+          bot.deleteMessage(chat_id, pending.message_id);
+          return;
+        }
+        caption = captionForRaydium.caption;
+        solbalance = captionForRaydium.solbalance;
+        splbalance = captionForRaydium.splbalance;
+      }
+      bot.deleteMessage(chat_id, pending.message_id);
+    } else {
+      // check token metadata
+      const tokeninfo = await TokenService.getMintInfo(mint);
+      if (!tokeninfo) {
+        await sendNoneExistTokenNotification(bot, msg);
+        return;
+      }
+      const captionForJuipter = await getJupiterTokenInfoCaption(
+        tokeninfo,
+        mint,
+        user.wallet_address
+      );
+
+      if (!captionForJuipter) return;
+
+      caption = captionForJuipter.caption;
+      solbalance = captionForJuipter.solbalance;
+      splbalance = captionForJuipter.splbalance;
     }
 
     const gassetting = await UserTradeSettingService.getGas(username);
@@ -367,52 +529,6 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
       })
     }
 
-    const { overview, secureinfo } = tokeninfo;
-    const { symbol, name, price, mc, liquidity } = overview;
-    const { isToken2022, ownerAddress, freezeAuthority, transferFeeEnable, transferFeeData, top10HolderPercent } = secureinfo;
-
-    const solprice = await TokenService.getSOLPrice();
-    const solbalance = await TokenService.getSOLBalance(user.wallet_address, true);
-    const splbalance = await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022, true);
-
-    // let priceImpact = ((1 - (liquidity) / (liquidity + splbalance)) * 100).toFixed(2);
-
-    let caption = `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
-      `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
-      `<i>${copytoclipboard(mint)}</i>\n\n`;
-
-    const position = await PositionService.findOne({ wallet_address: user.wallet_address, mint });
-    if (position) {
-      const { sol_amount } = position;
-      if (sol_amount > 0) {
-        let pnl = (price / solprice * splbalance * 100) / sol_amount;
-
-        if (transferFeeEnable && transferFeeData) {
-          const feerate = 1 - transferFeeData.newer_transfer_fee.transfer_fee_basis_points / 10000.0;
-          pnl *= feerate;
-        }
-        if (pnl >= 100) {
-          let pnl_sol = ((pnl - 100) * sol_amount / 100).toFixed(4);
-          let pnl_dollar = ((pnl - 100) * sol_amount * solprice / 100).toFixed(2)
-          caption += `<b>PNL:</b> +${(pnl - 100).toFixed(2)}% [${pnl_sol} Sol | +${pnl_dollar}$] 🟩\n\n`
-        } else {
-          let pnl_sol = ((100 - pnl) * sol_amount / 100).toFixed(4);
-          let pnl_dollar = ((100 - pnl) * sol_amount * solprice / 100).toFixed(2)
-          caption += `<b>PNL:</b> -${(100 - pnl).toFixed(2)}% [${pnl_sol} Sol | -${pnl_dollar}$] 🟥\n\n`
-        }
-      }
-    }
-
-    caption += `🌳 Mint Disabled: ${ownerAddress ? "🔴" : "🍏"}\n` +
-      // `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n\n` +
-      `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🟥' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n` +
-      `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-      // `💸 Price Impact: [${priceImpact} % of price impact if sold]\n` +
-      `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
-      `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
-      `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +
-      `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
-
     await bot.editMessageText(caption, {
       message_id: msg.message_id,
       chat_id, parse_mode: 'HTML',
@@ -423,5 +539,31 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     console.log("~ refresh handler ~", e)
   }
 }
-// FPymkKgpg1sLFbVao4JMk4ip8xb8C8uKqfMdARMobHaw
-// DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263
+
+export const getPNLCaptionFromQuote = async (
+  quote: QuoteRes | null,
+  wallet_address: string,
+  mint: string,
+  solprice: number
+) => {
+  if (quote) {
+    const pnlService = new PNLService(
+      wallet_address,
+      mint,
+      quote
+    )
+    await pnlService.initialize();
+    const pnldata = await pnlService.getPNLInfo();
+    if (pnldata) {
+      const { profitInSOL, percent } = pnldata;
+      const profitInUSD = profitInSOL * Number(solprice);
+      if (profitInSOL < 0) {
+        return `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n\n`
+      } else {
+        return `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n\n`
+      }
+    }
+  } else {
+    return `<b>PNL:</b> 0%\n\n`
+  }
+}

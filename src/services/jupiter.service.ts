@@ -553,4 +553,5 @@ export interface QuoteRes {
   outputMint: string;
   outAmount: number;
   priceImpactPct: number;
+  // priceInSOL?: number
 }

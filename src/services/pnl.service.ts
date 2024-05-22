@@ -41,6 +41,7 @@ export class PNLService {
         // chat_id: this.chat_id,
         mint: this.mint,
         wallet_address: this.wallet_address,
+        volume: 0,
         sol_amount: outAmount,
         amount: inAmount,
         received_sol_amount: 0,
@@ -73,6 +74,19 @@ export class PNLService {
       wallet_address: this.wallet_address,
       mint: this.mint,
     };
+    const res = await PositionService.findLastOne(filter);
+    if (!res) {
+      const ts = Date.now();
+      return await PositionService.create({
+        wallet_address: this.wallet_address,
+        mint: this.mint,
+        volume: 0,
+        sol_amount: inAmount,
+        amount: outAmount,
+        received_sol_amount: 0,
+        creation_time: ts
+      })
+    }
     const data = {
       $inc: {
         sol_amount: inAmount,

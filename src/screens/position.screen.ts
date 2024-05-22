@@ -3,7 +3,7 @@ import { TokenService } from "../services/token.metadata";
 import { copytoclipboard } from "../utils";
 import { UserService } from "../services/user.service";
 import { sendUsernameRequiredNotification } from "./common.screen";
-import { GrowTradeVersion } from "../config";
+import { GrowTradeVersion, PNL_SHOW_THRESHOLD_USD } from "../config";
 import { PositionService } from "../services/position.service";
 import { JupiterService } from "../services/jupiter.service";
 import { NATIVE_MINT } from "@solana/spl-token";
@@ -84,7 +84,7 @@ export const positionScreenHandler = async (
 
       // If value is over 5$.
       const jupiterService = new JupiterService();
-      const quote = splvalue > 1 ? await jupiterService.getQuote(
+      const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
         mintAddress,
         NATIVE_MINT.toBase58(),
         tokenBalance,

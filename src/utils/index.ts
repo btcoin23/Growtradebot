@@ -24,17 +24,18 @@ export function formatNumber(number: bigint | string | number) {
   return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-export function formatKMB(number: bigint | string | number) {
-  if (!number) return "0";
-  if (Number(number) > 1000000000) {
-    return `${(Number(number) / 1000000000).toFixed(1)}B`;
+export function formatKMB(val: bigint | string | number) {
+  if (!val) return "0";
+  if (Number(val) > 1000000000) {
+    return `${(Number(val) / 1000000000).toFixed(1)}B`;
   }
-  if (Number(number) > 1000000) {
-    return `${(Number(number) / 1000000).toFixed(1)}M`;
+  if (Number(val) > 1000000) {
+    return `${(Number(val) / 1000000).toFixed(1)}M`;
   }
-  if (Number(number) > 1000) {
-    return `${(Number(number) / 1000).toFixed(1)}k`;
+  if (Number(val) > 1000) {
+    return `${(Number(val) / 1000).toFixed(1)}k`;
   }
+  return Number(val).toFixed(3);
 }
 
 export const contractLink = (mint: string) => {
@@ -71,15 +72,11 @@ export function formatPrice(price: number) {
   return price.toFixed(3);
 }
 
-const options = {
-  method: 'GET',
-  headers: { 'x-chain': 'solana', 'X-API-KEY': 'abe5631abe864d529c0fbe4c8e905c97' }
-};
 export const getPrice = async (mint: string) => {
   const key = `${mint}_price`;
   const data = await redisClient.get(key);
   if (data) {
-    return data;
+    return Number(data);
   }
   const options = { method: 'GET', headers: REQUEST_HEADER };
   const response = await fetch(`https://public-api.birdeye.so/defi/price?address=${mint}`, options)
@@ -87,7 +84,7 @@ export const getPrice = async (mint: string) => {
   const price = res.data.value;
   await redisClient.set(key, price);
   await redisClient.expire(key, 5); // 5 seconds
-  return price;
+  return Number(price);
 };
 
 export const copytoclipboard = (
@@ -100,6 +97,6 @@ export const isEqual = (a: number, b: number) => {
   return Math.abs(b - a) < 0.001;
 }
 
-export const fromWeiToValue = (wei: string, decimal: number) => {
+export const fromWeiToValue = (wei: string | number, decimal: number) => {
   return Number(wei) / 10 ** decimal;
 }

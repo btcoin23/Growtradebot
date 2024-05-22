@@ -12,6 +12,7 @@ import { runSOLPriceUpdateSchedule } from "./cron/sol.price.cron";
 import { settingScreenHandler } from "./screens/settings.screen";
 import { ReferralChannelService, ReferralPlatform } from "./services/referral.channel.service";
 import { ReferrerListService } from "./services/referrer.list.service";
+import { runListener } from "./raydium";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -28,6 +29,8 @@ export interface ReferralIdenticalType {
 
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
+  // Listen Raydium POOL creation
+  runListener();
   // bot menu
   runAlertBotSchedule();
   // runAlertBotForChannel();

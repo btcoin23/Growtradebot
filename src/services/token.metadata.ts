@@ -182,7 +182,7 @@ export const TokenService = {
 
       const metadataAccountInfo = await connection.getAccountInfo(metadataAccount);
 
-      if (metadataAccountInfo && mintAddress) {
+      if (metadataAccountInfo) {
         const token = await metaplex.nfts().findByMint({ mintAddress: mintAddress });
         tokenName = token.name;
         tokenSymbol = token.symbol;
@@ -278,7 +278,7 @@ export const TokenService = {
       await redisClient.expire(key, 30);
       return results;
     } catch (e) { return [] }
-  }
+  },
 }
 
 const getaccounts = async (owner: string) => {
