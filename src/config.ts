@@ -40,5 +40,5 @@ export const GrowTradeVersion = '| beta';
 
 export const GROWSOL_API_ENDPOINT = process.env.GROWSOL_API_ENDPOINT || "http://127.0.0.1:5001";
 
-export const PNL_SHOW_THRESHOLD_USD = 1;
-export const RAYDIUM_PASS_TIME = 1200 * 60 * 1000; // 1200 minutes * 60 seconds * 1000 millisecons
+export const PNL_SHOW_THRESHOLD_USD = 5;
+export const RAYDIUM_PASS_TIME = 180 * 60 * 1000; // 1200 minutes * 60 seconds * 1000 millisecons
