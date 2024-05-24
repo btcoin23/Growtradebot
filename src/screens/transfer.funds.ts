@@ -373,7 +373,7 @@ export const withdrawCustomAmountScreenHandler = async (bot: TelegramBot, msg: T
     await MsgLogService.create({
       username,
       mint,
-      wallet_address: user.wallet_address,
+      wallet_address: msglog.wallet_address,
       chat_id,
       msg_id: sentMessage.message_id,
       parent_msgid: msg.message_id

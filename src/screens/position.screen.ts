@@ -74,16 +74,16 @@ export const positionScreenHandler = async (
 
     // Initialize the transferInlineKeyboards array with an empty array
     const transferInlineKeyboards: InlineKeyboardButton[][] = [];
-    const positions = await PositionService.find({ wallet_address: user.wallet_address });
+    // const positions = await PositionService.find({ wallet_address: user.wallet_address });
     let idx = 0;
     for (const item of tokenaccounts) {
       const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
-      const position = positions.filter(ps => ps.mint === mintAddress);
-      const splvalue = tokenBalance * price;
+      // const position = positions.filter(ps => ps.mint === mintAddress);
+      // const splvalue = tokenBalance * price;
 
       // If value is over 5$.
-      const jupiterService = new JupiterService();
+      // const jupiterService = new JupiterService();
       // const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
       //   mintAddress,
       //   NATIVE_MINT.toBase58(),
