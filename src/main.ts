@@ -13,6 +13,7 @@ import { settingScreenHandler } from "./screens/settings.screen";
 import { ReferralChannelService, ReferralPlatform } from "./services/referral.channel.service";
 import { ReferrerListService } from "./services/referrer.list.service";
 import { runListener } from "./raydium";
+import { wait } from "./utils/wait";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -82,7 +83,10 @@ const startTradeBot = () => {
     console.log("AlertBotStart", `/start@${AlertBotID}`);
     if (text && text.includes(`/start@${AlertBotID}`)) {
       console.log("AlertBotStart Delete");
-      alertBot.deleteMessage(chat.id, message_id);
+      await wait(3000);
+      try {
+        alertBot.deleteMessage(chat.id, message_id);
+      } catch (e) { }
       if (!from) return;
       if (!text.includes(' ')) return;
       const referrerInfo = await ReferrerListService.findLastOne({
