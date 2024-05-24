@@ -14,6 +14,7 @@ import { ReferralChannelService, ReferralPlatform } from "./services/referral.ch
 import { ReferrerListService } from "./services/referrer.list.service";
 import { runListener } from "./raydium";
 import { wait } from "./utils/wait";
+import { runOpenmarketCronSchedule } from "./cron/remove.openmarket.cron";
 
 const token = TELEGRAM_BOT_API_TOKEN;
 
@@ -30,6 +31,8 @@ export interface ReferralIdenticalType {
 
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
+  //
+  runOpenmarketCronSchedule();
   // Listen Raydium POOL creation
   runListener();
   // bot menu
@@ -82,8 +85,10 @@ const startTradeBot = () => {
     const { from, chat, text, message_id } = msg;
     console.log("AlertBotStart", `/start@${AlertBotID}`);
     if (text && text.includes(`/start@${AlertBotID}`)) {
-      console.log("AlertBotStart Delete");
+      console.log("AlertBotStart Delete", Date.now());
       await wait(3000);
+      console.log("AlertBotStart Delete", Date.now());
+
       try {
         alertBot.deleteMessage(chat.id, message_id);
       } catch (e) { }

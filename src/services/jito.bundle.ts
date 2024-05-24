@@ -55,7 +55,7 @@ export class JitoBundleService {
       });
       return response.data.result;
     } catch (error) {
-      console.error("Error:", error);
+      // console.error("Error:", error);
       throw new Error("cannot send!");
     }
   }
