@@ -2,18 +2,18 @@ import bs58 from "bs58";
 import axios from "axios";
 // import { JITO_UUID } from "../config";
 
-type Region = "ams" | "default" | "ger" | "ny" | "tokyo";
+type Region = "ams" | "ger" | "ny" | "tokyo"; // "default" | 
 
 // Region => Endpoint
 export const endpoints = {
   "ams": "https://amsterdam.mainnet.block-engine.jito.wtf",
-  "default": "https://mainnet.block-engine.jito.wtf",
+  // "default": "https://mainnet.block-engine.jito.wtf",
   "ger": "https://frankfurt.mainnet.block-engine.jito.wtf",
   "ny": "https://ny.mainnet.block-engine.jito.wtf",
   "tokyo": "https://tokyo.mainnet.block-engine.jito.wtf",
 }
 
-const regions = ["ams", "default", "ger", "ny", "tokyo"] as Region[];
+const regions = ["ams", "ger", "ny", "tokyo"] as Region[]; // "default", 
 let idx = 0;
 
 export const tipAccounts = [
@@ -32,7 +32,7 @@ export class JitoBundleService {
 
   // constructor(_region: Region) {
   constructor() {
-    idx = (idx + 1) % 5;
+    idx = (idx + 1) % regions.length;
     const _region = regions[idx];
 
     this.endpoint = endpoints[_region];
