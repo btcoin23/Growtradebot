@@ -81,7 +81,7 @@ export const getSignatureStatus = async (signature: string) => {
         console.log("JitoTransaction Failed");
         break;
       }
-      if (tx?.value?.confirmationStatus === "confirmed") {
+      if (tx?.value?.confirmationStatus === "confirmed" || tx?.value?.confirmationStatus === "finalized") {
         retries = 0;
         console.log("JitoTransaction confirmed!!!");
         break;
