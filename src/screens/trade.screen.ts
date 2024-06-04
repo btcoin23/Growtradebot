@@ -212,21 +212,24 @@ export const buyHandler = async (
   let isToken2022 = false;
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-  if (raydiumPoolInfo) {
-    const { creation_ts } = raydiumPoolInfo;
-    const duration = Date.now() - creation_ts;
-    if (duration < RAYDIUM_PASS_TIME) {
-      // Metadata
-      const metadata = await getMintMetadata(
-        private_connection,
-        new PublicKey(mint)
-      );
-      if (!metadata) return;
-      isToken2022 = metadata.program === "spl-token-2022";
-      name = raydiumPoolInfo.name;
-      symbol = raydiumPoolInfo.symbol;
-      decimals = metadata.parsed.info.decimals;
-    }
+  const jupiterSerivce = new JupiterService();
+  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+
+  if (raydiumPoolInfo && !isJupiterTradable) {
+    // const { creation_ts } = raydiumPoolInfo;
+    // const duration = Date.now() - creation_ts;
+    // if (duration < RAYDIUM_PASS_TIME) {
+    // Metadata
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    if (!metadata) return;
+    isToken2022 = metadata.program === "spl-token-2022";
+    name = raydiumPoolInfo.name;
+    symbol = raydiumPoolInfo.symbol;
+    decimals = metadata.parsed.info.decimals;
+    // }
   } else {
     const mintinfo = await TokenService.getMintInfo(mint);
     if (!mintinfo) return;
@@ -269,7 +272,7 @@ export const buyHandler = async (
   console.log("Buy start:", Date.now());
   // buy token
   const raydiumService = new RaydiumSwapService();
-  const jupiterSerivce = new JupiterService();
+  // const jupiterSerivce = new JupiterService();
   const quoteResult = isRaydium
     ? await raydiumService.swapToken(
       user.private_key,
@@ -380,7 +383,12 @@ export const autoBuyHandler = async (
   let isToken2022 = false;
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-  if (raydiumPoolInfo) {
+
+  const jupiterSerivce = new JupiterService();
+  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+
+  if (raydiumPoolInfo && !isJupiterTradable) {
+    // if (raydiumPoolInfo) {
     const { creation_ts } = raydiumPoolInfo;
     const duration = Date.now() - creation_ts;
     if (duration < RAYDIUM_PASS_TIME) {
@@ -431,7 +439,7 @@ export const autoBuyHandler = async (
 
   // buy token
   const raydiumService = new RaydiumSwapService();
-  const jupiterSerivce = new JupiterService();
+  // const jupiterSerivce = new JupiterService();
   const quoteResult = isRaydium
     ? await raydiumService.swapToken(
       user.private_key,

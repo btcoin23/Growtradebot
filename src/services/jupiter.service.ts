@@ -57,6 +57,16 @@ export class JupiterService {
     }, new Array<AddressLookupTableAccount>());
   };
 
+  async checkTradableOnJupiter(
+    mint: string
+  ) {
+    const config = {
+      basePath: "https://growtradebot.fly.dev"
+    }
+    const jupiterQuoteApi = createJupiterApiClient(config);
+    const tokens = await jupiterQuoteApi.tokensGet();
+    return tokens.includes(mint);
+  };
   async swapToken(
     pk: string,
     inputMint: string,

@@ -73,25 +73,28 @@ export const contractInfoScreenHandler = async (
     let splbalance = 0;
     // Here, we need to get info from raydium token list
     const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-    if (raydiumPoolInfo) {
-      const { creation_ts } = raydiumPoolInfo;
-      const duration = Date.now() - creation_ts;
+    const jupiterSerivce = new JupiterService();
+    const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
 
+    if (raydiumPoolInfo && !isJupiterTradable) {
+      // const { creation_ts } = raydiumPoolInfo;
+      // const duration = Date.now() - creation_ts;
       const pending = await bot.sendMessage(chat_id, "Loading...");
+
       // 120minutes
-      if (duration < RAYDIUM_PASS_TIME) {
-        const captionForRaydium = await getRaydiumTokenInfoCaption(
-          raydiumPoolInfo,
-          user.wallet_address
-        );
-        if (!captionForRaydium) {
-          bot.deleteMessage(chat_id, pending.message_id);
-          return;
-        }
-        caption = captionForRaydium.caption;
-        solbalance = captionForRaydium.solbalance;
-        splbalance = captionForRaydium.splbalance;
+      // if (duration < RAYDIUM_PASS_TIME) {
+      const captionForRaydium = await getRaydiumTokenInfoCaption(
+        raydiumPoolInfo,
+        user.wallet_address
+      );
+      if (!captionForRaydium) {
+        bot.deleteMessage(chat_id, pending.message_id);
+        return;
       }
+      caption = captionForRaydium.caption;
+      solbalance = captionForRaydium.solbalance;
+      splbalance = captionForRaydium.splbalance;
+      // }
       bot.deleteMessage(chat_id, pending.message_id);
     } else {
       // check token metadata
