@@ -6,241 +6,249 @@ const Schema = mongoose.Schema;
 export const PoolStateSchema = new Schema({
   status: {
     type: String,
-    default: ""
+    default: "",
   },
   nonce: {
     type: String,
-    default: ""
+    default: "",
   },
   maxOrder: {
     type: String,
-    default: ""
+    default: "",
   },
   depth: {
     type: String,
-    default: ""
+    default: "",
   },
   baseDecimal: {
     type: String,
-    default: ""
+    default: "",
   },
   quoteDecimal: {
     type: String,
-    default: ""
+    default: "",
   },
   state: {
     type: String,
-    default: ""
+    default: "",
   },
   resetFlag: {
     type: String,
-    default: ""
+    default: "",
   },
   minSize: {
     type: String,
-    default: ""
+    default: "",
   },
   volMaxCutRatio: {
     type: String,
-    default: ""
+    default: "",
   },
   amountWaveRatio: {
     type: String,
-    default: ""
+    default: "",
   },
   baseLotSize: {
     type: String,
-    default: ""
+    default: "",
   },
   quoteLotSize: {
     type: String,
-    default: ""
+    default: "",
   },
   minPriceMultiplier: {
     type: String,
-    default: ""
+    default: "",
   },
   maxPriceMultiplier: {
     type: String,
-    default: ""
+    default: "",
   },
   systemDecimalValue: {
     type: String,
-    default: ""
+    default: "",
   },
   minSeparateNumerator: {
     type: String,
-    default: ""
+    default: "",
   },
   minSeparateDenominator: {
     type: String,
-    default: ""
+    default: "",
   },
   tradeFeeNumerator: {
     type: String,
-    default: ""
+    default: "",
   },
   tradeFeeDenominator: {
     type: String,
-    default: ""
+    default: "",
   },
   pnlNumerator: {
     type: String,
-    default: ""
+    default: "",
   },
   pnlDenominator: {
     type: String,
-    default: ""
+    default: "",
   },
   swapFeeNumerator: {
     type: String,
-    default: ""
+    default: "",
   },
   swapFeeDenominator: {
     type: String,
-    default: ""
+    default: "",
   },
   baseNeedTakePnl: {
     type: String,
-    default: ""
+    default: "",
   },
   quoteNeedTakePnl: {
     type: String,
-    default: ""
+    default: "",
   },
   quoteTotalPnl: {
     type: String,
-    default: ""
+    default: "",
   },
   baseTotalPnl: {
     type: String,
-    default: ""
+    default: "",
   },
   poolOpenTime: {
     type: String,
-    default: ""
+    default: "",
   },
   punishPcAmount: {
     type: String,
-    default: ""
+    default: "",
   },
   punishCoinAmount: {
     type: String,
-    default: ""
+    default: "",
   },
   orderbookToInitTime: {
     type: String,
-    default: ""
+    default: "",
   },
   swapBaseInAmount: {
     type: String,
-    default: ""
+    default: "",
   },
   swapQuoteOutAmount: {
     type: String,
-    default: ""
+    default: "",
   },
   swapBase2QuoteFee: {
     type: String,
-    default: ""
+    default: "",
   },
   swapQuoteInAmount: {
     type: String,
-    default: ""
+    default: "",
   },
   swapBaseOutAmount: {
     type: String,
-    default: ""
+    default: "",
   },
   swapQuote2BaseFee: {
     type: String,
-    default: ""
+    default: "",
   },
   baseVault: {
     type: String,
-    default: ""
+    default: "",
   },
   quoteVault: {
     type: String,
-    default: ""
+    default: "",
   },
   baseMint: {
     type: String,
-    default: ""
+    default: "",
   },
   quoteMint: {
     type: String,
-    default: ""
+    default: "",
   },
   lpMint: {
     type: String,
-    default: ""
+    default: "",
   },
   openOrders: {
     type: String,
-    default: ""
+    default: "",
   },
   marketId: {
     type: String,
-    default: ""
+    default: "",
   },
   marketProgramId: {
     type: String,
-    default: ""
+    default: "",
   },
   targetOrders: {
     type: String,
-    default: ""
+    default: "",
   },
   withdrawQueue: {
     type: String,
-    default: ""
+    default: "",
   },
   lpVault: {
     type: String,
-    default: ""
+    default: "",
   },
   owner: {
     type: String,
-    default: ""
+    default: "",
   },
   lpReserve: {
     type: String,
-    default: ""
+    default: "",
   },
 });
 // Token Schema
-const Token = new Schema({
-  name: {
-    type: String,
-    default: "",
+const Token = new Schema(
+  {
+    name: {
+      type: String,
+      default: "",
+    },
+    symbol: {
+      type: String,
+      default: "",
+    },
+    mint: {
+      type: String,
+      default: "",
+      required: true,
+    },
+    isAmm: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+    poolId: {
+      type: String,
+      default: "",
+      required: true,
+      unique: true,
+    },
+    // poolState: {
+    //   type: PoolStateSchema,
+    //   required: true,
+    // },
+    creation_ts: {
+      type: Number,
+      required: true,
+    },
   },
-  symbol: {
-    type: String,
-    default: "",
-  },
-  mint: {
-    type: String,
-    default: "",
-    required: true,
-  },
-  poolId: {
-    type: String,
-    default: "",
-    required: true,
-    unique: true,
-  },
-  poolState: {
-    type: PoolStateSchema,
-    required: true,
-  },
-  creation_ts: {
-    type: Number,
-    required: true,
+  {
+    timestamps: true, // This option adds createdAt and updatedAt fields
   }
-}, {
-  timestamps: true  // This option adds createdAt and updatedAt fields
-});
+);
 
 // Create compound index for username, wallet_address, and nonce
 export default mongoose.model("token", Token);

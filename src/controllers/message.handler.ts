@@ -1,8 +1,21 @@
 import TelegramBot from "node-telegram-bot-api";
 import { isValidWalletAddress } from "../utils";
 import { contractInfoScreenHandler } from "../screens/contract.info.screen";
-import { AUTO_BUY_TEXT, BUY_XSOL_TEXT, PRESET_BUY_TEXT, SELL_XPRO_TEXT, SET_GAS_FEE, SET_SLIPPAGE_TEXT, WITHDRAW_TOKEN_AMT_TEXT, WITHDRAW_XTOKEN_TEXT } from "../bot.opts";
-import { buyHandler, sellHandler, setSlippageHandler } from "../screens/trade.screen";
+import {
+  AUTO_BUY_TEXT,
+  BUY_XSOL_TEXT,
+  PRESET_BUY_TEXT,
+  SELL_XPRO_TEXT,
+  SET_GAS_FEE,
+  SET_SLIPPAGE_TEXT,
+  WITHDRAW_TOKEN_AMT_TEXT,
+  WITHDRAW_XTOKEN_TEXT,
+} from "../bot.opts";
+import {
+  buyHandler,
+  sellHandler,
+  setSlippageHandler,
+} from "../screens/trade.screen";
 import { withdrawAddressHandler, withdrawHandler } from "../screens/transfer.funds";
 import { presetBuyBtnHandler, setCustomAutoBuyAmountHandler, setCustomBuyPresetHandler, setCustomFeeHandler } from "../screens/settings.screen";
 

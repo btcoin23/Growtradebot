@@ -1,20 +1,42 @@
 import TelegramBot from "node-telegram-bot-api"
 import { TokenService } from "../services/token.metadata";
-import { birdeyeLink, contractLink, copytoclipboard, dexscreenerLink, dextoolLink, formatKMB, formatNumber, formatPrice, getPrice } from "../utils";
+import {
+  birdeyeLink,
+  contractLink,
+  copytoclipboard,
+  dexscreenerLink,
+  dextoolLink,
+  formatKMB,
+  formatNumber,
+  formatPrice,
+  getPrice,
+} from "../utils";
 import { UserService } from "../services/user.service";
-import { sendNoneExistTokenNotification, sendNoneUserNotification, sendUsernameRequiredNotification } from "./common.screen";
-import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
+import {
+  sendNoneExistTokenNotification,
+  sendNoneUserNotification,
+  sendUsernameRequiredNotification,
+} from "./common.screen";
+import {
+  GasFeeEnum,
+  UserTradeSettingService,
+} from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { autoBuyHandler, buyHandler } from "./trade.screen";
 import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { PNLService } from "../services/pnl.service";
 import { RaydiumTokenService } from "../services/raydium.token.service";
-import { PNL_SHOW_THRESHOLD_USD, RAYDIUM_PASS_TIME, connection, private_connection } from "../config";
+import {
+  PNL_SHOW_THRESHOLD_USD,
+  RAYDIUM_PASS_TIME,
+  connection,
+  private_connection,
+  REQUEST_HEADER,
+} from "../config";
 import { PublicKey } from "@solana/web3.js";
-import { LIQUIDITY_STATE_LAYOUT_V4 } from "@raydium-io/raydium-sdk";
 import { getMintMetadata, getTop10HoldersPercent } from "../raydium";
-import { estimateSwapRate, getPriceInSOL } from "../raydium/raydium.service";
+import { getPriceInSOL } from "../raydium/raydium.service";
 import { OpenMarketService } from "../services/openmarket.service";
 
 export const inline_keyboards = [
@@ -210,7 +232,9 @@ const getRaydiumTokenInfoCaption = async (
       name,
       symbol,
       mint,
-      poolState
+      isAmm,
+      poolId
+      // poolState
     } = raydiumPoolInfo;
     // console.log("M1", Date.now())
 
@@ -231,11 +255,12 @@ const getRaydiumTokenInfoCaption = async (
     // console.log("M3", Date.now())
 
     // Price in sol
-    const {
-      priceInSOL,
-      // baseBalance
-    } = await getPriceInSOL(raydiumPoolInfo, private_connection);
+    // const {
+    //   priceInSOL,
+    //   // baseBalance
+    // } = await getPriceInSOL(raydiumPoolInfo, private_connection);
     // console.log("M4", Date.now())
+    const priceInSOL = await getPriceInSOL(mint);
 
     const priceInUsd = priceInSOL * solprice;
     const splvalue = priceInUsd * splbalance;
@@ -244,16 +269,17 @@ const getRaydiumTokenInfoCaption = async (
     const marketinfo = await OpenMarketService.findLastOne({ mint });
     // console.log("M5", Date.now())
 
-    const quote = splvalue >= PNL_SHOW_THRESHOLD_USD ? await estimateSwapRate(
-      private_connection,
-      raydiumPoolInfo,
-      marketinfo,
-      splbalance,
-      false,
-    ) : null;
+    // const quote = splvalue >= PNL_SHOW_THRESHOLD_USD ? await estimateSwapRate(
+    //   private_connection,
+    //   raydiumPoolInfo,
+    //   marketinfo,
+    //   splbalance,
+    //   false,
+    // ) : null;
     // console.log("M6", Date.now())
-
-    const priceImpact = quote ? quote.priceImpactPct : 0;
+    const quote = null;
+    const priceImpact = 0;
+    // const priceImpact = quote ? quote.priceImpactPct : 0;
 
     const decimals = metadata.parsed.info.decimals;
     const supply = Number(metadata.parsed.info.supply) / (10 ** Number(decimals));
@@ -268,7 +294,7 @@ const getRaydiumTokenInfoCaption = async (
       private_connection,
       mint,
       supply,
-      poolState.baseVault
+      // poolState.baseVault
     );
     const price = priceInUsd;
     const mc = circulateSupply * price;

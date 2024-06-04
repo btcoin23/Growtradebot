@@ -14,6 +14,7 @@ import {
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { MinimalMarketLayoutV3 } from '../market';
 
+export const RAYDIUM_LIQUIDITY_PROGRAM_ID_CLMM = MAINNET_PROGRAM_ID.CLMM;
 export const RAYDIUM_LIQUIDITY_PROGRAM_ID_V4 = MAINNET_PROGRAM_ID.AmmV4;
 export const OPENBOOK_PROGRAM_ID = MAINNET_PROGRAM_ID.OPENBOOK_MARKET;
 
