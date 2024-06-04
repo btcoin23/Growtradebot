@@ -75,7 +75,7 @@ export const contractInfoScreenHandler = async (
     const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
     const jupiterSerivce = new JupiterService();
     const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-
+    console.log("IsJupiterTradeable", isJupiterTradable);
     if (raydiumPoolInfo && !isJupiterTradable) {
       // const { creation_ts } = raydiumPoolInfo;
       // const duration = Date.now() - creation_ts;
