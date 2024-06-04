@@ -76,7 +76,13 @@ export const contractInfoScreenHandler = async (
     const jupiterSerivce = new JupiterService();
     const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
     console.log("IsJupiterTradeable", isJupiterTradable);
+    if (!raydiumPoolInfo && !isJupiterTradable) {
+      await sendNoneExistTokenNotification(bot, msg);
+      return;
+    }
+
     if (raydiumPoolInfo && !isJupiterTradable) {
+      // if (raydiumPoolInfo || !isJupiterTradable) {
       // const { creation_ts } = raydiumPoolInfo;
       // const duration = Date.now() - creation_ts;
       const pending = await bot.sendMessage(chat_id, "Loading...");
