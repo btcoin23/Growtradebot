@@ -273,6 +273,7 @@ export const buyHandler = async (
   // buy token
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
+  console.log("Raydium Swap?", isRaydium, isJupiterTradable);
   const quoteResult = isRaydium
     ? await raydiumService.swapToken(
       user.private_key,
