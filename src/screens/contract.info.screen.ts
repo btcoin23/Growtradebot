@@ -241,11 +241,17 @@ const getRaydiumTokenInfoCaption = async (
       name,
       symbol,
       mint,
-      // isAmm,
-      // poolId
-      // poolState
+      poolId
     } = raydiumPoolInfo;
-    // console.log("M1", Date.now())
+
+    let tokenName = name;
+    let tokenSymbol = symbol;
+    if (tokenName === '' || tokenSymbol === '') {
+      const { name, symbol } = await TokenService.fetchSimpleMetaData(new PublicKey(mint))
+      tokenName = name;
+      tokenSymbol = symbol;
+      RaydiumTokenService.findOneAndUpdate({ filter: { poolId }, data: { name, symbol } });
+    }
 
     // Metadata
     const metadata = await getMintMetadata(
@@ -261,31 +267,10 @@ const getRaydiumTokenInfoCaption = async (
     const solprice = await TokenService.getSOLPrice();
     const splbalance = await TokenService.getSPLBalance(mint, wallet_address, isToken2022, true);
     const solbalance = await TokenService.getSOLBalance(wallet_address);
-    // console.log("M3", Date.now())
 
-    // Price in sol
-    // const {
-    //   priceInSOL,
-    //   // baseBalance
-    // } = await getPriceInSOL(raydiumPoolInfo, private_connection);
-    // console.log("M4", Date.now())
     const priceInSOL = await getPriceInSOL(mint);
 
     const priceInUsd = priceInSOL * solprice;
-    const splvalue = priceInUsd * splbalance;
-
-    // PoolInfo, marketInfo
-    const marketinfo = await OpenMarketService.findLastOne({ mint });
-    // console.log("M5", Date.now())
-
-    // const quote = splvalue >= PNL_SHOW_THRESHOLD_USD ? await estimateSwapRate(
-    //   private_connection,
-    //   raydiumPoolInfo,
-    //   marketinfo,
-    //   splbalance,
-    //   false,
-    // ) : null;
-    // console.log("M6", Date.now())
     const quote = null;
     const priceImpact = 0;
     // const priceImpact = quote ? quote.priceImpactPct : 0;
@@ -310,8 +295,8 @@ const getRaydiumTokenInfoCaption = async (
     // console.log(mc);
 
     const caption = await buildCaption(
-      name,
-      symbol,
+      tokenName,
+      tokenSymbol,
       isToken2022,
       mint,
       quote,

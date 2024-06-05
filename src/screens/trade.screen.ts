@@ -228,9 +228,11 @@ export const buyHandler = async (
     );
     if (!metadata) return;
     isToken2022 = metadata.program === "spl-token-2022";
-    const tokenDetails = await TokenService.getTokenOverview(mint)
-    name = tokenDetails.name;
-    symbol = tokenDetails.symbol;
+    // const tokenDetails = await TokenService.getTokenOverview(mint)
+    // name = tokenDetails.name;
+    // symbol = tokenDetails.symbol;
+    name = raydiumPoolInfo.name;
+    symbol = raydiumPoolInfo.symbol;
     decimals = metadata.parsed.info.decimals;
     // }
   } else {

@@ -1,11 +1,11 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout, ExtensionType, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, getExtensionData, getExtensionTypes, getMetadataPointerState, getMint } from "@solana/spl-token";
 import { COMMITMENT_LEVEL, MAINNET_RPC, connection } from "../config";
-import { Metaplex } from "@metaplex-foundation/js";
+import { Metaplex, Metadata } from "@metaplex-foundation/js";
 import { GetProgramAccountsFilter, PublicKey } from "@solana/web3.js";
 import redisClient from "./redis";
 import { formatNumber, getPrice } from "../utils";
 import { BirdEyeAPIService, TokenOverviewDataType, TokenSecurityInfoDataType } from "./birdeye.api.service";
-
+import { min } from "bn.js";
 export interface ITokenAccountInfo {
   address: string,
   mint: string,
@@ -241,6 +241,26 @@ export const TokenService = {
       tokenBalance = 0;
     }
     return tokenBalance;
+  },
+  fetchSimpleMetaData: async (mint: PublicKey) => {
+    try {
+      const metaPlex = new Metaplex(connection);
+      const metadata = await metaPlex
+        .nfts()
+        .findByMint({ mintAddress: mint })
+      const tokenName = metadata.name;
+      const tokenSymbol = metadata.symbol;
+      console.log('token name: ', tokenName)
+      return {
+        name: tokenName,
+        symbol: tokenSymbol,
+      };
+    } catch (e) {
+      return {
+        name: "",
+        symbol: "",
+      };
+    }
   },
   getSOLBalance: async (owner: string, isLive: boolean = false) => {
     let solBalance = 0;
