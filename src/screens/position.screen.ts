@@ -78,9 +78,13 @@ export const positionScreenHandler = async (
     const transferInlineKeyboards: InlineKeyboardButton[][] = [];
     // const positions = await PositionService.find({ wallet_address: user.wallet_address });
     let idx = 0;
+    let discount = 0;
     for (const item of tokenaccounts) {
       const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
-      if (symbol === "SOL") continue;
+      if (symbol === "SOL") {
+        discount = -1;
+        continue;
+      }
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       // const position = positions.filter(ps => ps.mint === mintAddress);
       // const splvalue = tokenBalance * price;
@@ -148,12 +152,12 @@ export const positionScreenHandler = async (
       idx++;
     }
 
-    if (tokenaccounts.length <= 0) {
+    if (tokenaccounts.length + discount <= 0) {
       transferInlineKeyboards.push([]);
       caption += `\n<i>You don't hold any tokens in this wallet</i>`;
     }
     transferInlineKeyboards.push([]);
-    transferInlineKeyboards[Math.ceil(tokenaccounts.length / 3)].push(...[
+    transferInlineKeyboards[Math.ceil((tokenaccounts.length + discount) / 3)].push(...[
       {
         text: '🔄 Refresh', callback_data: JSON.stringify({
           'command': 'pos_ref'
