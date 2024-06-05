@@ -186,12 +186,12 @@ export class RaydiumSwapService {
       }
 
       if (is_buy) {
-        total_fee_in_sol = Number((fee * 10 ** decimal).toFixed(0));
+        total_fee_in_sol = Number((fee * 10 ** inDecimal).toFixed(0));
         total_fee_in_token = Number(
           (Number(quoteAmount) * total_fee_percent_in_token).toFixed(0)
         );
       } else {
-        total_fee_in_token = Number((fee * 10 ** decimal).toFixed(0));
+        total_fee_in_token = Number((fee * 10 ** inDecimal).toFixed(0));
         total_fee_in_sol = Number(
           (Number(quoteAmount) * total_fee_percent_in_sol).toFixed(0)
         );
