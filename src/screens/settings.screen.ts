@@ -28,7 +28,7 @@ export const settingScreenHandler = async (
     const activeuser = users.filter(user => user.retired === false)[0];
     const { wallet_address, burn_fee, auto_buy, auto_buy_amount } = activeuser;
 
-    const caption = `GrowTrade ${GrowTradeVersion}\n\n` +
+    const caption = `<b>GrowTrade ${GrowTradeVersion}</b>\n\n` +
       `<b>AutoBuy</b>\n` +
       `Automatically execute buys upon pasting token address. Customize the Sol amount and press the button to activate/deactivate.\n\n` +
       `<b>Withdraw</b>\n` +
@@ -254,7 +254,7 @@ export const walletViewHandler = async (bot: TelegramBot,
     const activeuser = users.filter(user => user.retired === false)[0];
     const { wallet_address } = activeuser;
 
-    const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>Your active wallet:</b>\n` +
+    const caption = `<b>GrowTrade ${GrowTradeVersion}</b>\n\n<b>Your active wallet:</b>\n` +
       `${copytoclipboard(wallet_address)}`;
     // const sentMessage = await bot.sendMessage(
     // chat_id,

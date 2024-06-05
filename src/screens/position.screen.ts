@@ -26,7 +26,7 @@ export const positionScreenHandler = async (
     if (!user) return;
 
 
-    const temp = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
+    const temp = `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
       `<b>Loading...</b>\n`;
 
@@ -69,7 +69,7 @@ export const positionScreenHandler = async (
     // const solprice = await TokenService.getSOLPrice();
     const solbalance = await TokenService.getSOLBalance(user.wallet_address);
 
-    let caption = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
+    let caption = `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
       `💳 Balance: <b>${solbalance} SOL</b>\n\n` +
       `<b>Please choose a token to buy/sell.</b>\n`;

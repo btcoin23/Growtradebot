@@ -36,7 +36,7 @@ export const JUPITER_PROJECT = new PublicKey(
 
 
 export const MAX_WALLET = 5;
-export const GrowTradeVersion = '| beta';
+export const GrowTradeVersion = '| Beta Version';
 
 export const GROWSOL_API_ENDPOINT = process.env.GROWSOL_API_ENDPOINT || "http://127.0.0.1:5001";
 

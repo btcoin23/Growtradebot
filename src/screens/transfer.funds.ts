@@ -22,7 +22,7 @@ export const transferFundScreenHandler = async (bot: TelegramBot, msg: TelegramB
     if (!user) return;
 
 
-    const temp = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
+    const temp = `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
       `<b>Balance: loading...</b>\n`;
 
@@ -55,7 +55,7 @@ export const transferFundScreenHandler = async (bot: TelegramBot, msg: TelegramB
     const sol = await TokenService.getSOLBalance(user.wallet_address, true);
     const tokenaccounts = await TokenService.getTokenAccounts(user.wallet_address);
 
-    let caption = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
+    let caption = `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
       `<b>Balance: ${sol} SOL</b>\n`;
 
