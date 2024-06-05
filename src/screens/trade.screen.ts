@@ -228,8 +228,9 @@ export const buyHandler = async (
     );
     if (!metadata) return;
     isToken2022 = metadata.program === "spl-token-2022";
-    name = raydiumPoolInfo.name;
-    symbol = raydiumPoolInfo.symbol;
+    const tokenDetails = await TokenService.getTokenOverview(mint)
+    name = tokenDetails.name;
+    symbol = tokenDetails.symbol;
     decimals = metadata.parsed.info.decimals;
     // }
   } else {
@@ -405,8 +406,9 @@ export const autoBuyHandler = async (
     );
     if (!metadata) return;
     isToken2022 = metadata.program === "spl-token-2022";
-    name = raydiumPoolInfo.name;
-    symbol = raydiumPoolInfo.symbol;
+    const tokenDetails = await TokenService.getTokenOverview(mint)
+    name = tokenDetails.name;
+    symbol = tokenDetails.symbol;
     decimals = metadata.parsed.info.decimals;
     // }
   } else {
@@ -582,7 +584,7 @@ export const sellHandler = async (
   }
   if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo) {
-    const { name, symbol, isAmm, poolId, creation_ts } = raydiumPoolInfo;
+    const { creation_ts } = raydiumPoolInfo;
     const duration = Date.now() - creation_ts;
     if (duration < RAYDIUM_PASS_TIME) {
       // Metadata

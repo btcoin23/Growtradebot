@@ -4,6 +4,10 @@ import { TokenSchema } from "../models/index";
 export const RaydiumTokenService = {
   create: async (props: any) => {
     try {
+      // return await TokenSchema.create(props);
+      const existing = await TokenSchema.findOne({ poolId: props.poolId });
+      if (existing == null)
+        console.log(props)
       return await TokenSchema.create(props);
     } catch (err: any) {
       console.log(err);

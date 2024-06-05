@@ -241,8 +241,8 @@ const getRaydiumTokenInfoCaption = async (
       name,
       symbol,
       mint,
-      isAmm,
-      poolId
+      // isAmm,
+      // poolId
       // poolState
     } = raydiumPoolInfo;
     // console.log("M1", Date.now())

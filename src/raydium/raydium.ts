@@ -1,63 +1,34 @@
 import {
-  ApiClmmPoolsItem,
-  jsonInfo2PoolKeys,
-  Clmm,
-  MAINNET_PROGRAM_ID,
-  Liquidity,
-  LIQUIDITY_STATE_LAYOUT_V4,
+  getPdaPoolId,
   LiquidityPoolKeys,
-  LiquidityStateV4,
   MARKET_STATE_LAYOUT_V3,
   MarketStateV3,
-  Percent,
-  PoolInfoLayout,
+  SPL_MINT_LAYOUT,
   Token,
-  TOKEN_PROGRAM_ID,
   TokenAmount,
 } from "@raydium-io/raydium-sdk";
+import { NATIVE_MINT } from "@solana/spl-token";
+import { Connection, PublicKey, KeyedAccountInfo } from "@solana/web3.js";
 import {
-  createAssociatedTokenAccountIdempotentInstruction,
-  createCloseAccountInstruction,
-  getAssociatedTokenAddressSync,
-  NATIVE_MINT,
-} from "@solana/spl-token";
-import {
-  Keypair,
-  Connection,
-  PublicKey,
-  ComputeBudgetProgram,
-  KeyedAccountInfo,
-  TransactionMessage,
-  VersionedTransaction,
-} from "@solana/web3.js";
-import {
-  getTokenAccounts,
   RAYDIUM_LIQUIDITY_PROGRAM_ID_V4,
   OPENBOOK_PROGRAM_ID,
-  createPoolKeys,
-  convertDBForPoolStateV4,
   RAYDIUM_LIQUIDITY_PROGRAM_ID_CLMM,
 } from "./liquidity";
-import {
-  convertDBForMarketV3,
-  getMinimalMarketV3,
-  MinimalMarketLayoutV3,
-} from "./market";
+import { MinimalMarketLayoutV3 } from "./market";
 import { MintData, MintLayout, TokenAccountLayout } from "./types";
-import bs58 from "bs58";
 import {
   connection,
   COMMITMENT_LEVEL,
   RPC_WEBSOCKET_ENDPOINT,
   PRIVATE_RPC_ENDPOINT,
+  RAYDIUM_AMM_URL,
+  private_connection,
+  RAYDIUM_CLMM_URL,
 } from "../config";
 import { OpenMarketService } from "../services/openmarket.service";
 import { TokenService } from "../services/token.metadata";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import redisClient from "../services/redis";
-
-import { formatClmmKeysById } from "./utils/formatClmmKeysById";
-import { formatAmmKeysById } from "./utils/formatAmmKeysById";
 
 const solanaConnection = new Connection(PRIVATE_RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,
@@ -71,72 +42,95 @@ export interface MinimalTokenAccountData {
 
 const existingLiquidityPools: Set<string> = new Set<string>();
 const existingOpenBookMarkets: Set<string> = new Set<string>();
-// const existingTokenAccounts: Map<string, MinimalTokenAccountData> = new Map<string, MinimalTokenAccountData>();
 
-// let wallet: Keypair;
-let quoteToken: Token;
-// let quoteTokenAssociatedAddress: PublicKey;
-// let quoteAmount: TokenAmount;
-let quoteMinPoolSizeAmount: TokenAmount;
+async function initDB(): Promise<void> {
+  initAMM();
+  initCLMM();
+}
 
-async function init(): Promise<void> {
-  quoteToken = Token.WSOL;
-  // quoteAmount = new TokenAmount(Token.WSOL, 0.01, false);
-  quoteMinPoolSizeAmount = new TokenAmount(quoteToken, 0.1, false);
-  // get wallet
-  // wallet = Keypair.fromSecretKey(bs58.decode(PRIVATE_KEY));
+async function initAMM(): Promise<void> {
+  console.log(" - AMM Pool data fetching is started...");
+  const ammRes = await fetch(RAYDIUM_AMM_URL);
+  const ammData = await ammRes.json();
+  console.log(" - AMM Pool data is fetched successfully...");
 
-  // // get quote mint and amount
-  // switch (QUOTE_MINT) {
-  //   case 'WSOL': {
-  //     quoteToken = Token.WSOL;
-  //     quoteAmount = new TokenAmount(Token.WSOL, QUOTE_AMOUNT, false);
-  //     quoteMinPoolSizeAmount = new TokenAmount(quoteToken, MIN_POOL_SIZE, false);
-  //     break;
-  //   }
-  //   case 'USDC': {
-  //     quoteToken = new Token(
-  //       TOKEN_PROGRAM_ID,
-  //       new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
-  //       6,
-  //       'USDC',
-  //       'USDC',
-  //     );
-  //     quoteAmount = new TokenAmount(quoteToken, QUOTE_AMOUNT, false);
-  //     quoteMinPoolSizeAmount = new TokenAmount(quoteToken, MIN_POOL_SIZE, false);
-  //     break;
-  //   }
-  //   default: {
-  //     throw new Error(`Unsupported quote mint "${QUOTE_MINT}". Supported values are USDC and WSOL`);
-  //   }
-  // }
+  const batchSize = 100; // Adjust this value based on your requirements
+  const batches: Array<Array<any>> = [];
 
-  // console.log(`Snipe list: ${USE_SNIPE_LIST}`);
-  // console.log(`Check mint renounced: ${CHECK_IF_MINT_IS_RENOUNCED}`);
-  // console.log(
-  //   `Min pool size: ${quoteMinPoolSizeAmount.isZero() ? 'false' : quoteMinPoolSizeAmount.toFixed()} ${quoteToken.symbol}`,
-  // );
-  // console.log(`Buy amount: ${quoteAmount.toFixed()} ${quoteToken.symbol}`);
-  // console.log(`Auto sell: ${AUTO_SELL}`);
-  // console.log(`Sell delay: ${AUTO_SELL_DELAY === 0 ? 'false' : AUTO_SELL_DELAY}`);
+  for (let i = 0; i < ammData.length; i += batchSize) {
+    batches.push(ammData.slice(i, i + batchSize));
+  }
 
-  // check existing wallet for associated token account of quote mint
-  // const tokenAccounts = await getTokenAccounts(solanaConnection, wallet.publicKey, COMMITMENT_LEVEL);
+  for (const batch of batches) {
+    await Promise.all(
+      batch.map(async (i: any) => {
+        if (
+          i.baseMint === NATIVE_MINT.toString() ||
+          i.quoteMint === NATIVE_MINT.toString()
+        ) {
+          if (Number(i.liquidity) > 0) {
+            const tokenMint =
+              i.baseMint === NATIVE_MINT.toString() ? i.quoteMint : i.baseMint;
+            // const tokenMetadata = await TokenService.fetchSimpleMetaData(tokenMint);
 
-  // for (const ta of tokenAccounts) {
-  //   existingTokenAccounts.set(ta.accountInfo.mint.toString(), <MinimalTokenAccountData>{
-  //     mint: ta.accountInfo.mint,
-  //     address: ta.pubkey,
-  //   });
-  // }
+            const data = {
+              // name: tokenMetadata.name,
+              // symbol: tokenMetadata.symbol,
+              mint: tokenMint,
+              isAmm: true,
+              poolId: i.ammId,
+              creation_ts: Date.now(),
+            };
+            await RaydiumTokenService.create(data);
+          }
+        }
+      })
+    );
+  }
 
-  // const tokenAccount = tokenAccounts.find((acc) => acc.accountInfo.mint.toString() === NATIVE_MINT.toString())!;
+  console.log(" - AMM Pool data is saved to MongoDB successfully...");
+}
 
-  // if (!tokenAccount) {
-  //   throw new Error(`No ${quoteToken.symbol} token account found in wallet: ${wallet.publicKey}`);
-  // }
+async function initCLMM(): Promise<void> {
+  console.log(" - CLMM Pool data fetching is started...");
+  const clmmRes = await fetch(RAYDIUM_CLMM_URL);
+  const clmmData = await clmmRes.json();
+  console.log(" - CLMM Pool data is fetched successfully...");
 
-  // quoteTokenAssociatedAddress = tokenAccount.pubkey;
+  const batchSize = 100; // Adjust this value based on your requirements
+  const batches: Array<Array<any>> = [];
+
+  for (let i = 0; i < clmmData.data.length; i += batchSize) {
+    batches.push(clmmData.data.slice(i, i + batchSize));
+  }
+
+  for (const batch of batches) {
+    await Promise.all(
+      batch.map(async (i: any) => {
+        if (
+          i.mintA === NATIVE_MINT.toString() ||
+          i.mintB === NATIVE_MINT.toString()
+        ) {
+          if (Number(i.tvl) > 0) {
+            const tokenMint =
+              i.mintA === NATIVE_MINT.toString() ? i.mintB : i.mintA;
+            // const tokenMetadata = await TokenService.fetchSimpleMetaData(tokenMint);
+
+            const data = {
+              // name: tokenMetadata.name,
+              // symbol: tokenMetadata.symbol,
+              mint: tokenMint,
+              isAmm: false,
+              poolId: i.id,
+              creation_ts: Date.now(),
+            };
+            await RaydiumTokenService.create(data);
+          }
+        }
+      })
+    );
+  }
+  console.log(" - CLMM Pool data is saved to MongoDB successfully...");
 }
 
 export async function saveTokenAccount(
@@ -191,6 +185,7 @@ export async function getMintMetadata(
     if (!mintdata || !mintdata.value) {
       return;
     }
+
     const data = mintdata.value.data as MintData;
     await redisClient.set(key, JSON.stringify(data));
     await redisClient.expire(key, 30);
@@ -246,7 +241,7 @@ export async function processOpenBookMarket(
 }
 
 export const runListener = async () => {
-  await init();
+  initDB();
   const runTimestamp = Math.floor(new Date().getTime() / 1000);
 
   const ammSubscriptionId = solanaConnection.onLogs(
@@ -319,7 +314,6 @@ export const runListener = async () => {
       const res = await redisClient.get(key);
       if (res === "added") return;
 
-      const tokenMetadata = await TokenService.fetchMetadataInfo(tokenAaccount);
       const displayData = {
         "TxID:": `https://solscan.io/tx/${txId}`,
         "PoolID:": poolId.toBase58(),
@@ -330,10 +324,11 @@ export const runListener = async () => {
       console.log(` - New ${isAmm ? "AMM" : "CLMM"} Found`);
       console.table(displayData);
 
+      const tokenMetadata = await TokenService.fetchMetadataInfo(tokenAaccount);
       // const mintable = mintOption !== true;
       const data = {
-        name: tokenMetadata.tokenName,
-        symbol: tokenMetadata.tokenSymbol,
+        name: tokenMetadata.name,
+        symbol: tokenMetadata.symbol,
         mint: tokenAaccount.toBase58(),
         isAmm,
         poolId,

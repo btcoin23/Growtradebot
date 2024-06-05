@@ -42,3 +42,5 @@ export const GROWSOL_API_ENDPOINT = process.env.GROWSOL_API_ENDPOINT || "http://
 
 export const PNL_SHOW_THRESHOLD_USD = 5;
 export const RAYDIUM_PASS_TIME = 1800 * 60 * 1000; // 1200 minutes * 60 seconds * 1000 millisecons
+export const RAYDIUM_AMM_URL = 'https://api.raydium.io/v2/main/pairs'
+export const RAYDIUM_CLMM_URL = 'https://api.raydium.io/v2/ammV3/ammPools'
