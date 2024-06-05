@@ -32,13 +32,13 @@ export interface ReferralIdenticalType {
 const startTradeBot = () => {
   const bot = new TelegramBot(token, { polling: true });
   //
-  // runOpenmarketCronSchedule();
+  runOpenmarketCronSchedule();
   // Listen Raydium POOL creation
-  // runListener();
+  runListener();
   // bot menu
-  // runAlertBotSchedule();
-  // runAlertBotForChannel();
-  // runSOLPriceUpdateSchedule();
+  runAlertBotSchedule();
+  // Later: runAlertBotForChannel();
+  runSOLPriceUpdateSchedule();
   bot.setMyCommands(BotMenu);
 
 
