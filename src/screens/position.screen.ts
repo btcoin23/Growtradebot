@@ -80,7 +80,7 @@ export const positionScreenHandler = async (
     let idx = 0;
     for (const item of tokenaccounts) {
       const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
-      if (symbol === "WSOL") continue;
+      if (symbol === "SOL") continue;
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       // const position = positions.filter(ps => ps.mint === mintAddress);
       // const splvalue = tokenBalance * price;
