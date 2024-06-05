@@ -163,15 +163,16 @@ export class RaydiumSwapService {
       const fee =
         _amount *
         (is_buy ? total_fee_percent_in_sol : total_fee_percent_in_token);
+
+      const inDecimal = is_buy ? 9 : decimal;
+      const outDecimal = is_buy ? decimal : 9;
       // in_amount
-      const amount = Number(((_amount - fee) * 10 ** decimal).toFixed(0));
+      const amount = Number(((_amount - fee) * 10 ** inDecimal).toFixed(0));
       const wallet = Keypair.fromSecretKey(bs58.decode(pk));
 
       const poolinfo = await RaydiumTokenService.findLastOne({ mint });
       if (!poolinfo) return;
       const { isAmm, poolId } = poolinfo;
-      const inDecimal = is_buy ? 9 : decimal;
-      const outDecimal = is_buy ? decimal : 9;
 
       const tokenPrice = await getPriceInSOL(mint);
       const quoteAmount = is_buy
