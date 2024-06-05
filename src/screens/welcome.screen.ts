@@ -8,12 +8,13 @@ import { TokenService } from "../services/token.metadata";
 import { contractInfoScreenHandler } from "./contract.info.screen";
 
 const MAX_RETRIES = 5;
-const welcomeKeyboardList = [
+export const welcomeKeyboardList = [
   // [{ text: '🏦 Buy/Sell', command: 'buysell' }],
   // snipe_token, my_position
   [{ text: '🎯 Sniper [Soon]', command: 'dummy_button' }, { text: '📊 Positions', command: 'position' }], // position
-  [{ text: '♻️ Withdraw', command: 'transfer_funds' }, { text: '🛠 Settings & Tools', command: 'settings' }],
-  [{ text: '⛓ Bridge', command: 'bridge' }],
+  // [{ text: '♻️ Withdraw', command: 'transfer_funds' }],
+  [{ text: "Burn: Off ♨️", command: `burn_switch` }],
+  [{ text: '⛓ Bridge', command: 'bridge' }, { text: '🛠 Settings & Tools', command: 'settings' }],
   [{ text: '🎁 Referral Program', command: 'referral' }],
   [{ text: '❌ Close', command: 'dismiss_message' }],
 ];
@@ -151,12 +152,22 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
   // // Add the 'text' event listener
   // bot.on('text', textEventHandler);
 
+  const burn_fee = user.burn_fee;
   const reply_markup = {
     inline_keyboard: welcomeKeyboardList.map((rowItem) => rowItem.map((item) => {
       if (item.command.includes("bridge")) {
         return {
           text: item.text,
           url: 'https://t.me/growbridge_bot'
+        }
+      }
+      if (item.text.includes("Burn")) {
+        const burnText = `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`;
+        return {
+          text: burnText,
+          callback_data: JSON.stringify({
+            'command': item.command
+          })
         }
       }
       return {

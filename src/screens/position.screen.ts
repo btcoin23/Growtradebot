@@ -66,10 +66,12 @@ export const positionScreenHandler = async (
     }
 
     const tokenaccounts = await TokenService.getTokenAccounts(user.wallet_address);
-    const solprice = await TokenService.getSOLPrice();
+    // const solprice = await TokenService.getSOLPrice();
+    const solbalance = await TokenService.getSOLBalance(user.wallet_address);
 
     let caption = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
-      `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
+      `<i>${copytoclipboard(user.wallet_address)}</i>\n` +
+      `SOL amount: <b>${solbalance}</b>\n\n` +
       `<b>Please choose a token to buy/sell.</b>\n`;
 
     // Initialize the transferInlineKeyboards array with an empty array
@@ -78,7 +80,7 @@ export const positionScreenHandler = async (
     let idx = 0;
     for (const item of tokenaccounts) {
       const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
-      caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
+      caption += `\n- <b>Token: ${symbol === "SOL" ? "WSOL" : symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       // const position = positions.filter(ps => ps.mint === mintAddress);
       // const splvalue = tokenBalance * price;
 

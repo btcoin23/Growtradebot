@@ -28,7 +28,7 @@ import {
   UserTradeSettingService,
 } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
-import { inline_keyboards } from "./contract.info.screen";
+// import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard, fromWeiToValue } from "../utils";
 import bs58 from "bs58";
 import {
@@ -136,9 +136,9 @@ export const setSlippageScreenHandler = async (
       msg_id: msg.message_id,
     });
     if (!msglog) return;
-    const { mint } = msglog;
+    // const { mint } = msglog;
 
-    if (!mint) return;
+    // if (!mint) return;
 
     const sentMessage = await bot.sendMessage(chat_id, SET_SLIPPAGE_TEXT, {
       parse_mode: "HTML",
@@ -149,7 +149,7 @@ export const setSlippageScreenHandler = async (
 
     await MsgLogService.create({
       username,
-      mint,
+      mint: "slippage",
       wallet_address: user.wallet_address,
       chat_id,
       msg_id: sentMessage.message_id,
@@ -272,7 +272,7 @@ export const buyHandler = async (
 
   const { slippage } = await UserTradeSettingService.getSlippage(
     username,
-    mint
+    // mint
   );
   console.log("Buy start:", Date.now());
   // buy token
@@ -649,7 +649,7 @@ export const sellHandler = async (
   // sell token
   const { slippage } = await UserTradeSettingService.getSlippage(
     username,
-    mint
+    // mint
   );
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
@@ -751,38 +751,62 @@ export const setSlippageHandler = async (
   const { mint, parent_msgid, msg_id } = msglog;
 
   if (!mint) return;
-
-  await UserTradeSettingService.setSlippage(username, mint, {
+  // mint, 
+  await UserTradeSettingService.setSlippage(username, {
     slippage: percent,
     slippagebps: percent * 100,
   });
 
-  const gassetting = await UserTradeSettingService.getGas(username);
-  const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(
-    gassetting.gas
-  );
-  const gasvalue = UserTradeSettingService.getGasValue(gassetting);
+  const user = await UserService.findOne({ username });
+  if (!user) return;
+  const { auto_buy, auto_buy_amount } = user;
 
-  inline_keyboards[0][0] = {
-    text: `${gassetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""
-      } Gas: ${gasvalue} SOL ⚙️`,
-    command: "custom_fee",
-  };
-  inline_keyboards[1][0].text = `Slippage: ${percent} %`;
+  const reply_markup = {
+    inline_keyboard: [
+      [{
+        text: `💳 Wallet`, callback_data: JSON.stringify({
+          'command': `wallet_view`
+        })
+      }, {
+        text: `🗒  Preset Settings`, callback_data: JSON.stringify({
+          'command': `preset_setting`
+        })
+      }],
+      [{
+        text: '♻️ Withdraw', callback_data: JSON.stringify({
+          'command': `transfer_funds`
+        })
+      }],
+      [{
+        text: `Slippage: ${percent} %`, callback_data: JSON.stringify({
+          'command': `set_slippage`
+        })
+      }],
+      [{
+        text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
+          'command': `autobuy_switch`
+        })
+      },
+      {
+        text: `${auto_buy_amount} SOL`, callback_data: JSON.stringify({
+          'command': `autobuy_amount`
+        })
+      }],
+      [{
+        text: '↩️ Back', callback_data: JSON.stringify({
+          'command': 'back_home'
+        })
+      },
+      {
+        text: '❌ Close', callback_data: JSON.stringify({
+          'command': 'dismiss_message'
+        })
+      }]
+    ]
+  }
 
   await bot.editMessageReplyMarkup(
-    {
-      inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) =>
-        rowItem.map((item) => {
-          return {
-            text: item.text,
-            callback_data: JSON.stringify({
-              command: item.command ?? "dummy_button",
-            }),
-          };
-        })
-      ),
-    },
+    reply_markup,
     {
       message_id: parent_msgid,
       chat_id,

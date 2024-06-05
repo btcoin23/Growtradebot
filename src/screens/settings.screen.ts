@@ -9,6 +9,7 @@ import { MsgLogService } from "../services/msglog.service";
 import redisClient from "../services/redis";
 import { AUTO_BUY_TEXT, PRESET_BUY_TEXT, SET_GAS_FEE } from "../bot.opts";
 import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
+import { welcomeKeyboardList } from "./welcome.screen";
 
 export const settingScreenHandler = async (
   bot: TelegramBot,
@@ -27,7 +28,15 @@ export const settingScreenHandler = async (
     const activeuser = users.filter(user => user.retired === false)[0];
     const { wallet_address, burn_fee, auto_buy, auto_buy_amount } = activeuser;
 
-    const caption = `GrowTrade ${GrowTradeVersion}\n\n<b>AutoBuy</b>\nAutomatically execute buys upon pasting token address.\nTap to switch on/off.\n\n<b>Your active wallet:</b>\n` + `${copytoclipboard(wallet_address)}`;
+    const caption = `GrowTrade ${GrowTradeVersion}\n\n` +
+      `<b>AutoBuy</b>\n` +
+      `Automatically execute buys upon pasting token address. Customize the Sol amount and press the button to activate/deactivate.\n\n` +
+      `<b>Withdraw</b>\n` +
+      `Withdraw any token or Solana you have in the currently active wallet.\n\n` +
+      `<b>Your active wallet:</b>\n` + `${copytoclipboard(wallet_address)}`;
+
+    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
+    const { slippage } = slippageSetting;
 
     const reply_markup = {
       inline_keyboard: [
@@ -41,8 +50,13 @@ export const settingScreenHandler = async (
           })
         }],
         [{
-          text: `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
-            'command': `burn_switch`
+          text: '♻️ Withdraw', callback_data: JSON.stringify({
+            'command': `transfer_funds`
+          })
+        }],
+        [{
+          text: `Slippage: ${slippage} %`, callback_data: JSON.stringify({
+            'command': `set_slippage`
           })
         }],
         [{
@@ -68,6 +82,7 @@ export const settingScreenHandler = async (
       ]
     }
 
+    let sentMessageId = 0;
     if (replaceId) {
       bot.editMessageText(
         caption,
@@ -79,8 +94,9 @@ export const settingScreenHandler = async (
           reply_markup
         }
       );
+      sentMessageId = replaceId;
     } else {
-      bot.sendMessage(
+      const sentMessage = await bot.sendMessage(
         chat_id,
         caption,
         {
@@ -89,7 +105,19 @@ export const settingScreenHandler = async (
           reply_markup
         }
       );
+      sentMessageId = sentMessage.message_id;
     }
+
+    await MsgLogService.create({
+      username,
+      mint: "slippage",
+      wallet_address: wallet_address,
+      chat_id,
+      msg_id: sentMessageId,
+      sol_amount: 0,
+      spl_amount: 0,
+      extra_key: 0
+    });
   } catch (e) { console.log("~ settingScreenHandler ~", e) }
 }
 
@@ -592,7 +620,7 @@ export const setCustomFeeHandler = async (
 
     const inline_keyboards = [
       [{ text: "Gas: 0.000105 SOL", command: null }],
-      [{ text: "Slippage: 5%", command: 'set_slippage' }],
+      // [{ text: "Slippage: 5%", command: 'set_slippage' }],
       [{ text: "Buy 0.01 SOL", command: 'buytoken_0.01' }, { text: "Buy 1 SOL", command: 'buytoken_1' },],
       [{ text: "Buy 5 SOL", command: 'buytoken_5' }, { text: "Buy 10 SOL", command: 'buytoken_10' },],
       [{ text: "Buy X SOL", command: 'buy_custom' }],
@@ -603,18 +631,18 @@ export const setCustomFeeHandler = async (
     let preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
 
     if (extra_key == "switch_sell") {
-      inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
-      inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
-      inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
-      inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
+      inline_keyboards[1] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
+      inline_keyboards[2] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
+      inline_keyboards[3] = [{ text: `Buy X SOL`, command: `buy_custom` }]
+      inline_keyboards[4] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
     }
     if (extra_key == "switch_buy") {
-      inline_keyboards[2] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
-      inline_keyboards[3] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
-      inline_keyboards[4] = [{ text: "Sell X%", command: `sell_custom` }]
-      inline_keyboards[5] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
+      inline_keyboards[1] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
+      inline_keyboards[2] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
+      inline_keyboards[3] = [{ text: "Sell X%", command: `sell_custom` }]
+      inline_keyboards[4] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
     }
-    const slippageSetting = await UserTradeSettingService.getSlippage(username, mint);
+    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
     const { slippage } = slippageSetting;
 
     const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(GasFeeEnum.CUSTOM);
@@ -622,7 +650,7 @@ export const setCustomFeeHandler = async (
       text: `Gas: ${amount} SOL ⚙️`,
       command: 'custom_fee'
     }
-    inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
+    // inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
 
     await bot.editMessageReplyMarkup({
       inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) => rowItem.map((item) => {
@@ -715,46 +743,42 @@ export const switchBurnOptsHandler = async (bot: TelegramBot, msg: TelegramBot.M
       { username },
       { burn_fee: !user.burn_fee }
     )
-    console.log("🚀 ~ switchBurnOptsHandler ~ user.burn_fee:", user.burn_fee)
+    // console.log("🚀 ~ switchBurnOptsHandler ~ user.burn_fee:", user.burn_fee)
 
-    const reply_markup = {
-      inline_keyboard: [
-        [{
-          text: `💳 Wallet`, callback_data: JSON.stringify({
-            'command': `wallet_view`
-          })
-        }, {
-          text: `🗒  Preset Settings`, callback_data: JSON.stringify({
-            'command': `preset_setting`
-          })
-        }],
-        [{
-          text: `${!user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
-            'command': `burn_switch`
-          })
-        }],
-        [{
-          text: `${!user.auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
-            'command': `autobuy_switch`
-          })
-        },
-        {
-          text: `${user.auto_buy_amount} SOL`, callback_data: JSON.stringify({
-            'command': `autobuy_amount`
-          })
-        }],
-        [{
-          text: '↩️ Back', callback_data: JSON.stringify({
-            'command': 'back_home'
-          })
-        },
-        {
-          text: '❌ Close', callback_data: JSON.stringify({
-            'command': 'dismiss_message'
-          })
-        }]
-      ]
+    if (!user.burn_fee) {
+      const caption = `Burn: On 🔥\n\n` +
+        `GrowTrade's burn functionality operates seamlessly through its fee system, where a portion of tokens bought and sold is systematically burned. This process does not affect users' own tokens but only those acquired through the fee mechanism, ensuring the safety of your trades.`;
+      bot.sendMessage(
+        msg.chat.id,
+        caption,
+        closeReplyMarkup
+      );
     }
+    const reply_markup = {
+      inline_keyboard: welcomeKeyboardList.map((rowItem) => rowItem.map((item) => {
+        if (item.command.includes("bridge")) {
+          return {
+            text: item.text,
+            url: 'https://t.me/growbridge_bot'
+          }
+        }
+        if (item.text.includes("Burn")) {
+          const burnText = `${!user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`;
+          return {
+            text: burnText,
+            callback_data: JSON.stringify({
+              'command': item.command
+            })
+          }
+        }
+        return {
+          text: item.text,
+          callback_data: JSON.stringify({
+            'command': item.command
+          })
+        }
+      }))
+    };
 
     await bot.editMessageReplyMarkup(
       reply_markup,
@@ -806,6 +830,8 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
       { username },
       { auto_buy: !user.auto_buy }
     )
+    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
+    const { slippage } = slippageSetting;
 
     const reply_markup = {
       inline_keyboard: [
@@ -819,8 +845,13 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
           })
         }],
         [{
-          text: `${user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`, callback_data: JSON.stringify({
-            'command': `burn_switch`
+          text: '♻️ Withdraw', callback_data: JSON.stringify({
+            'command': `transfer_funds`
+          })
+        }],
+        [{
+          text: `Slippage: ${slippage} %`, callback_data: JSON.stringify({
+            'command': `set_slippage`
           })
         }],
         [{

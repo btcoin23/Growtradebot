@@ -8,8 +8,10 @@ export enum GasFeeEnum {
 }
 
 export const UserTradeSettingService = {
-  getSlippage: async (username: string, mint: string) => {
-    const key = `${username}_${mint}`;
+  // , mint: string
+  getSlippage: async (username: string) => {
+    // const key = `${username}_${mint}`;
+    const key = `${username}_slippage`;
     const data = await redisClient.get(key);
     if (data) return JSON.parse(data) as ITradeSlippageSetting;
     return {
@@ -17,8 +19,10 @@ export const UserTradeSettingService = {
       slippagebps: 2000,
     } as ITradeSlippageSetting
   },
-  setSlippage: async (username: string, mint: string, opts: ITradeSlippageSetting) => {
-    const key = `${username}_${mint}`;
+  // , mint: string
+  setSlippage: async (username: string, opts: ITradeSlippageSetting) => {
+    // const key = `${username}_${mint}`;
+    const key = `${username}_slippage`;
     await redisClient.set(key, JSON.stringify(opts));
   },
   getGasInlineKeyboard: async (gasfee: GasFeeEnum) => {

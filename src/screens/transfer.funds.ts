@@ -63,7 +63,7 @@ export const transferFundScreenHandler = async (bot: TelegramBot, msg: TelegramB
     const transferInlineKeyboards: InlineKeyboardButton[][] = [
       [
         { text: '🌳 Withdraw SOL', callback_data: JSON.stringify({ 'command': `TF_${NATIVE_MINT.toBase58()}` }) },
-        { text: '↩️ Back', callback_data: JSON.stringify({ 'command': 'back_home' }) }
+        { text: '↩️ Back', callback_data: JSON.stringify({ 'command': 'settings' }) }
       ]
     ];
 

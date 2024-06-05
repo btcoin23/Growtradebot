@@ -41,7 +41,7 @@ import { OpenMarketService } from "../services/openmarket.service";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
-  [{ text: "Slippage: 5%", command: 'set_slippage' }],
+  // [{ text: "Slippage: 5%", command: 'set_slippage' }],
   [{ text: "Buy 0.01 SOL", command: 'buytoken_0.01' }, { text: "Buy 1 SOL", command: 'buytoken_1' },],
   [{ text: "Buy 5 SOL", command: 'buytoken_5' }, { text: "Buy 10 SOL", command: 'buytoken_10' },],
   [{ text: "Buy X SOL", command: 'buy_custom' }],
@@ -126,18 +126,18 @@ export const contractInfoScreenHandler = async (
     const preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
 
     if (switchBtn == "switch_buy") {
-      inline_keyboards[2] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
-      inline_keyboards[3] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
-      inline_keyboards[4] = [{ text: "Sell X%", command: `sell_custom` }]
-      inline_keyboards[5] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
+      inline_keyboards[1] = [{ text: "Sell 10%", command: `selltoken_10` }, { text: "Sell 50%", command: `selltoken_50` },]
+      inline_keyboards[2] = [{ text: "Sell 75%", command: `selltoken_75` }, { text: "Sell 100%", command: `selltoken_100` },]
+      inline_keyboards[3] = [{ text: "Sell X%", command: `sell_custom` }]
+      inline_keyboards[4] = [{ text: "🔁 Switch To Buy", command: `SS_${mint}` }]
     } else {
-      inline_keyboards[2] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
-      inline_keyboards[3] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
-      inline_keyboards[4] = [{ text: `Buy X SOL`, command: `buy_custom` }]
-      inline_keyboards[5] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
+      inline_keyboards[1] = [{ text: `Buy ${preset_setting[0]} SOL`, command: `buytoken_${preset_setting[0]}` }, { text: `Buy ${preset_setting[1]} SOL`, command: `buytoken_${preset_setting[1]}` },]
+      inline_keyboards[2] = [{ text: `Buy ${preset_setting[2]} SOL`, command: `buytoken_${preset_setting[2]}` }, { text: `Buy ${preset_setting[3]} SOL`, command: `buytoken_${preset_setting[3]}` },]
+      inline_keyboards[3] = [{ text: `Buy X SOL`, command: `buy_custom` }]
+      inline_keyboards[4] = [{ text: `🔁 Switch To Sell`, command: `BS_${mint}` }]
     }
 
-    const slippageSetting = await UserTradeSettingService.getSlippage(username, mint);
+    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
     const gasSetting = await UserTradeSettingService.getGas(username);
     const { slippage } = slippageSetting;
 
@@ -148,7 +148,6 @@ export const contractInfoScreenHandler = async (
       text: `${gasSetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
       command: 'custom_fee'
     }
-    inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
 
     if (switchBtn && !fromPosition) {
       const sentMessage = bot.editMessageReplyMarkup(
@@ -403,9 +402,9 @@ const buildCaption = async (
 
   caption += `🌳 Mint Disabled: ${mintAuthority ? "🔴" : "🍏"}\n` +
     `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n` +
-    `👥 Top 10 holder: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% held ]\n\n` +
+    `👥 Top 10 holders: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% ]\n\n` +
     `💲 Price: <b>$${formatPrice(price)}</b>\n` +
-    `💸 Price Impact: [${priceImpact.toFixed(4)} % of price impact on sell]\n` +
+    `💸 Price Impact: [${priceImpact.toFixed(4)} %]\n` +
     `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
     `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
     `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +
@@ -475,6 +474,7 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
       await sendNoneUserNotification(bot, msg);
       return;
     }
+    bot.deleteMessage(chat_id, msg.message_id);
 
     const msglog = await MsgLogService.findOne({
       username,
@@ -483,78 +483,7 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     if (!msglog) return;
     const { mint } = msglog;
 
-
-    let caption = ''
-    let solbalance = 0;
-    let splbalance = 0;
-    // Here, we need to get info from raydium token list
-    const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-    if (raydiumPoolInfo) {
-      const { creation_ts } = raydiumPoolInfo;
-      const duration = Date.now() - creation_ts;
-
-      const pending = await bot.sendMessage(chat_id, "Loading...");
-      // 120minutes
-      if (duration < RAYDIUM_PASS_TIME) {
-        const captionForRaydium = await getRaydiumTokenInfoCaption(
-          raydiumPoolInfo,
-          user.wallet_address
-        );
-        if (!captionForRaydium) {
-          bot.deleteMessage(chat_id, pending.message_id);
-          return;
-        }
-        caption = captionForRaydium.caption;
-        solbalance = captionForRaydium.solbalance;
-        splbalance = captionForRaydium.splbalance;
-      }
-      bot.deleteMessage(chat_id, pending.message_id);
-    } else {
-      // check token metadata
-      const tokeninfo = await TokenService.getMintInfo(mint);
-      if (!tokeninfo) {
-        await sendNoneExistTokenNotification(bot, msg);
-        return;
-      }
-      const captionForJuipter = await getJupiterTokenInfoCaption(
-        tokeninfo,
-        mint,
-        user.wallet_address
-      );
-
-      if (!captionForJuipter) return;
-
-      caption = captionForJuipter.caption;
-      solbalance = captionForJuipter.solbalance;
-      splbalance = captionForJuipter.splbalance;
-    }
-
-    const gassetting = await UserTradeSettingService.getGas(username);
-    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(gassetting.gas);
-    let inline_keyboard = reply_markup.inline_keyboard;
-    inline_keyboard[0] = gaskeyboards.map((item) => {
-      return {
-        text: item.text,
-        callback_data: JSON.stringify({
-          'command': item.command
-        })
-      }
-    })
-
-    const gasvalue = UserTradeSettingService.getGasValue(gassetting);
-    inline_keyboard[1][0] = {
-      text: `${gassetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
-      callback_data: JSON.stringify({
-        'command': 'custom_fee'
-      })
-    }
-
-    await bot.editMessageText(caption, {
-      message_id: msg.message_id,
-      chat_id, parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      reply_markup
-    });
+    await contractInfoScreenHandler(bot, msg, mint)
   } catch (e) {
     console.log("~ refresh handler ~", e)
   }
