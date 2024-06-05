@@ -170,7 +170,7 @@ export class RaydiumSwapService {
       const poolinfo = await RaydiumTokenService.findLastOne({ mint });
       if (!poolinfo) return;
       const { isAmm, poolId } = poolinfo;
-
+      console.log("Decimal", decimal);
       const inDecimal = is_buy ? 9 : decimal;
       const outDecimal = is_buy ? decimal : 9;
 
@@ -423,6 +423,8 @@ export class RaydiumSwapService {
       }
 
       const rawTransaction = transaction.serialize();
+      if (rawTransaction) return;
+
       // Netherland
       // const jitoBundleInstance = new JitoBundleService("ams");
       const jitoBundleInstance = new JitoBundleService();
