@@ -345,13 +345,15 @@ export const buyHandler = async (
     await checkReferralFeeSent(total_fee_in_sol, username);
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
-    await bot.editMessageText(failedCaption, {
-      message_id: pendingTxMsgId,
-      chat_id,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-    });
+    try {
+      await bot.editMessageText(failedCaption, {
+        message_id: pendingTxMsgId,
+        chat_id,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      });
+    } catch (e) { }
   }
 };
 
@@ -587,24 +589,26 @@ export const sellHandler = async (
   }
   if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo) {
-    const { creation_ts } = raydiumPoolInfo;
-    const duration = Date.now() - creation_ts;
-    if (duration < RAYDIUM_PASS_TIME) {
-      // Metadata
-      const metadata = await getMintMetadata(
-        private_connection,
-        new PublicKey(mint)
-      );
-      if (!metadata) return;
-      isToken2022 = metadata.program === "spl-token-2022";
+    // const { creation_ts } = raydiumPoolInfo;
+    // const duration = Date.now() - creation_ts;
+    // if (duration < RAYDIUM_PASS_TIME) {
+    // Metadata
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    if (!metadata) return;
+    isToken2022 = metadata.program === "spl-token-2022";
 
-      decimals = metadata.parsed.info.decimals;
+    name = raydiumPoolInfo.name;
+    symbol = raydiumPoolInfo.symbol;
+    decimals = metadata.parsed.info.decimals;
 
-      const priceInSOL = await getPriceInSOL(mint);
+    const priceInSOL = await getPriceInSOL(mint);
 
-      const solprice = await TokenService.getSOLPrice();
-      price = priceInSOL * solprice;
-    }
+    const solprice = await TokenService.getSOLPrice();
+    price = priceInSOL * solprice;
+    // }
   } else {
     const mintinfo = await TokenService.getMintInfo(mint);
     if (!mintinfo) return;
@@ -683,13 +687,16 @@ export const sellHandler = async (
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
-    await bot.editMessageText(successCaption, {
-      message_id: pendingMessage.message_id,
-      chat_id,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-    });
+    // Just in case
+    try {
+      await bot.editMessageText(successCaption, {
+        message_id: pendingMessage.message_id,
+        chat_id,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      });
+    } catch (e) { }
 
     const status = await getSignatureStatus(signature);
     if (!status) {
@@ -714,13 +721,15 @@ export const sellHandler = async (
     await checkReferralFeeSent(total_fee_in_sol, username);
   } else {
     const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
-    await bot.editMessageText(failedCaption, {
-      message_id: pendingMessage.message_id,
-      chat_id,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-    });
+    try {
+      await bot.editMessageText(failedCaption, {
+        message_id: pendingMessage.message_id,
+        chat_id,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+      });
+    } catch (e) { }
   }
 };
 
