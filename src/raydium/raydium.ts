@@ -241,7 +241,7 @@ export async function processOpenBookMarket(
 }
 
 export const runListener = async () => {
-  initDB();
+  // initDB();
   const runTimestamp = Math.floor(new Date().getTime() / 1000);
 
   const ammSubscriptionId = solanaConnection.onLogs(
