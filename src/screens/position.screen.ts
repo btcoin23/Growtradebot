@@ -71,7 +71,7 @@ export const positionScreenHandler = async (
 
     let caption = `GrowTrade ${GrowTradeVersion}\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
-      `💳 Balance: <b>${solbalance}</b>\n\n` +
+      `💳 Balance: <b>${solbalance} SOL</b>\n\n` +
       `<b>Please choose a token to buy/sell.</b>\n`;
 
     // Initialize the transferInlineKeyboards array with an empty array
