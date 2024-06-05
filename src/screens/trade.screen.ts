@@ -284,7 +284,8 @@ export const buyHandler = async (
       user.private_key,
       NATIVE_MINT.toBase58(),
       mint,
-      9, // SOL decimal
+      decimals,
+      // 9, // SOL decimal
       amount,
       slippage,
       gasvalue,
@@ -455,7 +456,7 @@ export const autoBuyHandler = async (
       user.private_key,
       NATIVE_MINT.toBase58(),
       mint,
-      9, // SOL decimal
+      decimals, // SOL decimal
       amount,
       slippage,
       gasvalue,
