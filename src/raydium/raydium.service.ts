@@ -46,6 +46,63 @@ import { formatAmmKeysById } from "./utils/formatAmmKeysById";
 import { default as BN } from "bn.js";
 import { REQUEST_HEADER } from "../config";
 
+export const estimateSwapRate = async (
+  connection: Connection,
+  poolinfo: any,
+  marketinfo: any,
+  inAmount: number,
+  swapInDirection: boolean,
+  inDecimal?: number,
+  outDecimal?: number,
+) => {
+  try {
+    const { poolId, poolState } = poolinfo;
+    const { market } = marketinfo;
+    const poolKeys = createPoolKeys(
+      new PublicKey(poolId),
+      convertDBForPoolStateV4(poolState),
+      convertDBForMarketV3(market)
+    )
+    const {
+      inputMint,
+      outputMint,
+      // amountIn,
+      amountOut,
+      // minAmountOut,
+      // currentPrice,
+      // executionPrice,
+      priceImpact,
+      // fee,
+    } = await calcAmountOut(connection, poolKeys, inAmount, swapInDirection);
+    const outAmount = Number(amountOut.numerator) / Number(amountOut.denominator);
+    const priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
+    // const curPrice = Number(currentPrice.numerator) / Number(currentPrice.denominator);
+
+    if (!inDecimal || !outDecimal) {
+      return {
+        inputMint,
+        outputMint,
+        inAmount,
+        outAmount,
+        priceImpactPct,
+        // priceInSOL: curPrice
+      } as QuoteRes
+
+    }
+    return {
+      inputMint,
+      outputMint,
+      inAmount: inAmount * (10 ** inDecimal),
+      outAmount: outAmount * (10 ** outDecimal),
+      priceImpactPct,
+      // priceInSOL: curPrice
+    } as QuoteRes
+  } catch (e) {
+    console.log("Faild", e);
+    return null;;
+  }
+};
+
 export const getPriceInSOL = async (tokenAddress: string): Promise<number> => {
   try {
     const options = { method: "GET", headers: REQUEST_HEADER };

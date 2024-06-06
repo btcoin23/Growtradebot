@@ -82,11 +82,11 @@ export const positionScreenHandler = async (
     for (const item of tokenaccounts) {
       const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
       if (symbol === "SOL" || tokenBalance < 0.000005) {
-        discount = -1;
+        discount -= 1;
         continue;
       }
       if (price && price * tokenBalance < 1) {
-        discount = -1;
+        discount -= 1;
         continue;
       }
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
