@@ -127,9 +127,9 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
     `<b>💳 Balance:</b> ${solbalance} SOL\n\n` +
     `<a href="https://solscan.io/address/${user.wallet_address}">View on Explorer</a>\n\n` +
     `<b>Part of <a href="https://growsol.io">GrowSol</a>'s Ecosystem</b>\n\n` +
-    `-----------------------\n` +
-    `<a href="https://docs.growsol.io/docs">📖 Docs</a>\n` +
-    `<a href="https://growsol.io">🌍 Website</a>\n\n` +
+    // `-----------------------\n` +
+    // `<a href="https://docs.growsol.io/docs">📖 Docs</a>\n` +
+    // `<a href="https://growsol.io">🌍 Website</a>\n\n` +
     `<b>Paste a contract address to trigger the Buy/Sell Menu or pick an option to get started.</b>`;
 
   // const textEventHandler = async (msg: TelegramBot.Message) => {
