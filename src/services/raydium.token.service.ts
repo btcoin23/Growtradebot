@@ -6,9 +6,12 @@ export const RaydiumTokenService = {
     try {
       // return await TokenSchema.create(props);
       const existing = await TokenSchema.findOne({ poolId: props.poolId });
-      if (existing == null)
+      if (existing == null) {
         console.log(props)
-      return await TokenSchema.create(props);
+        return await TokenSchema.create(props);
+      } else {
+        return;
+      }
     } catch (err: any) {
       console.log(err);
       // throw new Error(err.message);
