@@ -36,7 +36,7 @@ export const sendNoneExistTokenNotification = async (bot: TelegramBot, msg: Tele
   const { id: chat_id } = msg.chat;
   const sentMsg = await bot.sendMessage(
     chat_id,
-    '⚠︎ Error\n<b>This token does not exist. Please check mint address again. or Try it later.</b>',
+    '⚠︎ Error\n<b>This token does not exist. Please verify the mint address again or try later.</b>',
     {
       parse_mode: 'HTML'
     }
