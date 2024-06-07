@@ -36,7 +36,7 @@ import {
 } from "../config";
 import { PublicKey } from "@solana/web3.js";
 import { getMintMetadata, getTop10HoldersPercent } from "../raydium";
-import { getPriceInSOL } from "../raydium/raydium.service";
+import { calcAmountOut, getPriceInSOL } from "../raydium/raydium.service";
 import { OpenMarketService } from "../services/openmarket.service";
 
 export const inline_keyboards = [
@@ -240,7 +240,8 @@ const getRaydiumTokenInfoCaption = async (
       name,
       symbol,
       mint,
-      poolId
+      poolId,
+      isAmm
     } = raydiumPoolInfo;
 
     let tokenName = name;
@@ -268,11 +269,11 @@ const getRaydiumTokenInfoCaption = async (
     const solbalance = await TokenService.getSOLBalance(wallet_address);
 
     const priceInSOL = await getPriceInSOL(mint);
-
     const priceInUsd = priceInSOL * solprice;
-    const quote = null;
-    const priceImpact = 0;
-    // const priceImpact = quote ? quote.priceImpactPct : 0;
+    const splvalue = priceInUsd * splbalance;
+
+    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await calcAmountOut(connection, mint, metadata.parsed.info.decimals, poolId, splbalance, isAmm) as QuoteRes : null;
+    const priceImpact = quote ? quote.priceImpactPct : 0;
 
     const decimals = metadata.parsed.info.decimals;
     const supply = Number(metadata.parsed.info.supply) / (10 ** Number(decimals));

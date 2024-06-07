@@ -45,82 +45,71 @@ import { formatAmmKeysById } from "./utils/formatAmmKeysById";
 
 import { default as BN } from "bn.js";
 import { REQUEST_HEADER } from "../config";
+import { TokenService } from "../services/token.metadata";
 
-export const estimateSwapRate = async (
-  connection: Connection,
-  poolinfo: any,
-  marketinfo: any,
-  inAmount: number,
-  swapInDirection: boolean,
-  inDecimal?: number,
-  outDecimal?: number,
-) => {
-  try {
-    const { poolId, poolState } = poolinfo;
-    const { market } = marketinfo;
-    const poolKeys = createPoolKeys(
-      new PublicKey(poolId),
-      convertDBForPoolStateV4(poolState),
-      convertDBForMarketV3(market)
-    )
-    const {
-      inputMint,
-      outputMint,
-      // amountIn,
-      amountOut,
-      // minAmountOut,
-      // currentPrice,
-      // executionPrice,
-      priceImpact,
-      // fee,
-    } = await calcAmountOut(connection, poolKeys, inAmount, swapInDirection);
-    const outAmount = Number(amountOut.numerator) / Number(amountOut.denominator);
-    const priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
-    // const curPrice = Number(currentPrice.numerator) / Number(currentPrice.denominator);
+// export const estimateSwapRate = async (
+//   connection: Connection,
+//   poolinfo: any,
+//   marketinfo: any,
+//   inAmount: number,
+//   swapInDirection: boolean,
+//   inDecimal?: number,
+//   outDecimal?: number,
+// ) => {
+//   try {
+//     const { poolId, poolState } = poolinfo;
+//     const { market } = marketinfo;
+//     const poolKeys = createPoolKeys(
+//       new PublicKey(poolId),
+//       convertDBForPoolStateV4(poolState),
+//       convertDBForMarketV3(market)
+//     )
+//     const {
+//       inputMint,
+//       outputMint,
+//       // amountIn,
+//       amountOut,
+//       // minAmountOut,
+//       // currentPrice,
+//       // executionPrice,
+//       priceImpact,
+//       // fee,
+//     } = await calcAmountOut(connection, poolKeys, inAmount, swapInDirection);
+//     const outAmount = Number(amountOut.numerator) / Number(amountOut.denominator);
+//     const priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
+//     // const curPrice = Number(currentPrice.numerator) / Number(currentPrice.denominator);
 
-    if (!inDecimal || !outDecimal) {
-      return {
-        inputMint,
-        outputMint,
-        inAmount,
-        outAmount,
-        priceImpactPct,
-        // priceInSOL: curPrice
-      } as QuoteRes
+//     if (!inDecimal || !outDecimal) {
+//       return {
+//         inputMint,
+//         outputMint,
+//         inAmount,
+//         outAmount,
+//         priceImpactPct,
+//         // priceInSOL: curPrice
+//       } as QuoteRes
 
-    }
-    return {
-      inputMint,
-      outputMint,
-      inAmount: inAmount * (10 ** inDecimal),
-      outAmount: outAmount * (10 ** outDecimal),
-      priceImpactPct,
-      // priceInSOL: curPrice
-    } as QuoteRes
-  } catch (e) {
-    console.log("Faild", e);
-    return null;;
-  }
-};
+//     }
+//     return {
+//       inputMint,
+//       outputMint,
+//       inAmount: inAmount * (10 ** inDecimal),
+//       outAmount: outAmount * (10 ** outDecimal),
+//       priceImpactPct,
+//       // priceInSOL: curPrice
+//     } as QuoteRes
+//   } catch (e) {
+//     console.log("Faild", e);
+//     return null;;
+//   }
+// };
 
 export const getPriceInSOL = async (tokenAddress: string): Promise<number> => {
   try {
-    const options = { method: "GET", headers: REQUEST_HEADER };
-    const response1 = await fetch(
-      `https://public-api.birdeye.so/defi/price?address=${tokenAddress}`,
-      options
-    );
-    const res1 = await response1.json();
-    const priceInUSD = res1.data.value;
-
-    const response2 = await fetch(
-      `https://public-api.birdeye.so/defi/price?address=${NATIVE_MINT}`,
-      options
-    );
-    const res2 = await response2.json();
-    const solPrice = res2.data.value;
-    const priceInSol = Number(priceInUSD) / Number(solPrice);
-    return Number(priceInSol);
+    const tokenPrice = await TokenService.getSPLPrice(tokenAddress);
+    const solPrice = await TokenService.getSOLPrice();
+    const priceInSol = tokenPrice / solPrice;
+    return priceInSol;
   } catch (e) {
     // If an error occurs, return a default value (e.g., 0)
     return 0;
@@ -129,63 +118,104 @@ export const getPriceInSOL = async (tokenAddress: string): Promise<number> => {
 
 export const calcAmountOut = async (
   connection: Connection,
-  poolKeys: LiquidityPoolKeys,
+  mint: PublicKey,
+  decimal: number,
+  poolId: string,
   rawAmountIn: number,
-  swapInDirection: boolean
+  isAmm: boolean
 ) => {
-  const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys });
-  let currencyInMint = poolKeys.baseMint;
-  let currencyInDecimals = poolInfo.baseDecimals;
-  let currencyOutMint = poolKeys.quoteMint;
-  let currencyOutDecimals = poolInfo.quoteDecimals;
+  let inAmount = 0;
+  let outAmount = 0;
+  let priceImpactPct;
 
-  if (swapInDirection) {
-    currencyInMint = poolKeys.quoteMint;
-    currencyInDecimals = poolInfo.quoteDecimals;
-    currencyOutMint = poolKeys.baseMint;
-    currencyOutDecimals = poolInfo.baseDecimals;
-  }
-
+  const slippage = new Percent(100); // 100% slippage
   const currencyIn = new Token(
     TOKEN_PROGRAM_ID,
-    currencyInMint,
-    currencyInDecimals
+    mint,
+    decimal
   );
   const amountIn = new TokenAmount(currencyIn, rawAmountIn, false);
   const currencyOut = new Token(
     TOKEN_PROGRAM_ID,
-    currencyOutMint,
-    currencyOutDecimals
+    NATIVE_MINT,
+    9
   );
-  const slippage = new Percent(100); // 100% slippage
+  if (isAmm) {
+    const targetPoolInfo = await formatAmmKeysById(poolId);
+    if (!targetPoolInfo) {
+      console.log("🚀 cannot find the target pool", 11);
+      return;
+    }
+    const poolKeys = jsonInfo2PoolKeys(targetPoolInfo) as LiquidityPoolKeys;
+    const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys });
 
-  const {
-    amountOut,
-    minAmountOut,
-    currentPrice,
-    executionPrice,
-    priceImpact,
-    fee,
-  } = Liquidity.computeAmountOut({
-    poolKeys,
-    poolInfo,
-    amountIn,
-    currencyOut,
-    slippage,
-  });
+    const {
+      amountOut,
+      priceImpact,
+    } = Liquidity.computeAmountOut({
+      poolKeys,
+      poolInfo,
+      amountIn,
+      currencyOut,
+      slippage,
+    });
+    //     
+    outAmount = Number(amountOut.numerator) / Number(amountOut.denominator);
+    priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
+  }
+  else {
+    const clmmPools: ApiClmmPoolsItem[] = [
+      await formatClmmKeysById(poolId),
+    ];
+    const { [poolId]: clmmPoolInfo } =
+      await Clmm.fetchMultiplePoolInfos({
+        connection,
+        poolKeys: clmmPools,
+        chainTime: new Date().getTime() / 1000,
+      });
+    const tickCache = await Clmm.fetchMultiplePoolTickArrays({
+      connection,
+      poolKeys: [clmmPoolInfo.state],
+      batchRequest: true,
+    });
+
+    const { amountOut, priceImpact } = Clmm.computeAmountOutFormat(
+      {
+        poolInfo: clmmPoolInfo.state,
+        tickArrayCache: tickCache[poolId],
+        amountIn,
+        slippage,
+        currencyOut,
+        epochInfo: await connection.getEpochInfo(),
+        token2022Infos: await fetchMultipleMintInfos({
+          connection,
+          mints: [
+            ...clmmPools
+              .map((i) => [
+                { mint: i.mintA, program: i.mintProgramIdA },
+                { mint: i.mintB, program: i.mintProgramIdB },
+              ])
+              .flat()
+              .filter((i) => i.program === TOKEN_2022_PROGRAM_ID.toString())
+              .map((i) => new PublicKey(i.mint)),
+          ],
+        }),
+        catchLiquidityInsufficient: true,
+      }
+    );
+    outAmount = Number(amountOut.amount.numerator) / Number(amountOut.amount.denominator);
+    priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
+  }
 
   return {
-    inputMint: currencyInMint.toBase58(),
-    outputMint: currencyOutMint.toBase58(),
-    amountIn,
-    amountOut,
-    minAmountOut,
-    currentPrice,
-    executionPrice,
-    priceImpact,
-    fee,
+    inputMint: mint.toBase58(),
+    inAmount,
+    outputMint: NATIVE_MINT.toBase58(),
+    outAmount,
+    priceImpactPct,
   };
 };
+
 
 export class RaydiumSwapService {
   constructor() { }
