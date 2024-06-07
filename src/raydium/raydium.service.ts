@@ -124,7 +124,8 @@ export const calcAmountOut = async (
   rawAmountIn: number,
   isAmm: boolean
 ) => {
-  let inAmount = 0;
+  console.log("Calc", mint, decimal, poolId, rawAmountIn);
+  let inAmount = rawAmountIn;
   let outAmount = 0;
   let priceImpactPct;
 
@@ -140,6 +141,7 @@ export const calcAmountOut = async (
     NATIVE_MINT,
     9
   );
+  console.log("AMM", isAmm);
   if (isAmm) {
     const targetPoolInfo = await formatAmmKeysById(poolId);
     if (!targetPoolInfo) {
