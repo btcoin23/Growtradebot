@@ -210,9 +210,9 @@ export const calcAmountOut = async (
   }
 
   return {
-    inputMint: mint.toBase58(),
+    inputMint: mint.toString(),
     inAmount,
-    outputMint: NATIVE_MINT.toBase58(),
+    outputMint: NATIVE_MINT.toString(),
     outAmount,
     priceImpactPct,
   };
@@ -237,7 +237,7 @@ export class RaydiumSwapService {
     try {
       let total_fee_in_sol = 0;
       let total_fee_in_token = 0;
-      const is_buy = inputMint === NATIVE_MINT.toBase58();
+      const is_buy = inputMint === NATIVE_MINT.toString();
       const mint = is_buy ? outputMint : inputMint;
 
       let total_fee_percent = 0.01; // 1%

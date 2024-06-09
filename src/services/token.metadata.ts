@@ -130,7 +130,7 @@ export const TokenService = {
       }
       const mintdata = {
         token2022,
-        address: mintInfo.address.toBase58(),
+        address: mintInfo.address.toString(),
         mintAuthority: mintInfo.mintAuthority,
         supply: mintInfo.supply.toString(),
         decimals: mintInfo.decimals,
@@ -151,7 +151,7 @@ export const TokenService = {
   },
   fetchMetadataInfo: async (mint: PublicKey) => {
     try {
-      const filteredMints = knownMints.filter((item) => item.mint === mint.toBase58());
+      const filteredMints = knownMints.filter((item) => item.mint === mint.toString());
       if (filteredMints && filteredMints.length > 0) {
         const filteredMint = filteredMints[0];
         return {
@@ -281,7 +281,7 @@ export const TokenService = {
     return solBalance;
   },
   getSOLPrice: async () => {
-    return getPrice(NATIVE_MINT.toBase58());
+    return getPrice(NATIVE_MINT.toString());
   },
   getSPLPrice: async (mint: string) => {
     return getPrice(mint);

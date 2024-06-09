@@ -282,7 +282,7 @@ export const buyHandler = async (
   const quoteResult = isRaydium
     ? await raydiumService.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       decimals,
       // 9, // SOL decimal
@@ -295,7 +295,7 @@ export const buyHandler = async (
     )
     : await jupiterSerivce.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       9, // SOL decimal
       amount,
@@ -456,7 +456,7 @@ export const autoBuyHandler = async (
   const quoteResult = isRaydium
     ? await raydiumService.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       decimals, // SOL decimal
       amount,
@@ -468,7 +468,7 @@ export const autoBuyHandler = async (
     )
     : await jupiterSerivce.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       9, // SOL decimal
       amount,
@@ -660,7 +660,7 @@ export const sellHandler = async (
     ? await raydiumService.swapToken(
       user.private_key,
       mint,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       decimals,
       sellAmount,
       slippage,
@@ -672,7 +672,7 @@ export const sellHandler = async (
     : await jupiterSerivce.swapToken(
       user.private_key,
       mint,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       decimals,
       sellAmount,
       slippage,

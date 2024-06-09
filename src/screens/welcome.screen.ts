@@ -56,7 +56,7 @@ const newUserHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   do {
     const keypair = Keypair.generate();
     private_key = bs58.encode(keypair.secretKey);
-    wallet_address = keypair.publicKey.toBase58();
+    wallet_address = keypair.publicKey.toString();
 
     const wallet = await UserService.findOne({ wallet_address });
     if (!wallet) {

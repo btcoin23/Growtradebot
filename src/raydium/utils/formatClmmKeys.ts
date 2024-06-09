@@ -95,7 +95,7 @@ export async function formatClmmKeys(
         day: getApiClmmPoolsItemStatisticsDefault(),
         week: getApiClmmPoolsItemStatisticsDefault(),
         month: getApiClmmPoolsItemStatisticsDefault(),
-        lookupTableAccount: PublicKey.default.toBase58(),
+        lookupTableAccount: PublicKey.default.toString(),
       };
     })
     .reduce((a, b) => {

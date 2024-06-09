@@ -73,6 +73,7 @@ export const contractInfoScreenHandler = async (
     let splbalance = 0;
     // Here, we need to get info from raydium token list
     const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
+    console.log("IsRaydiumTradeable", raydiumPoolInfo? true: false);
     const jupiterSerivce = new JupiterService();
     const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
     console.log("IsJupiterTradeable", isJupiterTradable);
@@ -344,7 +345,7 @@ const getJupiterTokenInfoCaption = async (
     const jupiterService = new JupiterService();
     const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
       mint,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       splbalance,
       decimals,
       9

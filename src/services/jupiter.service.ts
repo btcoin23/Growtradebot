@@ -82,7 +82,7 @@ export class JupiterService {
     try {
       let total_fee_in_sol = 0;
       let total_fee_in_token = 0;
-      const is_buy = inputMint === NATIVE_MINT.toBase58();
+      const is_buy = inputMint === NATIVE_MINT.toString();
 
       let total_fee_percent = 0.01; // 1%
       let total_fee_percent_in_sol = 0.01; // 1%
@@ -132,7 +132,7 @@ export class JupiterService {
       // Get serialized transaction
       const swapReqOpts: SwapRequest = {
         quoteResponse: quote,
-        userPublicKey: wallet.publicKey.toBase58(),
+        userPublicKey: wallet.publicKey.toString(),
         dynamicComputeUnitLimit: true,
         prioritizationFeeLamports: Number(gasfeeValue.toFixed(0)),
       }
@@ -301,11 +301,11 @@ export class JupiterService {
   //     ]);
   //     console.log({
   //       txId,
-  //       referralAccountPubKey: referralAccountKeypair.publicKey.toBase58(),
+  //       referralAccountPubKey: referralAccountKeypair.publicKey.toString(),
   //     });
   //   } else {
   //     console.log(
-  //       `referralAccount ${referralAccountKeypair.publicKey.toBase58()} already exists`,
+  //       `referralAccount ${referralAccountKeypair.publicKey.toString()} already exists`,
   //     );
   //   }
   // },
@@ -333,14 +333,14 @@ export class JupiterService {
   //     const txId = await sendAndConfirmTransaction(connection, tx, [reserveWallet]);
   //     console.log({
   //       txId,
-  //       referralTokenAccountPubKey: referralTokenAccountPubKey.toBase58(),
+  //       referralTokenAccountPubKey: referralTokenAccountPubKey.toString(),
   //     });
-  //     await redisClient.set(key, referralTokenAccountPubKey.toBase58());
+  //     await redisClient.set(key, referralTokenAccountPubKey.toString());
   //   } else {
   //     console.log(
-  //       `referralTokenAccount ${referralTokenAccountPubKey.toBase58()} for mint ${mint.toBase58()} already exists`,
+  //       `referralTokenAccount ${referralTokenAccountPubKey.toString()} for mint ${mint.toString()} already exists`,
   //     );
-  //     await redisClient.set(key, referralTokenAccountPubKey.toBase58());
+  //     await redisClient.set(key, referralTokenAccountPubKey.toString());
   //   }
   // },
   // claimAll: async () => {

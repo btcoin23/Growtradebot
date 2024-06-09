@@ -62,7 +62,7 @@ export const transferFundScreenHandler = async (bot: TelegramBot, msg: TelegramB
     // Initialize the transferInlineKeyboards array with an empty array
     const transferInlineKeyboards: InlineKeyboardButton[][] = [
       [
-        { text: '🌳 Withdraw SOL', callback_data: JSON.stringify({ 'command': `TF_${NATIVE_MINT.toBase58()}` }) },
+        { text: '🌳 Withdraw SOL', callback_data: JSON.stringify({ 'command': `TF_${NATIVE_MINT.toString()}` }) },
         { text: '↩️ Back', callback_data: JSON.stringify({ 'command': 'settings' }) }
       ]
     ];
@@ -176,11 +176,11 @@ export const withdrawAddressHandler = async (
   const { name, symbol } = mintinfo.overview;
   const { isToken2022 } = mintinfo.secureinfo;
 
-  const balance = (mint === NATIVE_MINT.toBase58()) ?
+  const balance = (mint === NATIVE_MINT.toString()) ?
     await TokenService.getSOLBalance(user.wallet_address) :
     await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
 
-  const tokenName = (mint === NATIVE_MINT.toBase58()) ? "SOL" : name;
+  const tokenName = (mint === NATIVE_MINT.toString()) ? "SOL" : name;
   const caption = `<b>Token: ${tokenName} (${symbol ?? "undefined"})</b>\n` +
     `<i>${copytoclipboard(mint)}</i>\n` +
     `Balance: ${balance}\n\n` +
@@ -232,9 +232,9 @@ export const withdrawAddressHandler = async (
     username,
     mint,
     wallet_address: receive_address,
-    spl_amount: mint === NATIVE_MINT.toBase58() ? 0 : balance,
+    spl_amount: mint === NATIVE_MINT.toString() ? 0 : balance,
     parent_msgid: reply_message_id,
-    sol_amount: mint === NATIVE_MINT.toBase58() ? balance : 0,
+    sol_amount: mint === NATIVE_MINT.toString() ? balance : 0,
     extra_id: msg.message_id
   })
 }
@@ -278,10 +278,10 @@ export const withdrawHandler = async (
   if (!mintinfo) return;
   const { name, symbol, price, decimals } = mintinfo.overview;
 
-  const tokenName = (mint === NATIVE_MINT.toBase58()) ? "SOL" : name;
+  const tokenName = (mint === NATIVE_MINT.toString()) ? "SOL" : name;
 
   const { isToken2022 } = mintinfo.secureinfo;
-  const balance = (mint === NATIVE_MINT.toBase58()) ?
+  const balance = (mint === NATIVE_MINT.toString()) ?
     (await TokenService.getSOLBalance(user.wallet_address) - 0.000025) :
     await TokenService.getSPLBalance(mint, user.wallet_address, isToken2022);
 
@@ -310,7 +310,7 @@ export const withdrawHandler = async (
   )
 
   const jupiterSerivce = new JupiterService();
-  const transferResult = (mint === NATIVE_MINT.toBase58()) ?
+  const transferResult = (mint === NATIVE_MINT.toString()) ?
     await jupiterSerivce.transferSOL(amount, 9, topubkey, user.private_key, 100000, 200000) :
     await jupiterSerivce.transferSPL(mint, amount, decimals, topubkey, user.private_key, isToken2022);
   if (transferResult) {
