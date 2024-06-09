@@ -1,6 +1,6 @@
 import bs58 from "bs58";
 import axios from "axios";
-// import { JITO_UUID } from "../config";
+import { JITO_UUID } from "../config";
 
 type Region = "ams" | "ger" | "ny" | "tokyo"; // "default" | 
 
@@ -42,6 +42,7 @@ export class JitoBundleService {
   async sendTransaction(serializedTransaction: Uint8Array) {
     const encodedTx = bs58.encode(serializedTransaction);
     const jitoURL = `${this.endpoint}/api/v1/transactions`; // ?uuid=${JITO_UUID}
+    // const jitoURL = `${this.endpoint}/api/v1/bundles?uuid=${JITO_UUID}`
     const payload = {
       jsonrpc: "2.0",
       id: 1,

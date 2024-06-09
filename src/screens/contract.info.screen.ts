@@ -274,7 +274,7 @@ const getRaydiumTokenInfoCaption = async (
     const splvalue = priceInUsd * splbalance;
 
     const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await calcAmountOut(connection, new PublicKey(mint), metadata.parsed.info.decimals, poolId, splbalance, isAmm) as QuoteRes : null;
-    console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
+    // console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
     const priceImpact = quote ? quote.priceImpactPct : 0;
 
     const decimals = metadata.parsed.info.decimals;

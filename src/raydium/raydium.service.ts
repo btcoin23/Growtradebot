@@ -124,7 +124,7 @@ export const calcAmountOut = async (
   rawAmountIn: number,
   isAmm: boolean
 ) => {
-  console.log("Calc", mint, decimal, poolId, rawAmountIn);
+  // console.log("Calc", mint, decimal, poolId, rawAmountIn);
   let inAmount = rawAmountIn;
   let outAmount = 0;
   let priceImpactPct;

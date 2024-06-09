@@ -847,7 +847,7 @@ export const feeHandler = async (
     } else {
       referralWallet = RESERVE_WALLET;
     }
-    console.log("🚀 ~ referralWallet:", referralWallet);
+    console.log("🚀 ~ referralWallet:", referralWallet.toString());
     const referralFeePercent = ref_info?.referral_option ?? 0; // 25%
 
     const referralFee = Number(
