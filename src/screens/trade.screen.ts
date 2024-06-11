@@ -47,6 +47,8 @@ import { RaydiumSwapService, getPriceInSOL } from "../raydium/raydium.service";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import { getMintMetadata } from "../raydium";
 import { JitoBundleService } from "../services/jito.bundle";
+import { getCoinData } from "../pump/api";
+import { pumpFunSwap } from "../pump/swap";
 
 export const buyCustomAmountScreenHandler = async (
   bot: TelegramBot,
@@ -210,16 +212,12 @@ export const buyHandler = async (
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
   const jupiterSerivce = new JupiterService();
-  // const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-  // if (!raydiumPoolInfo && !isJupiterTradable) {
-  //   return;
-  // }
   let isJupiterTradable = false;
+  let isPumpfunTradable = false;
   if (!raydiumPoolInfo) {
     const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
     if (!jupiterTradeable) {
-      await sendNoneExistTokenNotification(bot, msg);
-      return;
+      isPumpfunTradable = true;
     } else {
       isJupiterTradable = jupiterTradeable;
     }
@@ -234,11 +232,24 @@ export const buyHandler = async (
       isJupiterTradable = jupiterTradeable;
     }
   }
+  console.log("IsJupiterTradeable", isJupiterTradable);
+  if (isPumpfunTradable) {
+    const coinData = await getCoinData(mint);
+    if (!coinData) {
+      console.error('Failed to retrieve coin data...');
+      return;
+    }
 
-  if (raydiumPoolInfo && !isJupiterTradable) {
-    // const { creation_ts } = raydiumPoolInfo;
-    // const duration = Date.now() - creation_ts;
-    // if (duration < RAYDIUM_PASS_TIME) {
+    name = coinData['name'];
+    symbol = coinData['symbol'];
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    if (!metadata) return;
+    decimals = metadata.parsed.info.decimals;
+    isToken2022 = metadata.program === "spl-token-2022";
+  } else if (raydiumPoolInfo && !isJupiterTradable) {
     // Metadata
     const metadata = await getMintMetadata(
       private_connection,
@@ -256,6 +267,7 @@ export const buyHandler = async (
   } else {
     const mintinfo = await TokenService.getMintInfo(mint);
     if (!mintinfo) return;
+
     isRaydium = false;
     name = mintinfo.overview.name || "";
     symbol = mintinfo.overview.symbol || "";
@@ -294,10 +306,22 @@ export const buyHandler = async (
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
   console.log("Raydium Swap?", isRaydium, isJupiterTradable);
-  const quoteResult = isRaydium
-    ? await raydiumService.swapToken(
+
+  const quoteResult = isPumpfunTradable ?
+    await pumpFunSwap(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      mint,
+      decimals,
+      true,
+      amount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    ) : isRaydium ? await raydiumService.swapToken(
+      user.private_key,
+      NATIVE_MINT.toString(),
       mint,
       decimals,
       // 9, // SOL decimal
@@ -307,10 +331,9 @@ export const buyHandler = async (
       user.burn_fee ?? true,
       username,
       isToken2022
-    )
-    : await jupiterSerivce.swapToken(
+    ) : await jupiterSerivce.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       9, // SOL decimal
       amount,
@@ -500,7 +523,7 @@ export const autoBuyHandler = async (
   const quoteResult = isRaydium
     ? await raydiumService.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       decimals, // SOL decimal
       amount,
@@ -512,7 +535,7 @@ export const autoBuyHandler = async (
     )
     : await jupiterSerivce.swapToken(
       user.private_key,
-      NATIVE_MINT.toBase58(),
+      NATIVE_MINT.toString(),
       mint,
       9, // SOL decimal
       amount,
@@ -596,8 +619,6 @@ export const sellHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id,
   });
-  // console.log("🚀 ~ msg.message_id:", msg.message_id)
-  // console.log("🚀 ~ msglog:", msglog)
 
   if (!msglog) return;
   const { mint, spl_amount, sol_amount } = msglog;
@@ -619,11 +640,6 @@ export const sellHandler = async (
     return;
   }
 
-  // const mintinfo = await TokenService.getMintInfo(mint);
-
-  // if (!mintinfo) return;
-  // const { name, symbol, price, decimals } = mintinfo.overview;
-  // const { isToken2022 } = mintinfo.secureinfo;
   let name = "";
   let symbol = "";
   let decimals = 9;
@@ -631,20 +647,14 @@ export const sellHandler = async (
   let isToken2022 = false;
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-
   const jupiterSerivce = new JupiterService();
-  // const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-
-  // if (!raydiumPoolInfo && !isJupiterTradable) {
-  //   return;
-  // }
 
   let isJupiterTradable = false;
+  let isPumpfunTradable = false;
   if (!raydiumPoolInfo) {
     const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
     if (!jupiterTradeable) {
-      await sendNoneExistTokenNotification(bot, msg);
-      return;
+      isPumpfunTradable = true;
     } else {
       isJupiterTradable = jupiterTradeable;
     }
@@ -659,12 +669,26 @@ export const sellHandler = async (
       isJupiterTradable = jupiterTradeable;
     }
   }
-  if (raydiumPoolInfo && !isJupiterTradable) {
-    // if (raydiumPoolInfo) {
-    // const { creation_ts } = raydiumPoolInfo;
-    // const duration = Date.now() - creation_ts;
-    // if (duration < RAYDIUM_PASS_TIME) {
-    // Metadata
+  console.log("IsJupiterTradeable", isJupiterTradable);
+
+  if (isPumpfunTradable) {
+    const coinData = await getCoinData(mint);
+    if (!coinData) {
+      console.error('Failed to retrieve coin data...');
+      return;
+    }
+
+    name = coinData['name'];
+    symbol = coinData['symbol'];
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    if (!metadata) return;
+    decimals = metadata.parsed.info.decimals;
+    isToken2022 = metadata.program === "spl-token-2022";
+  } else if (raydiumPoolInfo && !isJupiterTradable) {
+
     const metadata = await getMintMetadata(
       private_connection,
       new PublicKey(mint)
@@ -725,14 +749,25 @@ export const sellHandler = async (
   );
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
-
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
-  const quoteResult = isRaydium
-    ? await raydiumService.swapToken(
+  const quoteResult = isPumpfunTradable ?
+    await pumpFunSwap(
       user.private_key,
       mint,
-      NATIVE_MINT.toBase58(),
+      decimals,
+      false,
+      sellAmount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    )
+    : isRaydium ? await raydiumService.swapToken(
+      user.private_key,
+      mint,
+      NATIVE_MINT.toString(),
       decimals,
       sellAmount,
       slippage,
@@ -741,18 +776,18 @@ export const sellHandler = async (
       username,
       isToken2022
     )
-    : await jupiterSerivce.swapToken(
-      user.private_key,
-      mint,
-      NATIVE_MINT.toBase58(),
-      decimals,
-      sellAmount,
-      slippage,
-      gasvalue,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    );
+      : await jupiterSerivce.swapToken(
+        user.private_key,
+        mint,
+        NATIVE_MINT.toString(),
+        decimals,
+        sellAmount,
+        slippage,
+        gasvalue,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      );
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
@@ -926,7 +961,7 @@ export const feeHandler = async (
     } else {
       referralWallet = RESERVE_WALLET;
     }
-    console.log("🚀 ~ referralWallet:", referralWallet);
+    console.log("🚀 ~ referralWallet:", referralWallet.toString());
     const referralFeePercent = ref_info?.referral_option ?? 0; // 25%
 
     const referralFee = Number(

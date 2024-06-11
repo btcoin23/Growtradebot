@@ -13,7 +13,7 @@ export function formatConfigInfo(id: PublicKey, account: AccountInfo<Buffer>): A
   const info = AmmConfigLayout.decode(account.data)
 
   return {
-    id: id.toBase58(),
+    id: id.toString(),
     index: info.index,
     protocolFeeRate: info.protocolFeeRate,
     tradeFeeRate: info.tradeFeeRate,

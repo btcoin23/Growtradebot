@@ -97,7 +97,7 @@ export const positionScreenHandler = async (
       // const jupiterService = new JupiterService();
       // const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await jupiterService.getQuote(
       //   mintAddress,
-      //   NATIVE_MINT.toBase58(),
+      //   NATIVE_MINT.toString(),
       //   tokenBalance,
       //   decimals,
       //   9

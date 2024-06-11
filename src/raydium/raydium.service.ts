@@ -199,9 +199,9 @@ export const calcAmountOut = async (
   }
   console.log("1PriceInSOL & OutAmount", priceInSol, outAmount);
   return {
-    inputMint: inMint.toBase58(),
+    inputMint: inMint.toString(),
     inAmount: rawAmountIn,
-    outputMint: outMint.toBase58(),
+    outputMint: outMint.toString(),
     outAmount,
     priceImpactPct,
     priceInSol
@@ -227,7 +227,7 @@ export class RaydiumSwapService {
     try {
       let total_fee_in_sol = 0;
       let total_fee_in_token = 0;
-      const is_buy = inputMint === NATIVE_MINT.toBase58();
+      const is_buy = inputMint === NATIVE_MINT.toString();
       const mint = is_buy ? outputMint : inputMint;
 
       let total_fee_percent = 0.01; // 1%
@@ -276,16 +276,16 @@ export class RaydiumSwapService {
         console.error("unable to quote");
         return;
       }
-      const quoteAmount = quote.outAmount;
+      const quoteAmount = Number(quote.outAmount) * 10 ** outDecimal;
       if (is_buy) {
         total_fee_in_sol = Number((fee * 10 ** inDecimal).toFixed(0));
         total_fee_in_token = Number(
-          (Number(quoteAmount) * 10 ** outDecimal * total_fee_percent_in_token).toFixed(0)
+          (quoteAmount * total_fee_percent_in_token).toFixed(0)
         );
       } else {
         total_fee_in_token = Number((fee * 10 ** inDecimal).toFixed(0));
         total_fee_in_sol = Number(
-          (Number(quoteAmount) * 10 ** outDecimal * total_fee_percent_in_sol).toFixed(0)
+          (quoteAmount * total_fee_percent_in_sol).toFixed(0)
         );
       }
 
@@ -539,7 +539,7 @@ export class RaydiumSwapService {
       console.log(`https://solscan.io/tx/${signature}`);
 
       return {
-        quote: { inAmount: amount, outAmount: Number(quoteAmount) * 10 ** outDecimal },
+        quote: { inAmount: amount, outAmount: quoteAmount },
         signature,
         total_fee_in_sol,
         total_fee_in_token,

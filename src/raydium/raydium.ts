@@ -207,7 +207,7 @@ export async function getTop10HoldersPercent(
     let sum = 0;
     let counter = 0;
     for (const account of accounts.value) {
-      // if (account.address.toBase58() === excludeAddress) continue;
+      // if (account.address.toString() === excludeAddress) continue;
       if (!account.uiAmount) continue;
       if (counter >= 10) break;
       counter++;
@@ -241,7 +241,7 @@ export async function processOpenBookMarket(
 }
 
 export const runListener = async () => {
-  initDB();
+  // initDB();
   const runTimestamp = Math.floor(new Date().getTime() / 1000);
 
   const ammSubscriptionId = solanaConnection.onLogs(
@@ -252,7 +252,7 @@ export const runListener = async () => {
         // console.log(`https://solscan.io/tx/${signature}`)
         fetchRaydiumMints(
           signature,
-          RAYDIUM_LIQUIDITY_PROGRAM_ID_V4.toBase58(),
+          RAYDIUM_LIQUIDITY_PROGRAM_ID_V4.toString(),
           true
         );
       }
@@ -267,7 +267,7 @@ export const runListener = async () => {
       if (logs && logs.some((log) => log.includes("OpenPositionV2"))) {
         fetchRaydiumMints(
           signature,
-          RAYDIUM_LIQUIDITY_PROGRAM_ID_CLMM.toBase58(),
+          RAYDIUM_LIQUIDITY_PROGRAM_ID_CLMM.toString(),
           false
         );
       }
@@ -287,7 +287,7 @@ export const runListener = async () => {
       });
 
       //@ts-ignore
-      const accounts = tx?.transaction.message.instructions.find((ix) => ix.programId.toBase58() === instructionName)?.accounts as PublicKey[];
+      const accounts = tx?.transaction.message.instructions.find((ix) => ix.programId.toString() === instructionName)?.accounts as PublicKey[];
       if (!accounts) {
         console.log("No accounts found in the transaction.");
         return;
@@ -302,23 +302,23 @@ export const runListener = async () => {
       if ((tx?.blockTime && tx?.blockTime < runTimestamp) || existing) return;
       existingLiquidityPools.add(poolId.toString());
       const tokenAaccount =
-        accounts[tokenAIndex].toBase58() === NATIVE_MINT.toBase58()
-          ? accounts[tokenAIndex]
+        accounts[tokenAIndex].toString() === NATIVE_MINT.toString()
+          ? accounts[tokenBIndex]
           : accounts[tokenAIndex];
       const tokenBaccount =
-        accounts[tokenBIndex].toBase58() === NATIVE_MINT.toBase58()
+        accounts[tokenBIndex].toString() === NATIVE_MINT.toString()
           ? accounts[tokenBIndex]
-          : accounts[tokenBIndex];
-      if (tokenBaccount.toBase58() !== NATIVE_MINT.toBase58()) return;
+          : accounts[tokenAIndex];
+      if (tokenBaccount.toString() !== NATIVE_MINT.toString()) return;
       const key = `raydium_mint_${poolId.toString()}`;
       const res = await redisClient.get(key);
       if (res === "added") return;
 
       const displayData = {
         "TxID:": `https://solscan.io/tx/${txId}`,
-        "PoolID:": poolId.toBase58(),
-        "TokenA:": tokenAaccount.toBase58(),
-        "TokenB:": tokenBaccount.toBase58(),
+        "PoolID:": poolId.toString(),
+        "TokenA:": tokenAaccount.toString(),
+        "TokenB:": tokenBaccount.toString(),
       };
 
       console.log(` - New ${isAmm ? "AMM" : "CLMM"} Found`);
@@ -329,7 +329,7 @@ export const runListener = async () => {
       const data = {
         name: tokenMetadata.name,
         symbol: tokenMetadata.symbol,
-        mint: tokenAaccount.toBase58(),
+        mint: tokenAaccount.toString(),
         isAmm,
         poolId,
         creation_ts: Date.now(),
@@ -358,7 +358,7 @@ export const runListener = async () => {
       {
         memcmp: {
           offset: MARKET_STATE_LAYOUT_V3.offsetOf("quoteMint"),
-          bytes: NATIVE_MINT.toBase58(),
+          bytes: NATIVE_MINT.toString(),
         },
       },
     ]

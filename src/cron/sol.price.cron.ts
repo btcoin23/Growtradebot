@@ -23,7 +23,7 @@ const REQUEST_HEADER = {
 
 const updateSolPrice = async () => {
   try {
-    const solmint = NATIVE_MINT.toBase58();
+    const solmint = NATIVE_MINT.toString();
     const key = `${solmint}_price`;
     const options = { method: 'GET', headers: REQUEST_HEADER };
     const response = await fetch(`https://public-api.birdeye.so/defi/price?address=${solmint}`, options)

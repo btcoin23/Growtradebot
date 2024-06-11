@@ -50,6 +50,6 @@ export async function formatClmmKeysById(id: string): Promise<ApiClmmPoolsItem> 
     day: getApiClmmPoolsItemStatisticsDefault(),
     week: getApiClmmPoolsItemStatisticsDefault(),
     month: getApiClmmPoolsItemStatisticsDefault(),
-    lookupTableAccount: PublicKey.default.toBase58(),
+    lookupTableAccount: PublicKey.default.toString(),
   }
 }
