@@ -29,6 +29,7 @@ import { OpenMarketService } from "../services/openmarket.service";
 import { TokenService } from "../services/token.metadata";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import redisClient from "../services/redis";
+import { syncAmmPoolKeys, syncClmmPoolKeys } from "./raydium.service";
 
 const solanaConnection = new Connection(PRIVATE_RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,
@@ -336,37 +337,42 @@ export const runListener = async () => {
       };
       await redisClient.set(key, "added");
       await RaydiumTokenService.create(data);
+      if (isAmm) {
+        await syncAmmPoolKeys(poolId.toString());
+      } else {
+        await syncClmmPoolKeys(poolId.toString());
+      }
     } catch (e) {
       console.log("Error fetching transaction:", e);
       return;
     }
   }
 
-  const openBookSubscriptionId = solanaConnection.onProgramAccountChange(
-    OPENBOOK_PROGRAM_ID,
-    async (updatedAccountInfo) => {
-      const key = updatedAccountInfo.accountId.toString();
-      const existing = existingOpenBookMarkets.has(key);
-      if (!existing) {
-        existingOpenBookMarkets.add(key);
-        const _ = processOpenBookMarket(updatedAccountInfo);
-      }
-    },
-    COMMITMENT_LEVEL,
-    [
-      { dataSize: MARKET_STATE_LAYOUT_V3.span },
-      {
-        memcmp: {
-          offset: MARKET_STATE_LAYOUT_V3.offsetOf("quoteMint"),
-          bytes: NATIVE_MINT.toString(),
-        },
-      },
-    ]
-  );
+  // const openBookSubscriptionId = solanaConnection.onProgramAccountChange(
+  //   OPENBOOK_PROGRAM_ID,
+  //   async (updatedAccountInfo) => {
+  //     const key = updatedAccountInfo.accountId.toString();
+  //     const existing = existingOpenBookMarkets.has(key);
+  //     if (!existing) {
+  //       existingOpenBookMarkets.add(key);
+  //       const _ = processOpenBookMarket(updatedAccountInfo);
+  //     }
+  //   },
+  //   COMMITMENT_LEVEL,
+  //   [
+  //     { dataSize: MARKET_STATE_LAYOUT_V3.span },
+  //     {
+  //       memcmp: {
+  //         offset: MARKET_STATE_LAYOUT_V3.offsetOf("quoteMint"),
+  //         bytes: NATIVE_MINT.toString(),
+  //       },
+  //     },
+  //   ]
+  // );
 
   console.info(`Listening for raydium AMM changes: ${ammSubscriptionId}`);
   console.info(`Listening for raydium CLMM changes: ${clmmSubscriptionId}`);
-  console.info(`Listening for open book changes: ${openBookSubscriptionId}`);
+  // console.info(`Listening for open book changes: ${openBookSubscriptionId}`);
   // Here, we need to remove this mint from snipe List
   // in our database
   // ------>
