@@ -76,16 +76,7 @@ export const TokenService = {
     }
   },
   getTokenSecurity: async (mint: string) => {
-    const key = `${mint}_security`;
-    const redisdata = await redisClient.get(key);
-    if (redisdata) {
-      return JSON.parse(redisdata);
-    }
-
     const secureinfo = await BirdEyeAPIService.getTokenSecurity(mint);
-
-    await redisClient.set(key, JSON.stringify(secureinfo))
-    await redisClient.expire(key, 86400);
     return secureinfo;
   },
   getTokenOverview: async (mint: string) => {

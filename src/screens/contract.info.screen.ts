@@ -38,6 +38,8 @@ import { PublicKey } from "@solana/web3.js";
 import { getMintMetadata, getTop10HoldersPercent } from "../raydium";
 import { calcAmountOut, getPriceInSOL } from "../raydium/raydium.service";
 import { OpenMarketService } from "../services/openmarket.service";
+import { getCoinData } from "../pump/api";
+import { TokenSecurityInfoDataType } from "src/services/birdeye.api.service";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -77,10 +79,10 @@ export const contractInfoScreenHandler = async (
     const jupiterSerivce = new JupiterService();
     const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
     console.log("IsJupiterTradeable", isJupiterTradable);
-    if (!raydiumPoolInfo && !isJupiterTradable) {
-      await sendNoneExistTokenNotification(bot, msg);
-      return;
-    }
+    // if (!raydiumPoolInfo && !isJupiterTradable) {
+    //   await sendNoneExistTokenNotification(bot, msg);
+    //   return;
+    // }
 
     if (raydiumPoolInfo && !isJupiterTradable) {
       // if (raydiumPoolInfo || !isJupiterTradable) {
@@ -106,10 +108,8 @@ export const contractInfoScreenHandler = async (
     } else {
       // check token metadata
       const tokeninfo = await TokenService.getMintInfo(mint);
-      if (!tokeninfo) {
-        await sendNoneExistTokenNotification(bot, msg);
-        return;
-      }
+      if (tokeninfo) {
+        
       const captionForJuipter = await getJupiterTokenInfoCaption(
         tokeninfo,
         mint,
@@ -121,6 +121,18 @@ export const contractInfoScreenHandler = async (
       caption = captionForJuipter.caption;
       solbalance = captionForJuipter.solbalance;
       splbalance = captionForJuipter.splbalance;
+      }else{
+        const captionForPump = await getPumpTokenInfoCaption(
+          mint,
+          user.wallet_address
+        );
+
+        if (!captionForPump) return;
+
+        caption = captionForPump.caption;
+        solbalance = captionForPump.solbalance;
+        splbalance = captionForPump.splbalance;
+      }
     }
 
 
@@ -375,6 +387,96 @@ const getJupiterTokenInfoCaption = async (
       splbalance
     }
   } catch (e) {
+    return null;
+  }
+}
+
+const getPumpTokenInfoCaption = async (
+  mintStr: string,
+  wallet_address: string,
+) => {
+  try {
+    // Raydium Info
+    const coinData = await getCoinData(mintStr);
+        if (!coinData) {
+            console.error('Failed to retrieve coin data...');
+            return;
+        }
+
+    let tokenName = coinData['name'];
+    let tokenSymbol = coinData['symbol'];
+    const mc = coinData['usd_market_cap'];
+    const totalSupply = coinData['total_supply']
+    if (tokenName === '' || tokenSymbol === '') {
+      const { name, symbol } = await TokenService.fetchSimpleMetaData(new PublicKey(mintStr))
+      tokenName = name;
+      tokenSymbol = symbol;
+    }
+
+    // Metadata
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mintStr)
+    );
+    // console.log("M2", Date.now())
+    if (!metadata) return;
+
+    const isToken2022 = metadata.program === 'spl-token-2022';
+
+    // Balance
+    const solprice = await TokenService.getSOLPrice();
+    const splbalance = await TokenService.getSPLBalance(mintStr, wallet_address, isToken2022, true);
+    const solbalance = await TokenService.getSOLBalance(wallet_address);
+    
+    const decimals = metadata.parsed.info.decimals;
+    const priceInUsd = mc / (totalSupply / 10 ** decimals);
+    const splvalue = priceInUsd * splbalance;
+    const _slippage = 0.25
+    const minSolOutput = Math.floor(splbalance! * (1 - _slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
+    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? {inAmount: splbalance, outAmount: minSolOutput } as QuoteRes : null;
+    // console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
+    // const priceImpact = quote ? quote.priceImpactPct : 0;
+    const priceImpact = 0;
+
+    // const liquidity = baseBalance;
+
+    const freezeAuthority = metadata.parsed.info.freezeAuthority;
+    const mintAuthority = metadata.parsed.info.mintAuthority;
+    // console.log("M7", Date.now())
+
+    const secuInf = await TokenService.getTokenSecurity(
+      mintStr
+    ) as TokenSecurityInfoDataType;
+    const top10HolderPercent = secuInf.top10HolderPercent as number;
+    const price = priceInUsd;
+    // console.log(mc);
+
+    const caption = await buildCaption(
+      tokenName,
+      tokenSymbol,
+      isToken2022,
+      mintStr,
+      quote,
+      wallet_address,
+      mintAuthority,
+      freezeAuthority,
+      top10HolderPercent,
+      price,
+      priceImpact,
+      mc,
+      solprice,
+      solbalance,
+      splbalance
+    );
+    // console.log("M7", Date.now())
+
+    return {
+      caption,
+      solbalance,
+      splbalance
+    }
+  } catch (e) {
+    console.log(e)
     return null;
   }
 }
