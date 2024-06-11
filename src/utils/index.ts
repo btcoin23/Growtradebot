@@ -66,10 +66,10 @@ export function formatPrice(price: number) {
       }
       decimal--;
     }
-    return price.toFixed(decimal + 2);
+    return price.toFixed(decimal + 3);
   }
   // If the price is greater than or equal to 1, format it to 3 decimal places
-  return price.toFixed(3);
+  return price.toFixed(2);
 }
 
 export const getPrice = async (mint: string) => {

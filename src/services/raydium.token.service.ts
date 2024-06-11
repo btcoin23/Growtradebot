@@ -40,7 +40,7 @@ export const RaydiumTokenService = {
   findLastOne: async (props: any) => {
     try {
       const filter = props;
-      const result = await TokenSchema.findOne(filter).sort({ updatedAt: -1 });
+      const result = await TokenSchema.findOne(filter).sort({ creation_ts: 1 });
 
       return result;
     } catch (err: any) {

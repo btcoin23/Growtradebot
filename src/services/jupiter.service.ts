@@ -12,13 +12,14 @@ import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import { JitoBundleService, tipAccounts } from "./jito.bundle";
 import { FeeService } from "./fee.service";
 import { fromWeiToValue } from "../utils";
+import redisClient from "./redis";
 
 // const provider = new ReferralProvider(connection);
 
 const config = {
   basePath: "https://growtradebot.fly.dev"
 }
-
+let jupiterTradeableTokens: Array<string> = [];
 export class JupiterService {
   instructionDataToTransactionInstruction(
     instruction: Instruction | undefined
@@ -60,12 +61,25 @@ export class JupiterService {
   async checkTradableOnJupiter(
     mint: string
   ) {
+    if (jupiterTradeableTokens.includes(mint)) return true;
+
+    const key = `jugtradable_${mint}`;
+    const res = await redisClient.get(key);
+    if (res) {
+      return JSON.parse(res) as boolean;
+    }
+
     const config = {
       basePath: "https://growtradebot.fly.dev"
     }
     const jupiterQuoteApi = createJupiterApiClient(config);
     const tokens = await jupiterQuoteApi.tokensGet();
-    return tokens.includes(mint);
+    jupiterTradeableTokens = tokens;
+    const tradeable = tokens.includes(mint);
+    await redisClient.set(key, JSON.stringify(tradeable));
+    await redisClient.expire(key, 30);
+
+    return tradeable;
   };
   async swapToken(
     pk: string,
@@ -220,17 +234,19 @@ export class JupiterService {
       // Netherland
       // const jitoBundleInstance = new JitoBundleService("ams");
       const jitoBundleInstance = new JitoBundleService();
-      const result = await jitoBundleInstance.sendTransaction(rawTransaction);
+      const bundleId = await jitoBundleInstance.sendBundle(rawTransaction);
       // const status = await getSignatureStatus(signature);
-      // if (!status) return null;
-      console.log("Transaction Result", result);
+      if (!bundleId) return;
+
+      console.log("BundleID", bundleId);
       console.log(`https://solscan.io/tx/${signature}`);
 
       return {
         quote,
         signature,
         total_fee_in_sol,
-        total_fee_in_token
+        total_fee_in_token,
+        bundleId
       };
     } catch (e) {
       console.log("SwapToken Failed", e);
@@ -563,5 +579,5 @@ export interface QuoteRes {
   outputMint: string;
   outAmount: number;
   priceImpactPct: number;
-  // priceInSOL?: number
+  priceInSol?: number
 }

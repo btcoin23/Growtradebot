@@ -41,6 +41,6 @@ export const GrowTradeVersion = '| Beta Version';
 export const GROWSOL_API_ENDPOINT = process.env.GROWSOL_API_ENDPOINT || "http://127.0.0.1:5001";
 
 export const PNL_SHOW_THRESHOLD_USD = 0.000005;
-export const RAYDIUM_PASS_TIME = 1800 * 60 * 1000; // 1200 minutes * 60 seconds * 1000 millisecons
+export const RAYDIUM_PASS_TIME = 5 * 24 * 60 * 60 * 1000; // 3days * 24h * 60mins * 60 seconds * 1000 millisecons
 export const RAYDIUM_AMM_URL = 'https://api.raydium.io/v2/main/pairs'
 export const RAYDIUM_CLMM_URL = 'https://api.raydium.io/v2/ammV3/ammPools'

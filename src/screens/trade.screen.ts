@@ -1,7 +1,7 @@
 import TelegramBot, { InlineKeyboardMarkup } from "node-telegram-bot-api";
 import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
-import { closeReplyMarkup, deleteDelayMessage } from "./common.screen";
+import { closeReplyMarkup, deleteDelayMessage, sendNoneExistTokenNotification } from "./common.screen";
 import { UserService } from "../services/user.service";
 import {
   BUY_XSOL_TEXT,
@@ -46,6 +46,7 @@ import { PNLService } from "../services/pnl.service";
 import { RaydiumSwapService, getPriceInSOL } from "../raydium/raydium.service";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import { getMintMetadata } from "../raydium";
+import { JitoBundleService } from "../services/jito.bundle";
 
 export const buyCustomAmountScreenHandler = async (
   bot: TelegramBot,
@@ -172,21 +173,17 @@ export const buyHandler = async (
   console.log("Buy1:", Date.now());
   const user = await UserService.findOne({ username });
   if (!user) return;
-  console.log("Buy2:", Date.now());
 
   const msglog = await MsgLogService.findOne({
     username,
     msg_id: reply_message_id ?? msg.message_id,
   });
-  // console.log("🚀 ~ msglog:", msglog)
-  // console.log("🚀 ~ msg.message_id:", msg.message_id)
-  console.log("Buy3:", Date.now());
 
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
 
   const gassetting = await UserTradeSettingService.getGas(username);
-  console.log("Buy4:", Date.now());
+  console.log("Buy2:", Date.now());
 
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
   if (!mint) return;
@@ -213,10 +210,31 @@ export const buyHandler = async (
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
   const jupiterSerivce = new JupiterService();
-  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-  if (!raydiumPoolInfo && !isJupiterTradable) {
-    return;
+  // const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+  // if (!raydiumPoolInfo && !isJupiterTradable) {
+  //   return;
+  // }
+  let isJupiterTradable = false;
+  if (!raydiumPoolInfo) {
+    const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    if (!jupiterTradeable) {
+      await sendNoneExistTokenNotification(bot, msg);
+      return;
+    } else {
+      isJupiterTradable = jupiterTradeable;
+    }
+  } else {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    // 120minutes
+    if (duration < RAYDIUM_PASS_TIME) {
+      isJupiterTradable = false;
+    } else {
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      isJupiterTradable = jupiterTradeable;
+    }
   }
+
   if (raydiumPoolInfo && !isJupiterTradable) {
     // const { creation_ts } = raydiumPoolInfo;
     // const duration = Date.now() - creation_ts;
@@ -244,10 +262,8 @@ export const buyHandler = async (
     decimals = mintinfo.overview.decimals || 9;
     isToken2022 = mintinfo.secureinfo.isToken2022;
   }
-  console.log("Buy5:", Date.now());
 
   const solprice = await TokenService.getSOLPrice();
-  console.log("Buy6:", Date.now());
 
   // send Notification
   const getcaption = (status: string, suffix: string = "") => {
@@ -262,13 +278,12 @@ export const buyHandler = async (
     return securecaption;
   };
   const buycaption = getcaption(`🕒 <b>Buy in progress</b>\n`);
-  console.log("Buy7:", Date.now());
 
   const pendingTxMsg = await bot.sendMessage(chat_id, buycaption, {
     parse_mode: "HTML",
   });
   const pendingTxMsgId = pendingTxMsg.message_id;
-  console.log("Buy8:", Date.now());
+  console.log("Buy3:", Date.now());
 
   const { slippage } = await UserTradeSettingService.getSlippage(
     username,
@@ -307,7 +322,7 @@ export const buyHandler = async (
     );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, quote } = quoteResult;
+    const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -322,13 +337,20 @@ export const buyHandler = async (
       });
     } catch (e) { }
 
-    const status = await getSignatureStatus(signature);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
     if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
-      await bot.editMessageCaption(failedCaption, {
-        message_id: pendingTxMsgId,
+      await bot.deleteMessage(
         chat_id,
+        pendingTxMsgId
+      );
+      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
+
+      await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
       return;
     }
@@ -394,10 +416,32 @@ export const autoBuyHandler = async (
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
 
   const jupiterSerivce = new JupiterService();
-  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-  if (!raydiumPoolInfo && !isJupiterTradable) {
-    return;
+  let isJupiterTradable = false;
+  // const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+  // if (!raydiumPoolInfo && !isJupiterTradable) {
+  //   return;
+  // }
+  if (!raydiumPoolInfo) {
+    const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    if (!jupiterTradeable) {
+      await sendNoneExistTokenNotification(bot, msg);
+      return;
+    } else {
+      isJupiterTradable = jupiterTradeable;
+    }
+  } else {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    // 120minutes
+    if (duration < RAYDIUM_PASS_TIME) {
+      isJupiterTradable = false;
+    } else {
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      isJupiterTradable = jupiterTradeable;
+    }
   }
+
+
   if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo) {
@@ -480,7 +524,7 @@ export const autoBuyHandler = async (
     );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, quote } = quoteResult;
+    const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -495,13 +539,20 @@ export const autoBuyHandler = async (
       });
     } catch (e) { }
 
-    const status = await getSignatureStatus(signature);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+
     if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
-      await bot.editMessageCaption(failedCaption, {
-        message_id: pendingTxMsgId,
+      await bot.deleteMessage(
         chat_id,
+        pendingTxMsgId
+      );
+      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
+      await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
       return;
     }
@@ -582,10 +633,31 @@ export const sellHandler = async (
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
 
   const jupiterSerivce = new JupiterService();
-  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+  // const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
 
-  if (!raydiumPoolInfo && !isJupiterTradable) {
-    return;
+  // if (!raydiumPoolInfo && !isJupiterTradable) {
+  //   return;
+  // }
+
+  let isJupiterTradable = false;
+  if (!raydiumPoolInfo) {
+    const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    if (!jupiterTradeable) {
+      await sendNoneExistTokenNotification(bot, msg);
+      return;
+    } else {
+      isJupiterTradable = jupiterTradeable;
+    }
+  } else {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    // 120minutes
+    if (duration < RAYDIUM_PASS_TIME) {
+      isJupiterTradable = false;
+    } else {
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      isJupiterTradable = jupiterTradeable;
+    }
   }
   if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo) {
@@ -683,7 +755,7 @@ export const sellHandler = async (
     );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, quote } = quoteResult;
+    const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
@@ -698,13 +770,20 @@ export const sellHandler = async (
       });
     } catch (e) { }
 
-    const status = await getSignatureStatus(signature);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
     if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
-      await bot.editMessageCaption(failedCaption, {
-        message_id: pendingMessage.message_id,
+      await bot.deleteMessage(
         chat_id,
+        pendingMessage.message_id
+      );
+
+      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
+      await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
       return;
     }

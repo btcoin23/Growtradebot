@@ -32,11 +32,10 @@ import {
   RAYDIUM_PASS_TIME,
   connection,
   private_connection,
-  REQUEST_HEADER,
 } from "../config";
 import { PublicKey } from "@solana/web3.js";
 import { getMintMetadata, getTop10HoldersPercent } from "../raydium";
-import { calcAmountOut, getPriceInSOL } from "../raydium/raydium.service";
+import { calcAmountOut, getPriceInSOL, syncAmmPoolKeys, syncClmmPoolKeys } from "../raydium/raydium.service";
 import { OpenMarketService } from "../services/openmarket.service";
 
 export const inline_keyboards = [
@@ -73,13 +72,30 @@ export const contractInfoScreenHandler = async (
     let splbalance = 0;
     // Here, we need to get info from raydium token list
     const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-    const jupiterSerivce = new JupiterService();
-    const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-    console.log("IsJupiterTradeable", isJupiterTradable);
-    if (!raydiumPoolInfo && !isJupiterTradable) {
-      await sendNoneExistTokenNotification(bot, msg);
-      return;
+
+    let isJupiterTradable = false;
+    if (!raydiumPoolInfo) {
+      const jupiterSerivce = new JupiterService();
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      if (!jupiterTradeable) {
+        await sendNoneExistTokenNotification(bot, msg);
+        return;
+      } else {
+        isJupiterTradable = jupiterTradeable;
+      }
+    } else {
+      const { creation_ts } = raydiumPoolInfo;
+      const duration = Date.now() - creation_ts;
+      // 120minutes
+      if (duration < RAYDIUM_PASS_TIME) {
+        isJupiterTradable = false;
+      } else {
+        const jupiterSerivce = new JupiterService();
+        const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+        isJupiterTradable = jupiterTradeable;
+      }
     }
+    console.log("IsJupiterTradeable", isJupiterTradable);
 
     if (raydiumPoolInfo && !isJupiterTradable) {
       // if (raydiumPoolInfo || !isJupiterTradable) {
@@ -105,6 +121,7 @@ export const contractInfoScreenHandler = async (
     } else {
       // check token metadata
       const tokeninfo = await TokenService.getMintInfo(mint);
+      console.log(tokeninfo);
       if (!tokeninfo) {
         await sendNoneExistTokenNotification(bot, msg);
         return;
@@ -241,7 +258,9 @@ const getRaydiumTokenInfoCaption = async (
       symbol,
       mint,
       poolId,
-      isAmm
+      isAmm,
+      ammKeys,
+      clmmKeys
     } = raydiumPoolInfo;
 
     let tokenName = name;
@@ -268,12 +287,24 @@ const getRaydiumTokenInfoCaption = async (
     const splbalance = await TokenService.getSPLBalance(mint, wallet_address, isToken2022, true);
     const solbalance = await TokenService.getSOLBalance(wallet_address);
 
-    const priceInSOL = await getPriceInSOL(mint);
-    const priceInUsd = priceInSOL * solprice;
-    const splvalue = priceInUsd * splbalance;
+    // const splvalue = priceInUsd * splbalance;
 
-    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await calcAmountOut(connection, new PublicKey(mint), metadata.parsed.info.decimals, poolId, splbalance, isAmm) as QuoteRes : null;
-    console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
+    const quoteTemp = await calcAmountOut(
+      connection,
+      new PublicKey(mint),
+      metadata.parsed.info.decimals,
+      NATIVE_MINT,
+      9,
+      poolId,
+      splbalance,
+      isAmm,
+      ammKeys,
+      clmmKeys
+    ) as QuoteRes;
+    const quote = splbalance > 0 ? quoteTemp : null;
+
+    const priceInSOL = quoteTemp.priceInSol; //  await getPriceInSOL(mint);
+    const priceInUsd = (priceInSOL ?? 0) * solprice;
     const priceImpact = quote ? quote.priceImpactPct : 0;
 
     const decimals = metadata.parsed.info.decimals;
@@ -313,7 +344,12 @@ const getRaydiumTokenInfoCaption = async (
       splbalance
     );
     // console.log("M7", Date.now())
-
+    if (isAmm && !ammKeys) {
+      syncAmmPoolKeys(poolId);
+    }
+    if (!isAmm && !clmmKeys) {
+      syncClmmPoolKeys(poolId);
+    }
     return {
       caption,
       solbalance,
