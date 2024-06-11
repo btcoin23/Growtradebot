@@ -1,6 +1,7 @@
 import { PositionService } from "./position.service";
 import { isEqual } from "../utils";
 import { QuoteRes } from "./jupiter.service";
+import { amount } from "@metaplex-foundation/js";
 
 export class PNLService {
   wallet_address: string;
@@ -47,9 +48,26 @@ export class PNLService {
         received_sol_amount: 0,
         creation_time: ts
       })
-      return 0;
+    } else if (myposition.sol_amount <= 0 && myposition.amount <= 0) {
+
+      const {
+        inAmount,
+        outAmount
+      } = this.quote;
+
+      const filter = {
+        wallet_address: this.wallet_address,
+        mint: this.mint,
+      };
+      const data = {
+        $inc: {
+          sol_amount: outAmount,
+          amount: inAmount
+        }
+      };
+      await PositionService.findAndUpdateOne(filter, data);
     }
-    return null;
+    return;
   }
 
   async getPNLInfo() {
@@ -83,7 +101,7 @@ export class PNLService {
         volume: 0,
         sol_amount: inAmount,
         amount: outAmount,
-        received_sol_amount: 0,
+        received_sol_amount: 0.0,
         creation_time: ts
       })
     }
@@ -118,7 +136,8 @@ export class PNLService {
         },
         $set: {
           sol_amount: 0.0,
-          received_sol_amount: 0.0
+          received_sol_amount: 0.0,
+          amount: 0.0,
         }
       }
       return await PositionService.findAndUpdateOne(filter, data);

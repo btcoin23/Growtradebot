@@ -76,7 +76,14 @@ export const TokenService = {
     }
   },
   getTokenSecurity: async (mint: string) => {
+    const key = `${mint}_security`;
+    const redisdata = await redisClient.get(key);
+    if (redisdata) {
+      return JSON.parse(redisdata);
+    }
     const secureinfo = await BirdEyeAPIService.getTokenSecurity(mint);
+    await redisClient.set(key, JSON.stringify(secureinfo))
+    await redisClient.expire(key, 30);
     return secureinfo;
   },
   getTokenOverview: async (mint: string) => {
@@ -92,7 +99,7 @@ export const TokenService = {
     }
 
     await redisClient.set(key, JSON.stringify(overview))
-    await redisClient.expire(key, 30);
+    await redisClient.expire(key, 10);
     return overview;
   },
   fetchSecurityInfo: async (mint: PublicKey) => {
@@ -264,7 +271,7 @@ export const TokenService = {
       if (sol) {
         solBalance = sol / 10 ** 9;
         await redisClient.set(key, solBalance);
-        await redisClient.expire(key, 30);
+        await redisClient.expire(key, 10);
       }
     } catch (e) {
       solBalance = 0;

@@ -26,7 +26,6 @@ export async function formatAmmKeysById(id: string): Promise<ApiPoolInfoV4> {
   const lpMintAccount = await private_connection.getAccountInfo(lpMint)
   if (lpMintAccount === null) throw Error(' get lp mint info error')
   const lpMintInfo = SPL_MINT_LAYOUT.decode(lpMintAccount.data)
-
   return {
     id,
     baseMint: info.baseMint.toString(),

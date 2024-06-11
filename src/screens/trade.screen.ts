@@ -1,7 +1,7 @@
 import TelegramBot, { InlineKeyboardMarkup } from "node-telegram-bot-api";
 import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
-import { closeReplyMarkup, deleteDelayMessage } from "./common.screen";
+import { closeReplyMarkup, deleteDelayMessage, sendNoneExistTokenNotification } from "./common.screen";
 import { UserService } from "../services/user.service";
 import {
   BUY_XSOL_TEXT,
@@ -46,6 +46,7 @@ import { PNLService } from "../services/pnl.service";
 import { RaydiumSwapService, getPriceInSOL } from "../raydium/raydium.service";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import { getMintMetadata } from "../raydium";
+import { JitoBundleService } from "../services/jito.bundle";
 import { getCoinData } from "../pump/api";
 import { pumpFunSwap } from "../pump/swap";
 
@@ -174,21 +175,17 @@ export const buyHandler = async (
   console.log("Buy1:", Date.now());
   const user = await UserService.findOne({ username });
   if (!user) return;
-  console.log("Buy2:", Date.now());
 
   const msglog = await MsgLogService.findOne({
     username,
     msg_id: reply_message_id ?? msg.message_id,
   });
-  // console.log("🚀 ~ msglog:", msglog)
-  // console.log("🚀 ~ msg.message_id:", msg.message_id)
-  console.log("Buy3:", Date.now());
 
   if (!msglog) return;
   const { mint, sol_amount } = msglog;
 
   const gassetting = await UserTradeSettingService.getGas(username);
-  console.log("Buy4:", Date.now());
+  console.log("Buy2:", Date.now());
 
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
   if (!mint) return;
@@ -215,14 +212,44 @@ export const buyHandler = async (
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
   const jupiterSerivce = new JupiterService();
-  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-  // if (!raydiumPoolInfo && !isJupiterTradable) {
-  //   return;
-  // }
-  if (raydiumPoolInfo && !isJupiterTradable) {
-    // const { creation_ts } = raydiumPoolInfo;
-    // const duration = Date.now() - creation_ts;
-    // if (duration < RAYDIUM_PASS_TIME) {
+  let isJupiterTradable = false;
+  let isPumpfunTradable = false;
+  if (!raydiumPoolInfo) {
+    const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    if (!jupiterTradeable) {
+      isPumpfunTradable = true;
+    } else {
+      isJupiterTradable = jupiterTradeable;
+    }
+  } else {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    // 120minutes
+    if (duration < RAYDIUM_PASS_TIME) {
+      isJupiterTradable = false;
+    } else {
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      isJupiterTradable = jupiterTradeable;
+    }
+  }
+  console.log("IsJupiterTradeable", isJupiterTradable);
+  if (isPumpfunTradable) {
+    const coinData = await getCoinData(mint);
+    if (!coinData) {
+      console.error('Failed to retrieve coin data...');
+      return;
+    }
+
+    name = coinData['name'];
+    symbol = coinData['symbol'];
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    if (!metadata) return;
+    decimals = metadata.parsed.info.decimals;
+    isToken2022 = metadata.program === "spl-token-2022";
+  } else if (raydiumPoolInfo && !isJupiterTradable) {
     // Metadata
     const metadata = await getMintMetadata(
       private_connection,
@@ -239,34 +266,16 @@ export const buyHandler = async (
     // }
   } else {
     const mintinfo = await TokenService.getMintInfo(mint);
-    isRaydium = false;
-    if (mintinfo){
-      name = mintinfo.overview.name || "";
-      symbol = mintinfo.overview.symbol || "";
-      decimals = mintinfo.overview.decimals || 9;
-      isToken2022 = mintinfo.secureinfo.isToken2022;
-    }else{
-      const coinData = await getCoinData(mint);
-        if (!coinData) {
-            console.error('Failed to retrieve coin data...');
-            return;
-        }
+    if (!mintinfo) return;
 
-      name = coinData['name'];
-      symbol = coinData['symbol'];
-      const metadata = await getMintMetadata(
-        private_connection,
-        new PublicKey(mint)
-      );
-      if (!metadata) return;
-      decimals = metadata.parsed.info.decimals;
-      isToken2022 = metadata.program === "spl-token-2022";
-    }
+    isRaydium = false;
+    name = mintinfo.overview.name || "";
+    symbol = mintinfo.overview.symbol || "";
+    decimals = mintinfo.overview.decimals || 9;
+    isToken2022 = mintinfo.secureinfo.isToken2022;
   }
-  console.log("Buy5:", Date.now());
 
   const solprice = await TokenService.getSOLPrice();
-  console.log("Buy6:", Date.now());
 
   // send Notification
   const getcaption = (status: string, suffix: string = "") => {
@@ -281,13 +290,12 @@ export const buyHandler = async (
     return securecaption;
   };
   const buycaption = getcaption(`🕒 <b>Buy in progress</b>\n`);
-  console.log("Buy7:", Date.now());
 
   const pendingTxMsg = await bot.sendMessage(chat_id, buycaption, {
     parse_mode: "HTML",
   });
   const pendingTxMsgId = pendingTxMsg.message_id;
-  console.log("Buy8:", Date.now());
+  console.log("Buy3:", Date.now());
 
   const { slippage } = await UserTradeSettingService.getSlippage(
     username,
@@ -298,9 +306,20 @@ export const buyHandler = async (
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
   console.log("Raydium Swap?", isRaydium, isJupiterTradable);
-  
-  const quoteResult = isRaydium
-    ? await raydiumService.swapToken(
+
+  const quoteResult = isPumpfunTradable ?
+    await pumpFunSwap(
+      user.private_key,
+      mint,
+      decimals,
+      true,
+      amount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    ) : isRaydium ? await raydiumService.swapToken(
       user.private_key,
       NATIVE_MINT.toString(),
       mint,
@@ -312,8 +331,7 @@ export const buyHandler = async (
       user.burn_fee ?? true,
       username,
       isToken2022
-    )
-    : isJupiterTradable? await jupiterSerivce.swapToken(
+    ) : await jupiterSerivce.swapToken(
       user.private_key,
       NATIVE_MINT.toString(),
       mint,
@@ -324,21 +342,10 @@ export const buyHandler = async (
       user.burn_fee ?? true,
       username,
       isToken2022
-    ): await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      true,
-      amount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
     );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, quote } = quoteResult;
+    const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -353,13 +360,20 @@ export const buyHandler = async (
       });
     } catch (e) { }
 
-    const status = await getSignatureStatus(signature);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
     if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
-      await bot.editMessageCaption(failedCaption, {
-        message_id: pendingTxMsgId,
+      await bot.deleteMessage(
         chat_id,
+        pendingTxMsgId
+      );
+      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
+
+      await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
       return;
     }
@@ -425,10 +439,32 @@ export const autoBuyHandler = async (
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
 
   const jupiterSerivce = new JupiterService();
-  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-  if (!raydiumPoolInfo && !isJupiterTradable) {
-    return;
+  let isJupiterTradable = false;
+  // const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+  // if (!raydiumPoolInfo && !isJupiterTradable) {
+  //   return;
+  // }
+  if (!raydiumPoolInfo) {
+    const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    if (!jupiterTradeable) {
+      await sendNoneExistTokenNotification(bot, msg);
+      return;
+    } else {
+      isJupiterTradable = jupiterTradeable;
+    }
+  } else {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    // 120minutes
+    if (duration < RAYDIUM_PASS_TIME) {
+      isJupiterTradable = false;
+    } else {
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      isJupiterTradable = jupiterTradeable;
+    }
   }
+
+
   if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo && !isJupiterTradable) {
     // if (raydiumPoolInfo) {
@@ -511,7 +547,7 @@ export const autoBuyHandler = async (
     );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, quote } = quoteResult;
+    const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
@@ -526,13 +562,20 @@ export const autoBuyHandler = async (
       });
     } catch (e) { }
 
-    const status = await getSignatureStatus(signature);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+
     if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
-      await bot.editMessageCaption(failedCaption, {
-        message_id: pendingTxMsgId,
+      await bot.deleteMessage(
         chat_id,
+        pendingTxMsgId
+      );
+      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
+      await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
       return;
     }
@@ -576,8 +619,6 @@ export const sellHandler = async (
     username,
     msg_id: reply_message_id ?? msg.message_id,
   });
-  // console.log("🚀 ~ msg.message_id:", msg.message_id)
-  // console.log("🚀 ~ msglog:", msglog)
 
   if (!msglog) return;
   const { mint, spl_amount, sol_amount } = msglog;
@@ -599,11 +640,6 @@ export const sellHandler = async (
     return;
   }
 
-  // const mintinfo = await TokenService.getMintInfo(mint);
-
-  // if (!mintinfo) return;
-  // const { name, symbol, price, decimals } = mintinfo.overview;
-  // const { isToken2022 } = mintinfo.secureinfo;
   let name = "";
   let symbol = "";
   let decimals = 9;
@@ -611,21 +647,48 @@ export const sellHandler = async (
   let isToken2022 = false;
   let isRaydium = true;
   const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-  console.log("IsRaydiumTradeable", raydiumPoolInfo? true: false);
   const jupiterSerivce = new JupiterService();
-  const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
-  console.log("IsJupiterTradeable", isJupiterTradable);
-  // if (!raydiumPoolInfo && !isJupiterTradable) {
-  //   return;
-  // }
 
-  console.log()
-  if (raydiumPoolInfo && !isJupiterTradable) {
-    // if (raydiumPoolInfo) {
-    // const { creation_ts } = raydiumPoolInfo;
-    // const duration = Date.now() - creation_ts;
-    // if (duration < RAYDIUM_PASS_TIME) {
-    // Metadata
+  let isJupiterTradable = false;
+  let isPumpfunTradable = false;
+  if (!raydiumPoolInfo) {
+    const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    if (!jupiterTradeable) {
+      isPumpfunTradable = true;
+    } else {
+      isJupiterTradable = jupiterTradeable;
+    }
+  } else {
+    const { creation_ts } = raydiumPoolInfo;
+    const duration = Date.now() - creation_ts;
+    // 120minutes
+    if (duration < RAYDIUM_PASS_TIME) {
+      isJupiterTradable = false;
+    } else {
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      isJupiterTradable = jupiterTradeable;
+    }
+  }
+  console.log("IsJupiterTradeable", isJupiterTradable);
+
+  if (isPumpfunTradable) {
+    const coinData = await getCoinData(mint);
+    if (!coinData) {
+      console.error('Failed to retrieve coin data...');
+      return;
+    }
+
+    name = coinData['name'];
+    symbol = coinData['symbol'];
+    const metadata = await getMintMetadata(
+      private_connection,
+      new PublicKey(mint)
+    );
+    if (!metadata) return;
+    decimals = metadata.parsed.info.decimals;
+    isToken2022 = metadata.program === "spl-token-2022";
+  } else if (raydiumPoolInfo && !isJupiterTradable) {
+
     const metadata = await getMintMetadata(
       private_connection,
       new PublicKey(mint)
@@ -644,30 +707,13 @@ export const sellHandler = async (
     // }
   } else {
     const mintinfo = await TokenService.getMintInfo(mint);
+    if (!mintinfo) return;
     isRaydium = false;
-    if (mintinfo){
     name = mintinfo.overview.name || "";
     symbol = mintinfo.overview.symbol || "";
     decimals = mintinfo.overview.decimals || 9;
     isToken2022 = mintinfo.secureinfo.isToken2022;
     price = mintinfo.overview.price || 0;
-    }else{
-      const coinData = await getCoinData(mint);
-        if (!coinData) {
-            console.error('Failed to retrieve coin data...');
-            return;
-        }
-
-      name = coinData['name'];
-      symbol = coinData['symbol'];
-      const metadata = await getMintMetadata(
-        private_connection,
-        new PublicKey(mint)
-      );
-      if (!metadata) return;
-      decimals = metadata.parsed.info.decimals;
-      isToken2022 = metadata.program === "spl-token-2022";
-    }
   }
 
   const splbalance = await TokenService.getSPLBalance(
@@ -705,8 +751,20 @@ export const sellHandler = async (
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
-  const quoteResult = isRaydium
-    ? await raydiumService.swapToken(
+  const quoteResult = isPumpfunTradable ?
+    await pumpFunSwap(
+      user.private_key,
+      mint,
+      decimals,
+      false,
+      sellAmount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    )
+    : isRaydium ? await raydiumService.swapToken(
       user.private_key,
       mint,
       NATIVE_MINT.toString(),
@@ -718,32 +776,21 @@ export const sellHandler = async (
       username,
       isToken2022
     )
-    : isJupiterTradable? await jupiterSerivce.swapToken(
-      user.private_key,
-      mint,
-      NATIVE_MINT.toString(),
-      decimals,
-      sellAmount,
-      slippage,
-      gasvalue,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    ): await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      false,
-      sellAmount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    );;
+      : await jupiterSerivce.swapToken(
+        user.private_key,
+        mint,
+        NATIVE_MINT.toString(),
+        decimals,
+        sellAmount,
+        slippage,
+        gasvalue,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      );
 
   if (quoteResult) {
-    const { signature, total_fee_in_sol, quote } = quoteResult;
+    const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
@@ -758,13 +805,20 @@ export const sellHandler = async (
       });
     } catch (e) { }
 
-    const status = await getSignatureStatus(signature);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
     if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
-      await bot.editMessageCaption(failedCaption, {
-        message_id: pendingMessage.message_id,
+      await bot.deleteMessage(
         chat_id,
+        pendingMessage.message_id
+      );
+
+      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
+      await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
       return;
     }

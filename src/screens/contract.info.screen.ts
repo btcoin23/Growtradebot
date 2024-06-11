@@ -32,14 +32,13 @@ import {
   RAYDIUM_PASS_TIME,
   connection,
   private_connection,
-  REQUEST_HEADER,
 } from "../config";
 import { PublicKey } from "@solana/web3.js";
 import { getMintMetadata, getTop10HoldersPercent } from "../raydium";
-import { calcAmountOut, getPriceInSOL } from "../raydium/raydium.service";
+import { calcAmountOut, getPriceInSOL, syncAmmPoolKeys, syncClmmPoolKeys } from "../raydium/raydium.service";
 import { OpenMarketService } from "../services/openmarket.service";
 import { getCoinData } from "../pump/api";
-import { TokenSecurityInfoDataType } from "src/services/birdeye.api.service";
+import { TokenSecurityInfoDataType } from "../services/birdeye.api.service";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -75,19 +74,45 @@ export const contractInfoScreenHandler = async (
     let splbalance = 0;
     // Here, we need to get info from raydium token list
     const raydiumPoolInfo = await RaydiumTokenService.findLastOne({ mint });
-    console.log("IsRaydiumTradeable", raydiumPoolInfo? true: false);
-    const jupiterSerivce = new JupiterService();
-    const isJupiterTradable = await jupiterSerivce.checkTradableOnJupiter(mint);
+    let isJupiterTradable = false;
+    let isPumpfunTradable = false;
+    if (!raydiumPoolInfo) {
+      const jupiterSerivce = new JupiterService();
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      if (!jupiterTradeable) {
+        isPumpfunTradable = true;
+      } else {
+        isJupiterTradable = jupiterTradeable;
+      }
+    } else {
+      const { creation_ts } = raydiumPoolInfo;
+      const duration = Date.now() - creation_ts;
+      // 120minutes
+      if (duration < RAYDIUM_PASS_TIME) {
+        isJupiterTradable = false;
+      } else {
+        const jupiterSerivce = new JupiterService();
+        const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+        isJupiterTradable = jupiterTradeable;
+      }
+    }
     console.log("IsJupiterTradeable", isJupiterTradable);
-    // if (!raydiumPoolInfo && !isJupiterTradable) {
-    //   await sendNoneExistTokenNotification(bot, msg);
-    //   return;
-    // }
 
-    if (raydiumPoolInfo && !isJupiterTradable) {
-      // if (raydiumPoolInfo || !isJupiterTradable) {
-      // const { creation_ts } = raydiumPoolInfo;
-      // const duration = Date.now() - creation_ts;
+    if (isPumpfunTradable) {
+      const captionForPump = await getPumpTokenInfoCaption(
+        mint,
+        user.wallet_address
+      );
+
+      if (!captionForPump) {
+        await sendNoneExistTokenNotification(bot, msg);
+        return;
+      }
+
+      caption = captionForPump.caption;
+      solbalance = captionForPump.solbalance;
+      splbalance = captionForPump.splbalance;
+    } else if (raydiumPoolInfo && !isJupiterTradable) {
       const pending = await bot.sendMessage(chat_id, "Loading...");
 
       // 120minutes
@@ -108,8 +133,10 @@ export const contractInfoScreenHandler = async (
     } else {
       // check token metadata
       const tokeninfo = await TokenService.getMintInfo(mint);
-      if (tokeninfo) {
-        
+      if (!tokeninfo) {
+        await sendNoneExistTokenNotification(bot, msg);
+        return;
+      }
       const captionForJuipter = await getJupiterTokenInfoCaption(
         tokeninfo,
         mint,
@@ -121,20 +148,7 @@ export const contractInfoScreenHandler = async (
       caption = captionForJuipter.caption;
       solbalance = captionForJuipter.solbalance;
       splbalance = captionForJuipter.splbalance;
-      }else{
-        const captionForPump = await getPumpTokenInfoCaption(
-          mint,
-          user.wallet_address
-        );
-
-        if (!captionForPump) return;
-
-        caption = captionForPump.caption;
-        solbalance = captionForPump.solbalance;
-        splbalance = captionForPump.splbalance;
-      }
     }
-
 
     const preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
 
@@ -254,7 +268,9 @@ const getRaydiumTokenInfoCaption = async (
       symbol,
       mint,
       poolId,
-      isAmm
+      isAmm,
+      ammKeys,
+      clmmKeys
     } = raydiumPoolInfo;
 
     let tokenName = name;
@@ -281,12 +297,24 @@ const getRaydiumTokenInfoCaption = async (
     const splbalance = await TokenService.getSPLBalance(mint, wallet_address, isToken2022, true);
     const solbalance = await TokenService.getSOLBalance(wallet_address);
 
-    const priceInSOL = await getPriceInSOL(mint);
-    const priceInUsd = priceInSOL * solprice;
-    const splvalue = priceInUsd * splbalance;
+    // const splvalue = priceInUsd * splbalance;
 
-    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? await calcAmountOut(connection, new PublicKey(mint), metadata.parsed.info.decimals, poolId, splbalance, isAmm) as QuoteRes : null;
-    // console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
+    const quoteTemp = await calcAmountOut(
+      connection,
+      new PublicKey(mint),
+      metadata.parsed.info.decimals,
+      NATIVE_MINT,
+      9,
+      poolId,
+      splbalance,
+      isAmm,
+      ammKeys,
+      clmmKeys
+    ) as QuoteRes;
+    const quote = splbalance > 0 ? quoteTemp : null;
+
+    const priceInSOL = quoteTemp.priceInSol; //  await getPriceInSOL(mint);
+    const priceInUsd = (priceInSOL ?? 0) * solprice;
     const priceImpact = quote ? quote.priceImpactPct : 0;
 
     const decimals = metadata.parsed.info.decimals;
@@ -326,7 +354,12 @@ const getRaydiumTokenInfoCaption = async (
       splbalance
     );
     // console.log("M7", Date.now())
-
+    if (isAmm && !ammKeys) {
+      syncAmmPoolKeys(poolId);
+    }
+    if (!isAmm && !clmmKeys) {
+      syncClmmPoolKeys(poolId);
+    }
     return {
       caption,
       solbalance,
@@ -398,10 +431,10 @@ const getPumpTokenInfoCaption = async (
   try {
     // Raydium Info
     const coinData = await getCoinData(mintStr);
-        if (!coinData) {
-            console.error('Failed to retrieve coin data...');
-            return;
-        }
+    if (!coinData) {
+      console.error('Failed to retrieve coin data...');
+      return;
+    }
 
     let tokenName = coinData['name'];
     let tokenSymbol = coinData['symbol'];
@@ -427,13 +460,13 @@ const getPumpTokenInfoCaption = async (
     const solprice = await TokenService.getSOLPrice();
     const splbalance = await TokenService.getSPLBalance(mintStr, wallet_address, isToken2022, true);
     const solbalance = await TokenService.getSOLBalance(wallet_address);
-    
+
     const decimals = metadata.parsed.info.decimals;
     const priceInUsd = mc / (totalSupply / 10 ** decimals);
     const splvalue = priceInUsd * splbalance;
     const _slippage = 0.25
     const minSolOutput = Math.floor(splbalance! * (1 - _slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
-    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? {inAmount: splbalance, outAmount: minSolOutput } as QuoteRes : null;
+    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: minSolOutput } as QuoteRes : null;
     // console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
     // const priceImpact = quote ? quote.priceImpactPct : 0;
     const priceImpact = 0;
