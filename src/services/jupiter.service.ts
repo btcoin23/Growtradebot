@@ -9,7 +9,7 @@ import { getSignature } from "../utils/get.signature";
 // import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
 // import redisClient, { ITradeGasSetting } from "./redis";
 import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
-import { JitoBundleService, tipAccounts } from "./jito.bundle";
+import { JitoBundleService, JitoTipAmount, tipAccounts } from "./jito.bundle";
 import { FeeService } from "./fee.service";
 import { fromWeiToValue } from "../utils";
 import redisClient from "./redis";
@@ -175,7 +175,7 @@ export class JupiterService {
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
           toPubkey: new PublicKey(tipAccounts[0]),
-          lamports: 1_500_000
+          lamports: JitoTipAmount
         })
       )
 

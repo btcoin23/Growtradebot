@@ -42,7 +42,7 @@ import { OpenMarketService } from "../services/openmarket.service";
 import { private_connection } from "../config";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import { getSignature } from "../utils/get.signature";
-import { JitoBundleService, tipAccounts } from "../services/jito.bundle";
+import { JitoBundleService, JitoTipAmount, tipAccounts } from "../services/jito.bundle";
 import { FeeService } from "../services/fee.service";
 import { formatClmmKeysById } from "./utils/formatClmmKeysById";
 import { formatAmmKeysById } from "./utils/formatAmmKeysById";
@@ -432,7 +432,7 @@ export class RaydiumSwapService {
           SystemProgram.transfer({
             fromPubkey: wallet.publicKey,
             toPubkey: new PublicKey(tipAccounts[0]),
-            lamports: 1_500_000,
+            lamports: JitoTipAmount,
           }),
           createAssociatedTokenAccountIdempotentInstruction(
             wallet.publicKey,
@@ -467,7 +467,7 @@ export class RaydiumSwapService {
           SystemProgram.transfer({
             fromPubkey: wallet.publicKey,
             toPubkey: new PublicKey(tipAccounts[0]),
-            lamports: 1_500_000,
+            lamports: JitoTipAmount,
           }),
           ...raydiumSwapInnerInstruction.instructions,
           // Unwrap WSOL for SOL

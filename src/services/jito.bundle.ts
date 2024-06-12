@@ -17,6 +17,8 @@ export const endpoints = {
 const regions = ["ams", "ger", "ny", "tokyo"] as Region[]; // "default", 
 let idx = 0;
 
+export const JitoTipAmount = 7_500_000;
+
 export const tipAccounts = [
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
   "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
