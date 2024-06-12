@@ -454,11 +454,11 @@ export class RaydiumSwapService {
           ),
           ...raydiumSwapInnerInstruction.instructions,
           // Unwrap WSOL for SOL
-          // createCloseAccountInstruction(
-          //   tokenAccountIn,
-          //   wallet.publicKey,
-          //   wallet.publicKey
-          // )
+          createCloseAccountInstruction(
+            tokenAccountIn,
+            wallet.publicKey,
+            wallet.publicKey
+          )
         ]
         : [
           ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 421197 }),
@@ -469,13 +469,19 @@ export class RaydiumSwapService {
             toPubkey: new PublicKey(tipAccounts[0]),
             lamports: JitoTipAmount,
           }),
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            tokenAccountOut,
+            wallet.publicKey,
+            NATIVE_MINT
+          ),
           ...raydiumSwapInnerInstruction.instructions,
           // Unwrap WSOL for SOL
-          // createCloseAccountInstruction(
-          //   tokenAccountOut,
-          //   wallet.publicKey,
-          //   wallet.publicKey
-          // )
+          createCloseAccountInstruction(
+            tokenAccountOut,
+            wallet.publicKey,
+            wallet.publicKey
+          )
         ];
 
       console.log("🚀 Quote ~", quoteAmount, total_fee_in_sol, total_fee_in_token);
