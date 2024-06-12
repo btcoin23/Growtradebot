@@ -219,7 +219,6 @@ export const TokenService = {
         .findByMint({ mintAddress: mint })
       const tokenName = metadata.name;
       const tokenSymbol = metadata.symbol;
-      console.log('token name: ', tokenName)
       return {
         name: tokenName,
         symbol: tokenSymbol,
