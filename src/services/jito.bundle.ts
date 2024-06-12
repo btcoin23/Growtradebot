@@ -98,7 +98,7 @@ export class JitoBundleService {
     };
 
 
-    const maxRetry = 5;
+    const maxRetry = 15;
     let retries = 0;
     while (retries < maxRetry) {
       retries++;
