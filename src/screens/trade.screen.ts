@@ -382,6 +382,7 @@ export const buyHandler = async (
     const { inAmount, outAmount } = quote;
     const inAmountNum = fromWeiToValue(inAmount, 9);
     const outAmountNum = fromWeiToValue(outAmount, decimals);
+    console.log(inAmountNum, outAmountNum)
 
     const pnlservice = new PNLService(user.wallet_address, mint);
     await pnlservice.afterBuy(inAmountNum, outAmountNum);
