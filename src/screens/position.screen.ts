@@ -80,15 +80,15 @@ export const positionScreenHandler = async (
     let idx = 0;
     let discount = 0;
     for (const item of tokenaccounts) {
-      const { mint: mintAddress, amount: tokenBalance, symbol, price, decimals } = item;
+      const { mint: mintAddress, amount: tokenBalance, symbol } = item;
       if (symbol === "SOL" || tokenBalance < 0.000005) {
         discount -= 1;
         continue;
       }
-      if (price && price * tokenBalance < 1) {
-        discount -= 1;
-        continue;
-      }
+      // if (price && price * tokenBalance < 1) {
+      //   discount -= 1;
+      //   continue;
+      // }
       caption += `\n- <b>Token: ${symbol}</b>\n<b>Amount: ${tokenBalance}</b>\n`;
       // const position = positions.filter(ps => ps.mint === mintAddress);
       // const splvalue = tokenBalance * price;
