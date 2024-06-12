@@ -7,39 +7,10 @@ import { formatNumber, getPrice } from "../utils";
 import { BirdEyeAPIService, TokenOverviewDataType, TokenSecurityInfoDataType } from "./birdeye.api.service";
 import { min } from "bn.js";
 export interface ITokenAccountInfo {
-  address: string,
   mint: string,
-  owner: string,
   amount: number,
-  decimals: number,
-  delegated_amount: number,
-  frozen: boolean,
-  symbol?: string,
-  price: number,
-  transferFeeEnable?: boolean,
-  transferFeeData?: {
-    withdraw_withheld_authority: string,
-    transfer_fee_config_authority: string,
-    older_transfer_fee: {
-      epoch: number,
-      maximum_fee: number,
-      transfer_fee_basis_points: number
-    },
-    newer_transfer_fee: {
-      epoch: number,
-      maximum_fee: number,
-      transfer_fee_basis_points: number
-    },
-    fee_withdrawable: boolean,
-    fee_editable: boolean,
-    current_transfer_fee: {
-      epoch: number,
-      maximum_fee: number,
-      transfer_fee_basis_points: number
-    },
-    withheld_amount?: boolean,
-    withheld_amount_ratio: number
-  },
+  name: string,
+  symbol: string
 }
 const knownMints = [
   {
@@ -248,7 +219,6 @@ export const TokenService = {
         .findByMint({ mintAddress: mint })
       const tokenName = metadata.name;
       const tokenSymbol = metadata.symbol;
-      console.log('token name: ', tokenName)
       return {
         name: tokenName,
         symbol: tokenSymbol,
@@ -327,30 +297,10 @@ const getaccounts = async (owner: string) => {
     return [];
   }
 
-
   for (const account of data.result.token_accounts as Array<ITokenAccountInfo>) {
     const { mint, amount } = account;
-    const tokeninfo = await TokenService.getMintInfo(mint);
-    if (!tokeninfo) {
-      results.push(account);
-    } else {
-      const symbol = tokeninfo.overview.symbol;
-      const decimals = tokeninfo.overview.decimals;
-      if (decimals && amount) {
-        const balance = amount / (10 ** decimals);
-        const temp = account;
-        temp.symbol = symbol;
-        temp.amount = balance;
-        temp.decimals = decimals;
-        temp.price = tokeninfo.overview.price;
-        temp.transferFeeEnable = tokeninfo.secureinfo.transferFeeEnable;
-        temp.transferFeeData = tokeninfo.secureinfo.transferFeeData;
-        results.push(temp);
-      } else {
-        results.push({ symbol, ...account });
-      }
-    }
-
+    const { name, symbol } = await TokenService.fetchSimpleMetaData(new PublicKey(mint))
+    results.push({ mint, amount, name, symbol })
   }
   return results;
 }
