@@ -3,7 +3,7 @@ import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOK
 import { getKeyPairFromPrivateKey, createTransaction, sendAndConfirmTransactionWrapper, bufferFromUInt64 } from './utils';
 import { getCoinData } from './api';
 import { GLOBAL, FEE_RECIPIENT, SYSTEM_PROGRAM_ID, RENT, PUMP_FUN_ACCOUNT, PUMP_FUN_PROGRAM, ASSOC_TOKEN_ACC_PROG } from './constants';
-import { JitoBundleService, tipAccounts } from '../services/jito.bundle';
+import { JitoBundleService, JitoTipAmount, tipAccounts } from '../services/jito.bundle';
 import { calculateMicroLamports } from '../raydium/raydium.service';
 import { FeeService } from '../services/fee.service';
 import { getSignature } from '../utils/get.signature';
@@ -152,7 +152,7 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
       SystemProgram.transfer({
         fromPubkey: owner,
         toPubkey: new PublicKey(tipAccounts[0]),
-        lamports: 1_500_000,
+        lamports: JitoTipAmount,
       })
     );
 
