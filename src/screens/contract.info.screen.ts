@@ -465,11 +465,11 @@ const getPumpTokenInfoCaption = async (
     const priceInUsd = mc / (totalSupply / 10 ** decimals);
     const splvalue = priceInUsd * splbalance;
     const _slippage = 0.25
-    const minSolOutput = Math.floor(splbalance! * (1 - _slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
-    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: minSolOutput } as QuoteRes : null;
-    // console.log(quote, splvalue, PNL_SHOW_THRESHOLD_USD, splvalue > PNL_SHOW_THRESHOLD_USD)
-    // const priceImpact = quote ? quote.priceImpactPct : 0;
+    const minSolOutput = Math.floor(splbalance * 10 ** decimals! * (1 - _slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
+    // const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: minSolOutput } as QuoteRes : null;
+    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: minSolOutput / 10 ** 9 } as QuoteRes  : null;
     const priceImpact = 0;
+    console.log('quote', quote)
 
     // const liquidity = baseBalance;
 
