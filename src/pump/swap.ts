@@ -38,6 +38,7 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
       _amount *
       (is_buy ? total_fee_percent_in_sol : total_fee_percent_in_token);
     const inDecimal = is_buy ? 9 : decimal;
+    const outDecimal = is_buy ? decimal : 9;
     const amount = Number(((_amount - fee) * 10 ** inDecimal).toFixed(0));
 
     const tokenAccountIn = getAssociatedTokenAddressSync(
@@ -72,7 +73,6 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
 
     if (is_buy) {
       const tokenOut = Math.floor(amount * coinData["virtual_token_reserves"] / coinData["virtual_sol_reserves"]);
-
       const solInWithSlippage = amount * (1 + slippage);
       const maxSolCost = Math.floor(solInWithSlippage * LAMPORTS_PER_SOL);
 
@@ -213,9 +213,10 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
     if (!bundleId) return;
     console.log("BundleID", bundleId);
     console.log(`https://solscan.io/tx/${signature}`);
-
+    const quote = { inAmount: amount / 10 ** inDecimal, outAmount: quoteAmount / 10 ** outDecimal }
+    console.log(quote)
     return {
-      quote: { inAmount: amount, outAmount: quoteAmount },
+      quote,
       signature,
       total_fee_in_sol,
       total_fee_in_token,
