@@ -213,8 +213,7 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
     if (!bundleId) return;
     console.log("BundleID", bundleId);
     console.log(`https://solscan.io/tx/${signature}`);
-    const quote = { inAmount: amount / 10 ** inDecimal, outAmount: quoteAmount / 10 ** outDecimal }
-    console.log(quote)
+    const quote = { inAmount: amount, outAmount: quoteAmount }
     return {
       quote,
       signature,

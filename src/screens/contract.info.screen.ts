@@ -9,6 +9,7 @@ import {
   formatKMB,
   formatNumber,
   formatPrice,
+  fromWeiToValue,
   getPrice,
 } from "../utils";
 import { UserService } from "../services/user.service";
@@ -289,6 +290,7 @@ const getRaydiumTokenInfoCaption = async (
     );
     // console.log("M2", Date.now())
     if (!metadata) return;
+    const decimals = metadata.parsed.info.decimals;
 
     const isToken2022 = metadata.program === 'spl-token-2022';
 
@@ -302,7 +304,7 @@ const getRaydiumTokenInfoCaption = async (
     const quoteTemp = await calcAmountOut(
       connection,
       new PublicKey(mint),
-      metadata.parsed.info.decimals,
+      decimals,
       NATIVE_MINT,
       9,
       poolId,
@@ -311,13 +313,13 @@ const getRaydiumTokenInfoCaption = async (
       ammKeys,
       clmmKeys
     ) as QuoteRes;
-    const quote = splbalance > 0 ? quoteTemp : null;
 
+    const quote = splbalance > 0 ? quoteTemp : null;
+    
     const priceInSOL = quoteTemp.priceInSol; //  await getPriceInSOL(mint);
     const priceInUsd = (priceInSOL ?? 0) * solprice;
     const priceImpact = quote ? quote.priceImpactPct : 0;
 
-    const decimals = metadata.parsed.info.decimals;
     const supply = Number(metadata.parsed.info.supply) / (10 ** Number(decimals));
     // const liquidity = baseBalance;
     const circulateSupply = supply; // - liquidity;
@@ -334,7 +336,7 @@ const getRaydiumTokenInfoCaption = async (
     );
     const price = priceInUsd;
     const mc = circulateSupply * price;
-    // console.log(mc);
+    console.log(quote);
 
     const caption = await buildCaption(
       tokenName,
@@ -396,6 +398,8 @@ const getJupiterTokenInfoCaption = async (
       9
     ) : null;
     const priceImpact = quote ? quote.priceImpactPct : 0;
+
+    console.log(quote)
 
     const caption = await buildCaption(
       name,
@@ -465,9 +469,9 @@ const getPumpTokenInfoCaption = async (
     const priceInUsd = mc / (totalSupply / 10 ** decimals);
     const splvalue = priceInUsd * splbalance;
     const _slippage = 0.25
-    const minSolOutput = Math.floor(splbalance * 10 ** decimals! * (1 - _slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
-    // const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: minSolOutput } as QuoteRes : null;
-    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: minSolOutput / 10 ** 9 } as QuoteRes  : null;
+    const minSolOutput = Math.floor(splbalance * 10 ** decimals * (1 - _slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
+    // const quote = { inAmount: splbalance, outAmount: fromWeiToValue(minSolOutput, 9) } as QuoteRes
+    const quote = splvalue > PNL_SHOW_THRESHOLD_USD ? { inAmount: splbalance, outAmount: fromWeiToValue(minSolOutput, 9) } as QuoteRes  : null;
     const priceImpact = 0;
     console.log('quote', quote)
 
