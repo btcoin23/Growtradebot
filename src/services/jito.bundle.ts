@@ -1,7 +1,7 @@
 import bs58 from "bs58";
 import axios from "axios";
 import { wait } from "../utils/wait";
-import { JITO_UUID } from "../config";
+import { JITO_UUID, MAX_CHECK_JITO } from "../config";
 
 type Region = "ams" | "ger" | "ny" | "tokyo"; // "default" | 
 
@@ -17,7 +17,7 @@ export const endpoints = {
 const regions = ["ams", "ger", "ny", "tokyo"] as Region[]; // "default", 
 let idx = 0;
 
-export const JitoTipAmount = 7_500_000;
+export const JitoTipAmount = 7_500_00;
 
 export const tipAccounts = [
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
@@ -100,9 +100,8 @@ export class JitoBundleService {
     };
 
 
-    const maxRetry = 15;
     let retries = 0;
-    while (retries < maxRetry) {
+    while (retries < MAX_CHECK_JITO) {
       retries++;
       try {
         this.updateRegion();

@@ -34,11 +34,13 @@ export const JUPITER_PROJECT = new PublicKey(
   "45ruCyfdRkWpRNGEqWzjCiXRHkZs8WXCLQ67Pnpye7Hp",
 );
 
+export const MAX_CHECK_JITO = 20
 
 export const MAX_WALLET = 5;
 export const GrowTradeVersion = '| Beta Version';
 
 export const GROWSOL_API_ENDPOINT = process.env.GROWSOL_API_ENDPOINT || "http://127.0.0.1:5001";
+export const PNL_IMG_GENERATOR_API = process.env.PNL_IMG_GENERATOR_API || "http://127.0.0.1:3001";
 
 export const PNL_SHOW_THRESHOLD_USD = 0.00000005;
 export const RAYDIUM_PASS_TIME = 5 * 60 * 60 * 1000; // 5 * 24  3days * 24h * 60mins * 60 seconds * 1000 millisecons
