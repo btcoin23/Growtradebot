@@ -1,7 +1,11 @@
 import TelegramBot, { InlineKeyboardMarkup } from "node-telegram-bot-api";
 import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
-import { closeReplyMarkup, deleteDelayMessage, sendNoneExistTokenNotification } from "./common.screen";
+import {
+  closeReplyMarkup,
+  deleteDelayMessage,
+  sendNoneExistTokenNotification,
+} from "./common.screen";
 import { UserService } from "../services/user.service";
 import {
   BUY_XSOL_TEXT,
@@ -228,7 +232,9 @@ export const buyHandler = async (
     if (duration < RAYDIUM_PASS_TIME) {
       isJupiterTradable = false;
     } else {
-      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(
+        mint
+      );
       isJupiterTradable = jupiterTradeable;
     }
   }
@@ -236,12 +242,12 @@ export const buyHandler = async (
   if (isPumpfunTradable) {
     const coinData = await getCoinData(mint);
     if (!coinData) {
-      console.error('Failed to retrieve coin data...');
+      console.error("Failed to retrieve coin data...");
       return;
     }
 
-    name = coinData['name'];
-    symbol = coinData['symbol'];
+    name = coinData["name"];
+    symbol = coinData["symbol"];
     const metadata = await getMintMetadata(
       private_connection,
       new PublicKey(mint)
@@ -298,7 +304,7 @@ export const buyHandler = async (
   console.log("Buy3:", Date.now());
 
   const { slippage } = await UserTradeSettingService.getSlippage(
-    username,
+    username
     // mint
   );
   console.log("Buy start:", Date.now());
@@ -307,42 +313,45 @@ export const buyHandler = async (
   // const jupiterSerivce = new JupiterService();
   console.log("Raydium Swap?", isRaydium, isJupiterTradable);
 
-  const quoteResult = isPumpfunTradable ?
-    await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      true,
-      amount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    ) : isRaydium ? await raydiumService.swapToken(
-      user.private_key,
-      NATIVE_MINT.toString(),
-      mint,
-      decimals,
-      // 9, // SOL decimal
-      amount,
-      slippage,
-      gasvalue,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    ) : await jupiterSerivce.swapToken(
-      user.private_key,
-      NATIVE_MINT.toString(),
-      mint,
-      9, // SOL decimal
-      amount,
-      slippage,
-      gasvalue,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    );
+  const quoteResult = isPumpfunTradable
+    ? await pumpFunSwap(
+        user.private_key,
+        mint,
+        decimals,
+        true,
+        amount,
+        gasvalue,
+        slippage,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
+    : isRaydium
+    ? await raydiumService.swapToken(
+        user.private_key,
+        NATIVE_MINT.toString(),
+        mint,
+        decimals,
+        // 9, // SOL decimal
+        amount,
+        slippage,
+        gasvalue,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
+    : await jupiterSerivce.swapToken(
+        user.private_key,
+        NATIVE_MINT.toString(),
+        mint,
+        9, // SOL decimal
+        amount,
+        slippage,
+        gasvalue,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      );
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
@@ -358,16 +367,13 @@ export const buyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
+    } catch (e) {}
 
     // const status = await getSignatureStatus(signature);
     const jitoBundleInstance = new JitoBundleService();
     const status = await jitoBundleInstance.getBundleStatus(bundleId);
     if (!status) {
-      await bot.deleteMessage(
-        chat_id,
-        pendingTxMsgId
-      );
+      await bot.deleteMessage(chat_id, pendingTxMsgId);
       const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
 
       await bot.sendMessage(chat_id, failedCaption, {
@@ -382,7 +388,7 @@ export const buyHandler = async (
     const { inAmount, outAmount } = quote;
     const inAmountNum = fromWeiToValue(inAmount, 9);
     const outAmountNum = fromWeiToValue(outAmount, decimals);
-    console.log(inAmountNum, outAmountNum)
+    console.log(inAmountNum, outAmountNum);
 
     const pnlservice = new PNLService(user.wallet_address, mint);
     await pnlservice.afterBuy(inAmountNum, outAmountNum);
@@ -399,7 +405,7 @@ export const buyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
+    } catch (e) {}
   }
 };
 
@@ -457,7 +463,9 @@ export const autoBuyHandler = async (
     if (duration < RAYDIUM_PASS_TIME) {
       isJupiterTradable = false;
     } else {
-      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(
+        mint
+      );
       isJupiterTradable = jupiterTradeable;
     }
   }
@@ -466,12 +474,12 @@ export const autoBuyHandler = async (
   if (isPumpfunTradable) {
     const coinData = await getCoinData(mint);
     if (!coinData) {
-      console.error('Failed to retrieve coin data...');
+      console.error("Failed to retrieve coin data...");
       return;
     }
 
-    name = coinData['name'];
-    symbol = coinData['symbol'];
+    name = coinData["name"];
+    symbol = coinData["symbol"];
     const metadata = await getMintMetadata(
       private_connection,
       new PublicKey(mint)
@@ -506,7 +514,8 @@ export const autoBuyHandler = async (
   // send Notification
   const getcaption = (status: string, suffix: string = "") => {
     const securecaption =
-      `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"
+      `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${
+        symbol ?? "undefined"
       })</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
       `<i>${copytoclipboard(mint)}</i>\n` +
@@ -527,31 +536,33 @@ export const autoBuyHandler = async (
   // buy token
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
-  const quoteResult = isPumpfunTradable ?
-    await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      true,
-      amount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    ) : isRaydium ? await raydiumService.swapToken(
-      user.private_key,
-      NATIVE_MINT.toString(),
-      mint,
-      decimals, // SOL decimal
-      amount,
-      slippage,
-      gasvalue,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    )
-      : await jupiterSerivce.swapToken(
+  const quoteResult = isPumpfunTradable
+    ? await pumpFunSwap(
+        user.private_key,
+        mint,
+        decimals,
+        true,
+        amount,
+        gasvalue,
+        slippage,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
+    : isRaydium
+    ? await raydiumService.swapToken(
+        user.private_key,
+        NATIVE_MINT.toString(),
+        mint,
+        decimals, // SOL decimal
+        amount,
+        slippage,
+        gasvalue,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
+    : await jupiterSerivce.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -578,17 +589,14 @@ export const autoBuyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
+    } catch (e) {}
 
     // const status = await getSignatureStatus(signature);
     const jitoBundleInstance = new JitoBundleService();
     const status = await jitoBundleInstance.getBundleStatus(bundleId);
 
     if (!status) {
-      await bot.deleteMessage(
-        chat_id,
-        pendingTxMsgId
-      );
+      await bot.deleteMessage(chat_id, pendingTxMsgId);
       const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
       await bot.sendMessage(chat_id, failedCaption, {
         parse_mode: "HTML",
@@ -683,7 +691,9 @@ export const sellHandler = async (
     if (duration < RAYDIUM_PASS_TIME) {
       isJupiterTradable = false;
     } else {
-      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(mint);
+      const jupiterTradeable = await jupiterSerivce.checkTradableOnJupiter(
+        mint
+      );
       isJupiterTradable = jupiterTradeable;
     }
   }
@@ -692,12 +702,12 @@ export const sellHandler = async (
   if (isPumpfunTradable) {
     const coinData = await getCoinData(mint);
     if (!coinData) {
-      console.error('Failed to retrieve coin data...');
+      console.error("Failed to retrieve coin data...");
       return;
     }
 
-    name = coinData['name'];
-    symbol = coinData['symbol'];
+    name = coinData["name"];
+    symbol = coinData["symbol"];
     const metadata = await getMintMetadata(
       private_connection,
       new PublicKey(mint)
@@ -706,7 +716,6 @@ export const sellHandler = async (
     decimals = metadata.parsed.info.decimals;
     isToken2022 = metadata.program === "spl-token-2022";
   } else if (raydiumPoolInfo && !isJupiterTradable) {
-
     const metadata = await getMintMetadata(
       private_connection,
       new PublicKey(mint)
@@ -762,39 +771,40 @@ export const sellHandler = async (
 
   // sell token
   const { slippage } = await UserTradeSettingService.getSlippage(
-    username,
+    username
     // mint
   );
   const gassetting = await UserTradeSettingService.getGas(username);
   const gasvalue = UserTradeSettingService.getGasValue(gassetting);
   const raydiumService = new RaydiumSwapService();
   // const jupiterSerivce = new JupiterService();
-  const quoteResult = isPumpfunTradable ?
-    await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      false,
-      sellAmount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    )
-    : isRaydium ? await raydiumService.swapToken(
-      user.private_key,
-      mint,
-      NATIVE_MINT.toString(),
-      decimals,
-      sellAmount,
-      slippage,
-      gasvalue,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    )
-      : await jupiterSerivce.swapToken(
+  const quoteResult = isPumpfunTradable
+    ? await pumpFunSwap(
+        user.private_key,
+        mint,
+        decimals,
+        false,
+        sellAmount,
+        gasvalue,
+        slippage,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
+    : isRaydium
+    ? await raydiumService.swapToken(
+        user.private_key,
+        mint,
+        NATIVE_MINT.toString(),
+        decimals,
+        sellAmount,
+        slippage,
+        gasvalue,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
+    : await jupiterSerivce.swapToken(
         user.private_key,
         mint,
         NATIVE_MINT.toString(),
@@ -810,10 +820,17 @@ export const sellHandler = async (
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
 
-    // Just in case
-    try {
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    if (status) {
+      // await bot.deleteMessage(
+      //   chat_id,
+      //   pendingMessage.message_id
+      // );
+      const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+
       await bot.editMessageText(successCaption, {
         message_id: pendingMessage.message_id,
         chat_id,
@@ -821,19 +838,11 @@ export const sellHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
-
-    // const status = await getSignatureStatus(signature);
-    const jitoBundleInstance = new JitoBundleService();
-    const status = await jitoBundleInstance.getBundleStatus(bundleId);
-    if (!status) {
-      await bot.deleteMessage(
-        chat_id,
-        pendingMessage.message_id
-      );
-
+    } else {
       const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
-      await bot.sendMessage(chat_id, failedCaption, {
+      await bot.editMessageText(failedCaption, {
+        message_id: pendingMessage.message_id,
+        chat_id,
         parse_mode: "HTML",
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
@@ -861,7 +870,7 @@ export const sellHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
+    } catch (e) {}
   }
 };
 
@@ -883,7 +892,7 @@ export const setSlippageHandler = async (
   const { mint, parent_msgid, msg_id } = msglog;
 
   if (!mint) return;
-  // mint, 
+  // mint,
   await UserTradeSettingService.setSlippage(username, {
     slippage: percent,
     slippagebps: percent * 100,
@@ -895,55 +904,71 @@ export const setSlippageHandler = async (
 
   const reply_markup = {
     inline_keyboard: [
-      [{
-        text: `💳 Wallet`, callback_data: JSON.stringify({
-          'command': `wallet_view`
-        })
-      }, {
-        text: `🗒  Preset Settings`, callback_data: JSON.stringify({
-          'command': `preset_setting`
-        })
-      }],
-      [{
-        text: '♻️ Withdraw', callback_data: JSON.stringify({
-          'command': `transfer_funds`
-        })
-      }],
-      [{
-        text: `Slippage: ${percent} %`, callback_data: JSON.stringify({
-          'command': `set_slippage`
-        })
-      }],
-      [{
-        text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
-          'command': `autobuy_switch`
-        })
-      },
-      {
-        text: `${auto_buy_amount} SOL`, callback_data: JSON.stringify({
-          'command': `autobuy_amount`
-        })
-      }],
-      [{
-        text: '↩️ Back', callback_data: JSON.stringify({
-          'command': 'back_home'
-        })
-      },
-      {
-        text: '❌ Close', callback_data: JSON.stringify({
-          'command': 'dismiss_message'
-        })
-      }]
-    ]
-  }
+      [
+        {
+          text: `💳 Wallet`,
+          callback_data: JSON.stringify({
+            command: `wallet_view`,
+          }),
+        },
+        {
+          text: `🗒  Preset Settings`,
+          callback_data: JSON.stringify({
+            command: `preset_setting`,
+          }),
+        },
+      ],
+      [
+        {
+          text: "♻️ Withdraw",
+          callback_data: JSON.stringify({
+            command: `transfer_funds`,
+          }),
+        },
+      ],
+      [
+        {
+          text: `Slippage: ${percent} %`,
+          callback_data: JSON.stringify({
+            command: `set_slippage`,
+          }),
+        },
+      ],
+      [
+        {
+          text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`,
+          callback_data: JSON.stringify({
+            command: `autobuy_switch`,
+          }),
+        },
+        {
+          text: `${auto_buy_amount} SOL`,
+          callback_data: JSON.stringify({
+            command: `autobuy_amount`,
+          }),
+        },
+      ],
+      [
+        {
+          text: "↩️ Back",
+          callback_data: JSON.stringify({
+            command: "back_home",
+          }),
+        },
+        {
+          text: "❌ Close",
+          callback_data: JSON.stringify({
+            command: "dismiss_message",
+          }),
+        },
+      ],
+    ],
+  };
 
-  await bot.editMessageReplyMarkup(
-    reply_markup,
-    {
-      message_id: parent_msgid,
-      chat_id,
-    }
-  );
+  await bot.editMessageReplyMarkup(reply_markup, {
+    message_id: parent_msgid,
+    chat_id,
+  });
   bot.deleteMessage(chat_id, msg_id);
   bot.deleteMessage(chat_id, msg.message_id);
 };
