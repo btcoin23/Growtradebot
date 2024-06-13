@@ -299,8 +299,17 @@ const getaccounts = async (owner: string) => {
 
   for (const account of data.result.token_accounts as Array<ITokenAccountInfo>) {
     const { mint, amount } = account;
+    let tokenName
+    let tokenSymbol
     const { name, symbol } = await TokenService.fetchSimpleMetaData(new PublicKey(mint))
-    results.push({ mint, amount, name, symbol })
+    tokenName = name
+    tokenSymbol = symbol
+    if(name ==='' && symbol ===''){
+      const res = await TokenService.getMintInfo(mint);
+      tokenName = res?.overview.name as string
+      tokenSymbol = res?.overview.symbol as string
+    }
+    results.push({ mint, amount, name: tokenName, symbol: tokenSymbol })
   }
   return results;
 }
