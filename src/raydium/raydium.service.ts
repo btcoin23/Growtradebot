@@ -469,8 +469,8 @@ export class RaydiumSwapService {
           )
         ]
         : [
-          ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 421197 }),
-          ComputeBudgetProgram.setComputeUnitLimit({ units: 101337 }),
+          ComputeBudgetProgram.setComputeUnitPrice({ microLamports: microLamports }),
+          ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
           // JitoTipOption
           SystemProgram.transfer({
             fromPubkey: wallet.publicKey,
