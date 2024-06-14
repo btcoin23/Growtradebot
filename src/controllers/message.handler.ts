@@ -7,6 +7,7 @@ import {
   PRESET_BUY_TEXT,
   SELL_XPRO_TEXT,
   SET_GAS_FEE,
+  SET_JITO_FEE,
   SET_SLIPPAGE_TEXT,
   WITHDRAW_TOKEN_AMT_TEXT,
   WITHDRAW_XTOKEN_TEXT,
@@ -17,7 +18,7 @@ import {
   setSlippageHandler,
 } from "../screens/trade.screen";
 import { withdrawAddressHandler, withdrawHandler } from "../screens/transfer.funds";
-import { presetBuyBtnHandler, setCustomAutoBuyAmountHandler, setCustomBuyPresetHandler, setCustomFeeHandler } from "../screens/settings.screen";
+import { presetBuyBtnHandler, setCustomAutoBuyAmountHandler, setCustomBuyPresetHandler, setCustomFeeHandler, setCustomJitoFeeHandler } from "../screens/settings.screen";
 
 export const messageHandler = async (
   bot: TelegramBot,
@@ -39,6 +40,7 @@ export const messageHandler = async (
 
       if (isNumber) {
         const amount = Number(messageText);
+
         if (text === BUY_XSOL_TEXT.replace(/<[^>]*>/g, '')) {
           await buyHandler(bot, msg, amount, reply_message_id);
         } else if (text === SELL_XPRO_TEXT.replace(/<[^>]*>/g, '')) {
@@ -53,6 +55,12 @@ export const messageHandler = async (
           await setCustomAutoBuyAmountHandler(bot, msg, amount, reply_message_id);
         } else if (text === SET_GAS_FEE.replace(/<[^>]*>/g, '')) {
           await setCustomFeeHandler(bot, msg, amount, reply_message_id);
+        } else if (text === SET_JITO_FEE.replace(/<[^>]*>/g, '')) {
+          if (amount < 0.000005) {
+            await setCustomJitoFeeHandler(bot, msg, amount, reply_message_id);
+          } else {
+            await setCustomJitoFeeHandler(bot, msg, 0.0001, reply_message_id);
+          }
         }
       } else {
         if (text === WITHDRAW_TOKEN_AMT_TEXT.replace(/<[^>]*>/g, '')) {

@@ -49,7 +49,7 @@ export class PNLService {
         received_sol_amount: 0,
         creation_time: ts
       })
-    } else if ((myposition.sol_amount <= 0 && myposition.amount <= 0) || myposition.amount > this.quote.inAmount * 1.05) {
+    } else if ((myposition.sol_amount <= 0 && myposition.amount <= 0)) {
       const waitForBundle = await waitFlagForBundleVerify(this.wallet_address);
       if (waitForBundle) return;
 

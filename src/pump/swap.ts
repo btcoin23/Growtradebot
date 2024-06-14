@@ -1,23 +1,41 @@
 import { ComputeBudgetProgram, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction, clusterApiUrl } from '@solana/web3.js';
-import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, createSyncNativeInstruction, NATIVE_MINT, getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, createSyncNativeInstruction, NATIVE_MINT, getAssociatedTokenAddressSync, createCloseAccountInstruction } from '@solana/spl-token';
 import { getKeyPairFromPrivateKey, createTransaction, sendAndConfirmTransactionWrapper, bufferFromUInt64 } from './utils';
 import { getCoinData } from './api';
 import { GLOBAL, FEE_RECIPIENT, SYSTEM_PROGRAM_ID, RENT, PUMP_FUN_ACCOUNT, PUMP_FUN_PROGRAM, ASSOC_TOKEN_ACC_PROG } from './constants';
-import { JitoBundleService, JitoTipAmount, tipAccounts } from '../services/jito.bundle';
+import { JitoBundleService, tipAccounts } from '../services/jito.bundle';
 import { calculateMicroLamports } from '../raydium/raydium.service';
 import { FeeService } from '../services/fee.service';
 import { getSignature } from '../utils/get.signature';
 import base58 from 'bs58';
 import { private_connection } from '../config';
+import { UserTradeSettingService } from '../services/user.trade.setting.service';
 
 
-export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, decimal: number, is_buy: boolean, _amount: number, gasFee: number, _slippage: number, isFeeBurn: boolean, username: string, isToken2022: boolean) {
+export async function pumpFunSwap(
+  payerPrivateKey: string,
+  mintStr: string,
+  decimal: number,
+  is_buy: boolean,
+  _amount: number,
+  gasFee: number,
+  _slippage: number,
+  isFeeBurn: boolean,
+  username: string,
+  isToken2022: boolean
+) {
   try {
     const coinData = await getCoinData(mintStr);
     if (!coinData) {
       console.error('Failed to retrieve coin data...');
       return;
     }
+
+    // JitoFee
+    const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
+    const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
+    const jitoFeeValueWei = BigInt((jitoFeeValue * 10 ** 9).toFixed());
+
     const txBuilder = new Transaction();
 
     const payer = await getKeyPairFromPrivateKey(payerPrivateKey);
@@ -121,6 +139,11 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
           microLamports: microLamports,
         }),
         ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
+        SystemProgram.transfer({
+          fromPubkey: owner,
+          toPubkey: new PublicKey(tipAccounts[0]),
+          lamports: jitoFeeValueWei,
+        }),
         createAssociatedTokenAccountIdempotentInstruction(
           owner,
           tokenAccountIn,
@@ -140,21 +163,35 @@ export async function pumpFunSwap(payerPrivateKey: string, mintStr: string, deci
           new PublicKey(mint)
         ),
         ...jitoInstruction,
+        // Unwrap WSOL for SOL
+        createCloseAccountInstruction(
+          tokenAccountIn,
+          owner,
+          owner
+        )
       ]
       : [
-        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 421197 }),
-        ComputeBudgetProgram.setComputeUnitLimit({ units: 101337 }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
+        ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
+        SystemProgram.transfer({
+          fromPubkey: owner,
+          toPubkey: new PublicKey(tipAccounts[0]),
+          lamports: jitoFeeValueWei,
+        }),
+        createAssociatedTokenAccountIdempotentInstruction(
+          owner,
+          tokenAccountOut,
+          owner,
+          NATIVE_MINT
+        ),
         ...jitoInstruction,
+        // Unwrap WSOL for SOL
+        createCloseAccountInstruction(
+          tokenAccountOut,
+          owner,
+          owner
+        )
       ];
-
-    // JitoTipOption
-    instructions.push(
-      SystemProgram.transfer({
-        fromPubkey: owner,
-        toPubkey: new PublicKey(tipAccounts[0]),
-        lamports: JitoTipAmount,
-      })
-    );
 
     // Referral Fee, ReserverStaking Fee, Burn Token
     console.log("Before Fee: ", Date.now());
