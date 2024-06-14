@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import { REDIS_URI } from '../config';
-import { GasFeeEnum } from './user.trade.setting.service';
+import { GasFeeEnum, JitoFeeEnum } from './user.trade.setting.service';
 import { TokenOverviewDataType, TokenSecurityInfoDataType } from './birdeye.api.service';
 
 const redisClient = createClient({
@@ -23,6 +23,11 @@ export interface ITradeSlippageSetting {
 
 export interface ITradeGasSetting {
   gas: GasFeeEnum;
+  value?: number;
+}
+
+export interface ITradeJioFeeSetting {
+  jitoOption: JitoFeeEnum;
   value?: number;
 }
 

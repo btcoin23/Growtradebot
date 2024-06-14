@@ -19,6 +19,7 @@ export const BridgeBotID = process.env.BridgeBotID;
 
 export const INPUT_SOL_ADDRESS = 'Please send your SOL payout address in solana network.';
 export const SET_GAS_FEE = `🌳 Custom GAS\n\n<i>💲 Enter SOL Value in format "0.001"</i>`;
+export const SET_JITO_FEE = `🌳 Custom Fee Amount\n\n<i>💲 Enter SOL Value in format "0.001"</i>`;
 
 export const WITHDRAW_TOKEN_AMT_TEXT = `<i>🌳 Enter your receive wallet address</i>`;
 export enum CommandEnum {

@@ -54,6 +54,7 @@ import { JitoBundleService } from "../services/jito.bundle";
 import { getCoinData } from "../pump/api";
 import { pumpFunSwap } from "../pump/swap";
 import { setFlagForBundleVerify } from "../services/redis.service";
+import { getReplyOptionsForSettings } from "./settings.screen";
 
 export const buyCustomAmountScreenHandler = async (
   bot: TelegramBot,
@@ -913,68 +914,11 @@ export const setSlippageHandler = async (
   if (!user) return;
   const { auto_buy, auto_buy_amount } = user;
 
-  const reply_markup = {
-    inline_keyboard: [
-      [
-        {
-          text: `💳 Wallet`,
-          callback_data: JSON.stringify({
-            command: `wallet_view`,
-          }),
-        },
-        {
-          text: `🗒  Preset Settings`,
-          callback_data: JSON.stringify({
-            command: `preset_setting`,
-          }),
-        },
-      ],
-      [
-        {
-          text: "♻️ Withdraw",
-          callback_data: JSON.stringify({
-            command: `transfer_funds`,
-          }),
-        },
-      ],
-      [
-        {
-          text: `Slippage: ${percent} %`,
-          callback_data: JSON.stringify({
-            command: `set_slippage`,
-          }),
-        },
-      ],
-      [
-        {
-          text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`,
-          callback_data: JSON.stringify({
-            command: `autobuy_switch`,
-          }),
-        },
-        {
-          text: `${auto_buy_amount} SOL`,
-          callback_data: JSON.stringify({
-            command: `autobuy_amount`,
-          }),
-        },
-      ],
-      [
-        {
-          text: "↩️ Back",
-          callback_data: JSON.stringify({
-            command: "back_home",
-          }),
-        },
-        {
-          text: "❌ Close",
-          callback_data: JSON.stringify({
-            command: "dismiss_message",
-          }),
-        },
-      ],
-    ],
-  };
+  const reply_markup = await getReplyOptionsForSettings(
+    username,
+    auto_buy,
+    auto_buy_amount
+  );
 
   await bot.editMessageReplyMarkup(reply_markup, {
     message_id: parent_msgid,

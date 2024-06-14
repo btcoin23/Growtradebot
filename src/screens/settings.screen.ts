@@ -7,8 +7,8 @@ import { copytoclipboard } from "../utils";
 import { GrowTradeVersion, MAX_WALLET } from "../config";
 import { MsgLogService } from "../services/msglog.service";
 import redisClient from "../services/redis";
-import { AUTO_BUY_TEXT, PRESET_BUY_TEXT, SET_GAS_FEE } from "../bot.opts";
-import { GasFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
+import { AUTO_BUY_TEXT, PRESET_BUY_TEXT, SET_GAS_FEE, SET_JITO_FEE } from "../bot.opts";
+import { GasFeeEnum, JitoFeeEnum, UserTradeSettingService } from "../services/user.trade.setting.service";
 import { welcomeKeyboardList } from "./welcome.screen";
 
 export const settingScreenHandler = async (
@@ -24,9 +24,12 @@ export const settingScreenHandler = async (
       return;
     }
 
-    const users = await UserService.findAndSort({ username });
-    const activeuser = users.filter(user => user.retired === false)[0];
-    const { wallet_address, burn_fee, auto_buy, auto_buy_amount } = activeuser;
+    const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+    const { wallet_address, auto_buy, auto_buy_amount } = user;
 
     const caption = `<b>GrowTrade ${GrowTradeVersion}</b>\n\n` +
       `<b>AutoBuy</b>\n` +
@@ -35,52 +38,11 @@ export const settingScreenHandler = async (
       `Withdraw any token or Solana you have in the currently active wallet.\n\n` +
       `<b>Your active wallet:</b>\n` + `${copytoclipboard(wallet_address)}`;
 
-    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
-    const { slippage } = slippageSetting;
-
-    const reply_markup = {
-      inline_keyboard: [
-        [{
-          text: `💳 Wallet`, callback_data: JSON.stringify({
-            'command': `wallet_view`
-          })
-        }, {
-          text: `🗒  Preset Settings`, callback_data: JSON.stringify({
-            'command': `preset_setting`
-          })
-        }],
-        [{
-          text: '♻️ Withdraw', callback_data: JSON.stringify({
-            'command': `transfer_funds`
-          })
-        }],
-        [{
-          text: `Slippage: ${slippage} %`, callback_data: JSON.stringify({
-            'command': `set_slippage`
-          })
-        }],
-        [{
-          text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
-            'command': `autobuy_switch`
-          })
-        },
-        {
-          text: `${auto_buy_amount} SOL`, callback_data: JSON.stringify({
-            'command': `autobuy_amount`
-          })
-        }],
-        [{
-          text: '↩️ Back', callback_data: JSON.stringify({
-            'command': 'back_home'
-          })
-        },
-        {
-          text: '❌ Close', callback_data: JSON.stringify({
-            'command': 'dismiss_message'
-          })
-        }]
-      ]
-    }
+    const reply_markup = await getReplyOptionsForSettings(
+      username,
+      auto_buy,
+      auto_buy_amount
+    )
 
     let sentMessageId = 0;
     if (replaceId) {
@@ -120,6 +82,8 @@ export const settingScreenHandler = async (
     });
   } catch (e) { console.log("~ settingScreenHandler ~", e) }
 }
+
+
 
 export const presetBuyBtnHandler = async (bot: TelegramBot,
   msg: TelegramBot.Message) => {
@@ -826,56 +790,17 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
       return;
     }
 
+    const isAutoBuy = !user.auto_buy;
     await UserService.updateMany(
       { username },
-      { auto_buy: !user.auto_buy }
+      { auto_buy: isAutoBuy }
     )
-    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
-    const { slippage } = slippageSetting;
 
-    const reply_markup = {
-      inline_keyboard: [
-        [{
-          text: `💳 Wallet`, callback_data: JSON.stringify({
-            'command': `wallet_view`
-          })
-        }, {
-          text: `🗒  Preset Settings`, callback_data: JSON.stringify({
-            'command': `preset_setting`
-          })
-        }],
-        [{
-          text: '♻️ Withdraw', callback_data: JSON.stringify({
-            'command': `transfer_funds`
-          })
-        }],
-        [{
-          text: `Slippage: ${slippage} %`, callback_data: JSON.stringify({
-            'command': `set_slippage`
-          })
-        }],
-        [{
-          text: `${user.auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
-            'command': `autobuy_switch`
-          })
-        },
-        {
-          text: `${user.auto_buy_amount} SOL`, callback_data: JSON.stringify({
-            'command': `autobuy_amount`
-          })
-        }],
-        [{
-          text: '↩️ Back', callback_data: JSON.stringify({
-            'command': 'back_home'
-          })
-        },
-        {
-          text: '❌ Close', callback_data: JSON.stringify({
-            'command': 'dismiss_message'
-          })
-        }]
-      ]
-    }
+    const reply_markup = await getReplyOptionsForSettings(
+      username,
+      isAutoBuy,
+      user.auto_buy_amount
+    );
 
     await bot.editMessageReplyMarkup(
       reply_markup,
@@ -895,3 +820,206 @@ export const switchAutoBuyOptsHandler = async (bot: TelegramBot, msg: TelegramBo
   }
 }
 
+export const getReplyOptionsForSettings = async (
+  username: string,
+  auto_buy: boolean,
+  auto_buy_amount: string
+) => {
+  // Slippage
+  const slippageSetting = await UserTradeSettingService.getSlippage(username);
+
+  // JitoFee
+  const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
+  const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
+
+  const { slippage } = slippageSetting;
+
+  const reply_markup = {
+    inline_keyboard: [
+      [{
+        text: `💳 Wallet`, callback_data: JSON.stringify({
+          'command': `wallet_view`
+        })
+      }, {
+        text: `🗒  Preset Settings`, callback_data: JSON.stringify({
+          'command': `preset_setting`
+        })
+      }],
+      [{
+        text: '♻️ Withdraw', callback_data: JSON.stringify({
+          'command': `transfer_funds`
+        })
+      },
+      {
+        text: `〰️ Slippage: ${slippage} %`, callback_data: JSON.stringify({
+          'command': `set_slippage`
+        })
+      }],
+      [{
+        text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`, callback_data: JSON.stringify({
+          'command': `autobuy_switch`
+        })
+      },
+      {
+        text: `${auto_buy_amount} SOL`, callback_data: JSON.stringify({
+          'command': `autobuy_amount`
+        })
+      }],
+      [{
+        text: '--- MEV PROTECT ---', callback_data: JSON.stringify({
+          'command': `dump`
+        })
+      }],
+      [{
+        text: `🔁 ${jitoFeeSetting.jitoOption}`, callback_data: JSON.stringify({
+          'command': `switch_mev`
+        })
+      }, {
+        text: `⚙️ ${jitoFeeValue} SOL`, callback_data: JSON.stringify({
+          'command': `custom_jitofee`
+        })
+      }],
+      [{
+        text: '↩️ Back', callback_data: JSON.stringify({
+          'command': 'back_home'
+        })
+      },
+      {
+        text: '❌ Close', callback_data: JSON.stringify({
+          'command': 'dismiss_message'
+        })
+      }]
+    ]
+  }
+
+  return reply_markup;
+}
+
+export const changeJitoTipFeeHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  const chat_id = msg.chat.id;
+  const caption = msg.text;
+  const username = msg.chat.username;
+  const reply_markup = msg.reply_markup
+  if (!caption || !username || !reply_markup) return;
+
+  const { jitoOption, value } = await UserTradeSettingService.getJitoFee(username);
+  const nextFeeOption = UserTradeSettingService.getNextJitoFeeOption(jitoOption);
+  const nextValue = UserTradeSettingService.getJitoFeeValue({ jitoOption: nextFeeOption });
+
+  await UserTradeSettingService.setJitoFee(
+    username,
+    {
+      jitoOption: nextFeeOption,
+      value: nextValue
+    }
+  );
+
+  let inline_keyboard = reply_markup.inline_keyboard;
+  inline_keyboard[4] = [{
+    text: `🔁 ${nextFeeOption}`, callback_data: JSON.stringify({
+      'command': `switch_mev`
+    })
+  }, {
+    text: `⚙️ ${nextValue} SOL`, callback_data: JSON.stringify({
+      'command': `custom_jitofee`
+    })
+  }];
+
+  bot.sendMessage(chat_id, `MEV protect set to ${nextFeeOption}.`);
+
+  await bot.editMessageReplyMarkup({
+    inline_keyboard
+  }, {
+    message_id: msg.message_id,
+    chat_id
+  })
+}
+
+
+export const setCustomJitoFeeScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+  try {
+    const chat_id = msg.chat.id;
+    const username = msg.chat.username;
+    const user = await UserService.findOne({ username });
+    if (!user) return;
+
+    const sentMessage = await bot.sendMessage(
+      chat_id,
+      SET_JITO_FEE,
+      {
+        parse_mode: 'HTML',
+        reply_markup: {
+          force_reply: true,
+        }
+      }
+    );
+
+    await MsgLogService.create({
+      username,
+      wallet_address: user.wallet_address,
+      chat_id,
+      msg_id: sentMessage.message_id,
+      parent_msgid: msg.message_id
+    });
+  } catch (e) {
+    console.log("~ setCustomFeeScreenHandler ~", e);
+  }
+}
+
+export const setCustomJitoFeeHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message,
+  amount: number,
+  reply_message_id: number
+) => {
+  try {
+    const { id: chat_id, username } = msg.chat
+    if (!username) {
+      await sendUsernameRequiredNotification(bot, msg);
+      return;
+    }
+
+    // user
+    const user = await UserService.findOne({ username });
+    if (!user) {
+      await sendNoneUserNotification(bot, msg);
+      return;
+    }
+    const { auto_buy, auto_buy_amount } = user;
+
+    const msgLog = await MsgLogService.findOne({ username, msg_id: reply_message_id });
+    if (!msgLog) {
+      return;
+    }
+    const parent_msgid = msgLog.parent_msgid;
+
+    const parentMsgLog = await MsgLogService.findOne({ username, msg_id: parent_msgid });
+    if (!parentMsgLog) {
+      return;
+    }
+    await UserTradeSettingService.setJitoFee(
+      username,
+      {
+        jitoOption: JitoFeeEnum.CUSTOM,
+        value: amount
+      }
+    );
+
+    bot.deleteMessage(chat_id, msg.message_id);
+    bot.deleteMessage(chat_id, reply_message_id);
+
+    const reply_markup = await getReplyOptionsForSettings(
+      username,
+      auto_buy,
+      auto_buy_amount
+    );
+    bot.sendMessage(chat_id, `MEV protect set to ${amount} SOL.`);
+
+    await bot.editMessageReplyMarkup(reply_markup, {
+      message_id: parent_msgid,
+      chat_id
+    })
+  } catch (e) {
+    console.log("~ setCustomBuyPresetHandler ~", e)
+  }
+}

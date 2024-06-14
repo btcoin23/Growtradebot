@@ -1,4 +1,4 @@
-import redisClient, { ITradeGasSetting, ITradeSlippageSetting } from "./redis";
+import redisClient, { ITradeGasSetting, ITradeJioFeeSetting, ITradeSlippageSetting } from "./redis";
 
 export enum GasFeeEnum {
   LOW = 'low',
@@ -6,6 +6,18 @@ export enum GasFeeEnum {
   MEDIUM = 'medium',
   CUSTOM = 'custom'
 }
+
+
+// - Turbo 0.0075
+// - Safe 0.0045
+// - Light 0.0015
+export enum JitoFeeEnum {
+  LOW = 'Light',
+  HIGH = 'Turbo',
+  MEDIUM = 'Safe',
+  CUSTOM = 'custom'
+}
+
 
 export const UserTradeSettingService = {
   // , mint: string
@@ -57,8 +69,47 @@ export const UserTradeSettingService = {
     if (data) return JSON.parse(data) as ITradeGasSetting;
     return {
       gas: GasFeeEnum.LOW,
-      value: 0.05
+      value: 0.005
     } as ITradeGasSetting
+  },
+  getJitoFeeValue: (gasSetting: ITradeJioFeeSetting) => {
+    const { jitoOption, value } = gasSetting;
+
+    if (jitoOption === JitoFeeEnum.LOW) {
+      return 0.0015; // SOL
+    } else if (jitoOption === JitoFeeEnum.MEDIUM) {
+      return 0.0045; // SOL
+    } else if (jitoOption === JitoFeeEnum.HIGH) {
+      return 0.0075; // SOL
+    } else {
+      return value ?? 0.0045; // SOL
+    }
+  },
+
+  setJitoFee: async (username: string, opts: ITradeJioFeeSetting) => {
+    const key = `${username}_jitofee`;
+    await redisClient.set(key, JSON.stringify(opts));
+  },
+  getJitoFee: async (username: string) => {
+    const key = `${username}_jitofee`;
+    const data = await redisClient.get(key);
+    if (data) return JSON.parse(data) as ITradeJioFeeSetting;
+    return {
+      jitoOption: JitoFeeEnum.MEDIUM,
+      value: 0.0045
+    } as ITradeJioFeeSetting
+  },
+  getNextJitoFeeOption: (option: JitoFeeEnum) => {
+    switch (option) {
+      case JitoFeeEnum.CUSTOM:
+        return JitoFeeEnum.LOW;
+      case JitoFeeEnum.LOW:
+        return JitoFeeEnum.MEDIUM;
+      case JitoFeeEnum.MEDIUM:
+        return JitoFeeEnum.HIGH;
+      case JitoFeeEnum.HIGH:
+        return JitoFeeEnum.LOW;
+    }
   }
 }
 /** Gas Fee calculation */

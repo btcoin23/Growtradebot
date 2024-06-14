@@ -9,10 +9,11 @@ import { getSignature } from "../utils/get.signature";
 // import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
 // import redisClient, { ITradeGasSetting } from "./redis";
 import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
-import { JitoBundleService, JitoTipAmount, tipAccounts } from "./jito.bundle";
+import { JitoBundleService, tipAccounts } from "./jito.bundle";
 import { FeeService } from "./fee.service";
 import { fromWeiToValue } from "../utils";
 import redisClient from "./redis";
+import { UserTradeSettingService } from "./user.trade.setting.service";
 
 // const provider = new ReferralProvider(connection);
 
@@ -98,6 +99,11 @@ export class JupiterService {
       let total_fee_in_token = 0;
       const is_buy = inputMint === NATIVE_MINT.toString();
 
+      // JitoFee
+      const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
+      const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
+      const jitoFeeValueWei = BigInt((jitoFeeValue * 10 ** 9).toFixed());
+
       let total_fee_percent = 0.01; // 1%
       let total_fee_percent_in_sol = 0.01; // 1%
       let total_fee_percent_in_token = 0;
@@ -175,7 +181,7 @@ export class JupiterService {
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
           toPubkey: new PublicKey(tipAccounts[0]),
-          lamports: JitoTipAmount
+          lamports: jitoFeeValueWei
         })
       )
 

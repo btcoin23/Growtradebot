@@ -4,7 +4,7 @@ import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { autoBuyAmountScreenHandler, generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
+import { autoBuyAmountScreenHandler, changeJitoTipFeeHandler, generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, setCustomJitoFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
 import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
@@ -152,6 +152,17 @@ export const callbackQueryHandler = async (
       await setCustomFeeScreenHandler(bot, callbackMessage);
       return;
     }
+
+    if (data.command === 'switch_mev') {
+      await changeJitoTipFeeHandler(bot, callbackMessage);
+      return;
+    }
+
+    if (data.command === 'custom_jitofee') {
+      await setCustomJitoFeeScreenHandler(bot, callbackMessage);
+      return;
+    }
+
     const buyTokenStr = 'buytoken_';
     if (data.command.includes(buyTokenStr)) {
       const buyAmount = Number(data.command.slice(buyTokenStr.length));

@@ -38,11 +38,10 @@ import {
   NATIVE_MINT,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
-import { OpenMarketService } from "../services/openmarket.service";
 import { private_connection } from "../config";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import { getSignature } from "../utils/get.signature";
-import { JitoBundleService, JitoTipAmount, tipAccounts } from "../services/jito.bundle";
+import { JitoBundleService, tipAccounts } from "../services/jito.bundle";
 import { FeeService } from "../services/fee.service";
 import { formatClmmKeysById } from "./utils/formatClmmKeysById";
 import { formatAmmKeysById } from "./utils/formatAmmKeysById";
@@ -50,6 +49,7 @@ import { formatAmmKeysById } from "./utils/formatAmmKeysById";
 import { default as BN, min } from "bn.js";
 import { TokenService } from "../services/token.metadata";
 import { QuoteRes } from "../services/jupiter.service";
+import { UserTradeSettingService } from "../services/user.trade.setting.service";
 
 export const getPriceInSOL = async (tokenAddress: string): Promise<number> => {
   try {
@@ -225,6 +225,11 @@ export class RaydiumSwapService {
     isToken2022: boolean
   ) {
     try {
+      // JitoFee
+      const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
+      const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
+
+
       let total_fee_in_sol = 0;
       let total_fee_in_token = 0;
       const is_buy = inputMint === NATIVE_MINT.toString();
@@ -418,9 +423,12 @@ export class RaydiumSwapService {
         raydiumSwapInnerInstruction = innerTransaction;
       }
 
+      const jitoFeeValueWei = BigInt((jitoFeeValue * 10 ** 9).toFixed());
       // // Gas in SOL
       const cu = 1_000_000;
       const microLamports = calculateMicroLamports(gasFee, cu);
+
+      console.log("Fee====>", microLamports, gasFee, cu);
       console.log("Is_BUY", is_buy);
       const instructions: TransactionInstruction[] = is_buy
         ? [
@@ -432,7 +440,7 @@ export class RaydiumSwapService {
           SystemProgram.transfer({
             fromPubkey: wallet.publicKey,
             toPubkey: new PublicKey(tipAccounts[0]),
-            lamports: JitoTipAmount,
+            lamports: jitoFeeValueWei,
           }),
           createAssociatedTokenAccountIdempotentInstruction(
             wallet.publicKey,
@@ -467,7 +475,7 @@ export class RaydiumSwapService {
           SystemProgram.transfer({
             fromPubkey: wallet.publicKey,
             toPubkey: new PublicKey(tipAccounts[0]),
-            lamports: JitoTipAmount,
+            lamports: jitoFeeValueWei,
           }),
           createAssociatedTokenAccountIdempotentInstruction(
             wallet.publicKey,
@@ -574,7 +582,7 @@ export async function getWalletTokenAccount(
 }
 
 export const calculateMicroLamports = (gasvalue: number, cu: number) => {
-  const microlamports = ((gasvalue - 0.000005) * ((10 * 15) / cu)).toFixed(0);
+  const microlamports = ((gasvalue - 0.000005) * ((10 ** 15) / cu)).toFixed(0);
   return Number(microlamports);
 };
 
