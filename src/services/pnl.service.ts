@@ -2,6 +2,7 @@ import { PositionService } from "./position.service";
 import { isEqual } from "../utils";
 import { QuoteRes } from "./jupiter.service";
 import { amount } from "@metaplex-foundation/js";
+import { waitFlagForBundleVerify } from "./redis.service";
 
 export class PNLService {
   wallet_address: string;
@@ -48,7 +49,9 @@ export class PNLService {
         received_sol_amount: 0,
         creation_time: ts
       })
-    } else if (myposition.sol_amount <= 0 && myposition.amount <= 0) {
+    } else if ((myposition.sol_amount <= 0 && myposition.amount <= 0) || myposition.amount > this.quote.inAmount * 1.05) {
+      const waitForBundle = await waitFlagForBundleVerify(this.wallet_address);
+      if (waitForBundle) return;
 
       const {
         inAmount,
@@ -60,7 +63,7 @@ export class PNLService {
         mint: this.mint,
       };
       const data = {
-        $inc: {
+        $set: {
           sol_amount: outAmount,
           amount: inAmount
         }
@@ -129,6 +132,7 @@ export class PNLService {
       const position = await PositionService.findLastOne(filter);
       if (!position) return;
       const { sol_amount, received_sol_amount } = position;
+      console.log("OutProfit", outAmount);
       const profit = outAmount + received_sol_amount - sol_amount;
       const data = {
         $inc: {

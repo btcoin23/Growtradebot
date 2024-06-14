@@ -53,6 +53,7 @@ import { getMintMetadata } from "../raydium";
 import { JitoBundleService } from "../services/jito.bundle";
 import { getCoinData } from "../pump/api";
 import { pumpFunSwap } from "../pump/swap";
+import { setFlagForBundleVerify } from "../services/redis.service";
 
 export const buyCustomAmountScreenHandler = async (
   bot: TelegramBot,
@@ -179,7 +180,7 @@ export const buyHandler = async (
   console.log("Buy1:", Date.now());
   const user = await UserService.findOne({ username });
   if (!user) return;
-
+  const { wallet_address } = user;
   const msglog = await MsgLogService.findOne({
     username,
     msg_id: reply_message_id ?? msg.message_id,
@@ -315,19 +316,19 @@ export const buyHandler = async (
 
   const quoteResult = isPumpfunTradable
     ? await pumpFunSwap(
-        user.private_key,
-        mint,
-        decimals,
-        true,
-        amount,
-        gasvalue,
-        slippage,
-        user.burn_fee ?? true,
-        username,
-        isToken2022
-      )
+      user.private_key,
+      mint,
+      decimals,
+      true,
+      amount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    )
     : isRaydium
-    ? await raydiumService.swapToken(
+      ? await raydiumService.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -340,7 +341,7 @@ export const buyHandler = async (
         username,
         isToken2022
       )
-    : await jupiterSerivce.swapToken(
+      : await jupiterSerivce.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -358,6 +359,11 @@ export const buyHandler = async (
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
+    // Here, we need to set Flag because of PNL calucation
+    // while waiting for bundle verification, "position" collection
+    // might be overlapped
+    await setFlagForBundleVerify(wallet_address);
+
     // Just in case
     try {
       await bot.editMessageText(successCaption, {
@@ -367,11 +373,11 @@ export const buyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) {}
+    } catch (e) { }
 
-    // const status = await getSignatureStatus(signature);
-    const jitoBundleInstance = new JitoBundleService();
-    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    const status = await getSignatureStatus(signature);
+    // const jitoBundleInstance = new JitoBundleService();
+    // const status = await jitoBundleInstance.getBundleStatus(bundleId);
     if (!status) {
       await bot.deleteMessage(chat_id, pendingTxMsgId);
       const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
@@ -405,7 +411,7 @@ export const buyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
@@ -514,8 +520,7 @@ export const autoBuyHandler = async (
   // send Notification
   const getcaption = (status: string, suffix: string = "") => {
     const securecaption =
-      `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${
-        symbol ?? "undefined"
+      `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"
       })</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
       `<i>${copytoclipboard(mint)}</i>\n` +
@@ -538,19 +543,19 @@ export const autoBuyHandler = async (
   // const jupiterSerivce = new JupiterService();
   const quoteResult = isPumpfunTradable
     ? await pumpFunSwap(
-        user.private_key,
-        mint,
-        decimals,
-        true,
-        amount,
-        gasvalue,
-        slippage,
-        user.burn_fee ?? true,
-        username,
-        isToken2022
-      )
+      user.private_key,
+      mint,
+      decimals,
+      true,
+      amount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    )
     : isRaydium
-    ? await raydiumService.swapToken(
+      ? await raydiumService.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -562,7 +567,7 @@ export const autoBuyHandler = async (
         username,
         isToken2022
       )
-    : await jupiterSerivce.swapToken(
+      : await jupiterSerivce.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -580,6 +585,11 @@ export const autoBuyHandler = async (
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
 
+    // Here, we need to set Flag because of PNL calucation
+    // while waiting for bundle verification, "position" collection
+    // might be overlapped
+    await setFlagForBundleVerify(user.wallet_address);
+
     // Just in case
     try {
       await bot.editMessageText(successCaption, {
@@ -589,11 +599,11 @@ export const autoBuyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) {}
+    } catch (e) { }
 
-    // const status = await getSignatureStatus(signature);
-    const jitoBundleInstance = new JitoBundleService();
-    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    const status = await getSignatureStatus(signature);
+    // const jitoBundleInstance = new JitoBundleService();
+    // const status = await jitoBundleInstance.getBundleStatus(bundleId);
 
     if (!status) {
       await bot.deleteMessage(chat_id, pendingTxMsgId);
@@ -780,19 +790,19 @@ export const sellHandler = async (
   // const jupiterSerivce = new JupiterService();
   const quoteResult = isPumpfunTradable
     ? await pumpFunSwap(
-        user.private_key,
-        mint,
-        decimals,
-        false,
-        sellAmount,
-        gasvalue,
-        slippage,
-        user.burn_fee ?? true,
-        username,
-        isToken2022
-      )
+      user.private_key,
+      mint,
+      decimals,
+      false,
+      sellAmount,
+      gasvalue,
+      slippage,
+      user.burn_fee ?? true,
+      username,
+      isToken2022
+    )
     : isRaydium
-    ? await raydiumService.swapToken(
+      ? await raydiumService.swapToken(
         user.private_key,
         mint,
         NATIVE_MINT.toString(),
@@ -804,7 +814,7 @@ export const sellHandler = async (
         username,
         isToken2022
       )
-    : await jupiterSerivce.swapToken(
+      : await jupiterSerivce.swapToken(
         user.private_key,
         mint,
         NATIVE_MINT.toString(),
@@ -821,24 +831,25 @@ export const sellHandler = async (
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
 
-    // const status = await getSignatureStatus(signature);
-    const jitoBundleInstance = new JitoBundleService();
-    const status = await jitoBundleInstance.getBundleStatus(bundleId);
-    if (status) {
-      // await bot.deleteMessage(
-      //   chat_id,
-      //   pendingMessage.message_id
-      // );
-      const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+    // Here, we need to set Flag because of PNL calucation
+    // while waiting for bundle verification, "position" collection
+    // might be overlapped
+    await setFlagForBundleVerify(user.wallet_address);
 
-      await bot.editMessageText(successCaption, {
-        message_id: pendingMessage.message_id,
-        chat_id,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      });
-    } else {
+    const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+
+    await bot.editMessageText(successCaption, {
+      message_id: pendingMessage.message_id,
+      chat_id,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+    });
+
+    const status = await getSignatureStatus(signature);
+    // const jitoBundleInstance = new JitoBundleService();
+    // const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    if (!status) {
       const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
       await bot.editMessageText(failedCaption, {
         message_id: pendingMessage.message_id,
@@ -870,7 +881,7 @@ export const sellHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
