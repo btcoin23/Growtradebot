@@ -12,6 +12,7 @@ import {
   PRESET_BUY_TEXT,
   SELL_XPRO_TEXT,
   SET_SLIPPAGE_TEXT,
+  TradeBotID,
 } from "../bot.opts";
 import {
   ComputeBudgetProgram,
@@ -55,6 +56,7 @@ import { getCoinData } from "../pump/api";
 import { pumpFunSwap } from "../pump/swap";
 import { setFlagForBundleVerify } from "../services/redis.service";
 import { getReplyOptionsForSettings } from "./settings.screen";
+import { GenerateReferralCode } from "./referral.link.handler";
 
 export const buyCustomAmountScreenHandler = async (
   bot: TelegramBot,
@@ -866,10 +868,30 @@ export const sellHandler = async (
     const { inAmount, outAmount } = quote;
     const inAmountNum = fromWeiToValue(inAmount, decimals);
     const outAmountNum = fromWeiToValue(outAmount, 9);
+    const quoteValue = {inAmount: inAmountNum, outAmount: outAmountNum} as QuoteRes;
 
-    const pnlservice = new PNLService(user.wallet_address, mint);
-    await pnlservice.afterSell(outAmountNum, percent);
+    const pnlService = new PNLService(user.wallet_address, mint);
+    await pnlService.initialize();
+    const pnldata = await pnlService.getPNLInfo();
 
+    //send pnl Card
+    let profitInSOL = 0;
+    let pnlPercent = 0;
+    const boughtInSOL = await pnlService.getBoughtAmount() as number;
+    if (pnldata) {
+      const { profitInSOL : profitSol, percent } = pnldata;
+      profitInSOL = profitSol;
+      pnlPercent = percent
+    }
+    const solPrice = await TokenService.getSOLPrice();
+    const profitInUSD = profitInSOL * Number(solPrice);
+    const referrerCode = await GenerateReferralCode(user.username)
+    const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL.toFixed(5), pnlValue: profitInUSD.toFixed(5), worth: Math.abs(profitInSOL).toFixed(5), profitPercent: pnlPercent.toFixed(5), burnAmount: Number(0).toFixed(5), isBuy: false, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
+    const { pnlUrl } = await pnlService.getPNLCard(pnlData);
+    await bot.sendPhoto(msg.chat.id, pnlUrl, {
+      parse_mode: 'HTML'
+    });
+    await pnlService.afterSell(outAmountNum, percent);
     // Update Referral System
     await checkReferralFeeSent(total_fee_in_sol, username);
   } else {

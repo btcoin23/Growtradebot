@@ -88,7 +88,7 @@ export class PNLService {
     return { profitInSOL, percent };
   }
 
-  async getPNLCard(pnlData: any): Promise<string> {
+  async getPNLCard(pnlData: any): Promise<any> {
     const url = PNL_IMG_GENERATOR_API + '/create'
         const res = await fetch(url, {
           method: 'POST',   
@@ -103,10 +103,10 @@ export class PNLService {
             {
               // console.log(data.pplUrl)
               const urls = data.pplUrl.split('/')
-              return urls[urls.length - 1].replace('.png', 'png')
+              return { pnlCard: urls[urls.length - 1].replace('.png', 'png'), pnlUrl: data.pplUrl }
             }
           }
-    return '';
+    return null;
   }
 
   async getBoughtAmount() {
