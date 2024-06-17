@@ -3,18 +3,19 @@ import { isEqual } from "../utils";
 import { QuoteRes } from "./jupiter.service";
 import { amount } from "@metaplex-foundation/js";
 import { waitFlagForBundleVerify } from "./redis.service";
+import { PNL_IMG_GENERATOR_API } from "../config";
 
 export class PNLService {
   wallet_address: string;
   mint: string;
   // username: string;
-  quote: QuoteRes | undefined; // input: mint, output: SOL
+  quote: QuoteRes | undefined | null; // input: mint, output: SOL
 
   constructor(
     _wallet_address: string,
     _mint: string,
     // _username: string,
-    _quote?: QuoteRes
+    _quote?: QuoteRes | undefined | null
   ) {
     this.wallet_address = _wallet_address;
     this.mint = _mint;
@@ -85,6 +86,38 @@ export class PNLService {
     const profitInSOL = outAmount + received_sol_amount - sol_amount;
     const percent = profitInSOL * 100 / sol_amount;
     return { profitInSOL, percent };
+  }
+
+  async getPNLCard(pnlData: any): Promise<string> {
+    const url = PNL_IMG_GENERATOR_API + '/create'
+        const res = await fetch(url, {
+          method: 'POST',   
+          headers: {
+            'Content-Type': 'application/json'
+            }, 
+          body: JSON.stringify(pnlData) })
+  
+          if(res){
+            const data = await res.json();
+            if(res.status === 200)
+            {
+              // console.log(data.pplUrl)
+              const urls = data.pplUrl.split('/')
+              return urls[urls.length - 1].replace('.png', 'png')
+            }
+          }
+    return '';
+  }
+
+  async getBoughtAmount() {
+    const position = await PositionService.findLastOne({
+      wallet_address: this.wallet_address,
+      mint: this.mint,
+    });
+    if (!position) return null;
+    
+    const { sol_amount } = position;
+    return sol_amount;
   }
   /**
    * inAmount: SOL amount spent

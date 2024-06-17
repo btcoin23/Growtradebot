@@ -96,7 +96,7 @@ export const calcAmountOut = async (
   if (isAmm) {
     const targetPoolInfo = ammKeys ? JSON.parse(JSON.stringify(ammKeys)) : await syncAmmPoolKeys(poolId);
     if (!targetPoolInfo) {
-      console.log("🚀 cannot find the target pool", 11);
+      console.log("🚀 cannot find the target pool", poolId);
       return;
     }
     const poolKeys = jsonInfo2PoolKeys(targetPoolInfo) as LiquidityPoolKeys;
@@ -128,10 +128,6 @@ export const calcAmountOut = async (
     });
 
     const decimalsDiff = currentPrice.baseCurrency.decimals - currentPrice.quoteCurrency.decimals;
-    console.log(
-      (currentPrice.baseCurrency as Token).mint.toBase58(),
-      NATIVE_MINT.toBase58()
-    )
     if ((currentPrice.baseCurrency as Token).mint.toBase58() === NATIVE_MINT.toBase58()) {
       priceInSol = Number(currentPrice.denominator) / Number(currentPrice.numerator) / (10 ** decimalsDiff);
       console.log("F=>PriceInSOL & OutAmount", currentPrice.numerator.toString(), currentPrice.denominator.toString());

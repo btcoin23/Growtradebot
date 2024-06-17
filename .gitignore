@@ -11,3 +11,4 @@ artifacts
 yarn.lock
 
 .DS_Store
+test.ts

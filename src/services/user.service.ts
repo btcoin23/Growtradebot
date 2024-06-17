@@ -98,6 +98,15 @@ export const UserService = {
   extractUniqueCode: (text: string): string | null => {
     const words = text.split(' ');
     return words.length > 1 ? words[1] : null;
+  },
+
+  extractPNLdata: (text: string): any => {
+    const words = text.split(' ');
+    if(words.length > 1){
+      if(words[1].endsWith('png')){
+        return words[1].replace('png', '.png');
+      }
+    }
   }
 
 };

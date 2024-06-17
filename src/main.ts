@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-import { TELEGRAM_BOT_API_TOKEN } from "./config";
+import { PNL_IMG_GENERATOR_API, TELEGRAM_BOT_API_TOKEN } from "./config";
 import { AlertBotID, BotMenu } from "./bot.opts";
 import { WelcomeScreenHandler } from "./screens/welcome.screen";
 import { callbackQueryHandler } from "./controllers/callback.handler";
@@ -56,20 +56,29 @@ const startTradeBot = () => {
   bot.onText(/\/start/, async (msg: TelegramBot.Message) => {
     // Need to remove "/start" text
     bot.deleteMessage(msg.chat.id, msg.message_id);
-    await WelcomeScreenHandler(bot, msg);
-
+    
     // https://t.me/growswapver1_bot?start=mqMyH7jKzWN3tNA
-    const referralcode = UserService.extractUniqueCode(msg.text ?? "");
-    if (referralcode && referralcode !== "") {
-      // store info
-      const chat = msg.chat;
-      if (chat.username) {
-        const data = await UserService.findLastOne({ username: chat.username });
-        if (data && data.referral_code && data.referral_code !== "") return;
-        await UserService.updateMany({ username: chat.username }, {
-          referral_code: referralcode,
-          referral_date: new Date()
-        });
+    console.log(msg.text)
+    const pnlData = UserService.extractPNLdata(msg.text ?? "");
+    if(pnlData){
+      const pnlUrl = PNL_IMG_GENERATOR_API + '/assets/pnl/' + pnlData
+      await bot.sendPhoto(msg.chat.id, pnlUrl, {
+        parse_mode: 'HTML'
+      });
+    }else{
+      await WelcomeScreenHandler(bot, msg);
+      const referralcode = UserService.extractUniqueCode(msg.text ?? "");
+      if (referralcode && referralcode !== "") {
+        // store info
+        const chat = msg.chat;
+        if (chat.username) {
+          const data = await UserService.findLastOne({ username: chat.username });
+          if (data && data.referral_code && data.referral_code !== "") return;
+          await UserService.updateMany({ username: chat.username }, {
+            referral_code: referralcode,
+            referral_date: new Date()
+          });
+        }
       }
     }
   });

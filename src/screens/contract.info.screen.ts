@@ -29,6 +29,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { PNLService } from "../services/pnl.service";
 import { RaydiumTokenService } from "../services/raydium.token.service";
 import {
+  PNL_IMG_GENERATOR_API,
   PNL_SHOW_THRESHOLD_USD,
   RAYDIUM_PASS_TIME,
   connection,
@@ -40,6 +41,8 @@ import { calcAmountOut, getPriceInSOL, syncAmmPoolKeys, syncClmmPoolKeys } from 
 import { OpenMarketService } from "../services/openmarket.service";
 import { getCoinData } from "../pump/api";
 import { TokenSecurityInfoDataType } from "../services/birdeye.api.service";
+import { TradeBotID } from "../bot.opts";
+import { GenerateReferralCode } from "./referral.link.handler";
 
 export const inline_keyboards = [
   [{ text: "Gas: 0.000105 SOL", command: null }],
@@ -56,20 +59,21 @@ export const contractInfoScreenHandler = async (
 ) => {
   try {
     const { id: chat_id, username } = msg.chat;
-
+    
     if (!username) {
       await sendUsernameRequiredNotification(bot, msg);
       return;
     }
-
+    
     // user
     const user = await UserService.findOne({ username });
     if (!user) {
       await sendNoneUserNotification(bot, msg);
       return;
     }
-
-
+    
+    
+    const referrerCode = await GenerateReferralCode(username)
     let caption = ''
     let solbalance = 0;
     let splbalance = 0;
@@ -101,6 +105,8 @@ export const contractInfoScreenHandler = async (
 
     if (isPumpfunTradable) {
       const captionForPump = await getPumpTokenInfoCaption(
+        chat_id,
+        referrerCode,
         mint,
         user.wallet_address
       );
@@ -119,6 +125,8 @@ export const contractInfoScreenHandler = async (
       // 120minutes
       // if (duration < RAYDIUM_PASS_TIME) {
       const captionForRaydium = await getRaydiumTokenInfoCaption(
+        chat_id,
+        referrerCode,
         raydiumPoolInfo,
         user.wallet_address
       );
@@ -139,6 +147,8 @@ export const contractInfoScreenHandler = async (
         return;
       }
       const captionForJuipter = await getJupiterTokenInfoCaption(
+        chat_id,
+        referrerCode,
         tokeninfo,
         mint,
         user.wallet_address
@@ -259,6 +269,8 @@ export const contractInfoScreenHandler = async (
 }
 
 const getRaydiumTokenInfoCaption = async (
+  chat_id: number,
+  referrerCode: any,
   raydiumPoolInfo: any,
   wallet_address: string,
 ) => {
@@ -336,9 +348,11 @@ const getRaydiumTokenInfoCaption = async (
     );
     const price = priceInUsd;
     const mc = circulateSupply * price;
-    console.log(quote);
+    console.log('quote: ',  quote);
 
     const caption = await buildCaption(
+      chat_id,
+      referrerCode,
       tokenName,
       tokenSymbol,
       isToken2022,
@@ -374,6 +388,8 @@ const getRaydiumTokenInfoCaption = async (
 }
 
 const getJupiterTokenInfoCaption = async (
+  chat_id: number,
+  referrerCode: any,
   tokeninfo: any,
   mint: string,
   wallet_address: string,
@@ -399,9 +415,11 @@ const getJupiterTokenInfoCaption = async (
     ) : null;
     const priceImpact = quote ? quote.priceImpactPct : 0;
 
-    console.log(quote)
+    console.log('quote', quote)
 
     const caption = await buildCaption(
+      chat_id,
+      referrerCode,
       name,
       symbol,
       isToken2022,
@@ -429,6 +447,8 @@ const getJupiterTokenInfoCaption = async (
 }
 
 const getPumpTokenInfoCaption = async (
+  chat_id: number,
+  referrerCode: any,
   mintStr: string,
   wallet_address: string,
 ) => {
@@ -489,6 +509,8 @@ const getPumpTokenInfoCaption = async (
     // console.log(mc);
 
     const caption = await buildCaption(
+      chat_id,
+      referrerCode,
       tokenName,
       tokenSymbol,
       isToken2022,
@@ -519,6 +541,8 @@ const getPumpTokenInfoCaption = async (
 }
 
 const buildCaption = async (
+  chat_id: number,
+  referrerCode: string,
   name: string,
   symbol: string,
   isToken2022: boolean,
@@ -536,12 +560,30 @@ const buildCaption = async (
   splbalance: number
 ) => {
   let caption = '';
-
+  let boughtInSOL = 0
+  let profitInSOL = 0;
+  let pnlPercent = 0;
   caption += `🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"})</b> ` +
     `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
     `<i>${copytoclipboard(mint)}</i>\n\n`;
-  caption += await getPNLCaptionFromQuote(quote, wallet_address, mint, solprice);
 
+  const pnlService = new PNLService(
+    wallet_address,
+    mint,
+    quote
+  )
+  await pnlService.initialize();
+  const pnldata = await pnlService.getPNLInfo();
+  boughtInSOL = await pnlService.getBoughtAmount() as number;
+  if (pnldata) {
+    const { profitInSOL : profitSol, percent } = pnldata;
+    profitInSOL = profitSol;
+    pnlPercent = percent
+  }
+  const profitInUSD = profitInSOL * Number(solprice);
+  const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL, pnlValue: profitInUSD, worth: profitInSOL, profitPercent: pnlPercent, burnAmount: Number(0), isBuy: splbalance > 0, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
+  const pnlCard = await pnlService.getPNLCard(pnlData);
+  caption += `<b>PNL:</b> +${pnlPercent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] ${pnlPercent > 0? '🟩': '🟥'} \n\n`
   caption += `🌳 Mint Disabled: ${mintAuthority ? "🔴" : "🍏"}\n` +
     `🌳 Freeze Disabled: ${freezeAuthority ? "🔴" : "🍏"}\n` +
     `👥 Top 10 holders: ${top10HolderPercent && (top10HolderPercent > 0.15 ? '🔴' : '🍏')}  [ ${top10HolderPercent && (top10HolderPercent * 100)?.toFixed(2)}% ]\n\n` +
@@ -550,6 +592,7 @@ const buildCaption = async (
     `📊 Market Cap: <b>$${formatKMB(mc)}</b>\n\n` +
     `💳 <b>Balance: ${solbalance.toFixed(6)} SOL\n` +
     `💳 Token: ${splbalance} ${symbol ?? ""}</b>\n` +
+    `🖼 <a href="https://t.me/${TradeBotID}?start=${pnlCard}">Generate PNL Card</a>\n` +
     `${contractLink(mint)} • ${birdeyeLink(mint)} • ${dextoolLink(mint)} • ${dexscreenerLink(mint)}`;
 
   return caption;
@@ -628,33 +671,5 @@ export const refreshHandler = async (bot: TelegramBot, msg: TelegramBot.Message)
     await contractInfoScreenHandler(bot, msg, mint)
   } catch (e) {
     console.log("~ refresh handler ~", e)
-  }
-}
-
-export const getPNLCaptionFromQuote = async (
-  quote: QuoteRes | null,
-  wallet_address: string,
-  mint: string,
-  solprice: number
-) => {
-  if (quote) {
-    const pnlService = new PNLService(
-      wallet_address,
-      mint,
-      quote
-    )
-    await pnlService.initialize();
-    const pnldata = await pnlService.getPNLInfo();
-    if (pnldata) {
-      const { profitInSOL, percent } = pnldata;
-      const profitInUSD = profitInSOL * Number(solprice);
-      if (profitInSOL < 0) {
-        return `<b>PNL:</b> ${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟥\n\n`
-      } else {
-        return `<b>PNL:</b> +${percent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] 🟩\n\n`
-      }
-    }
-  } else {
-    return `<b>PNL:</b> 0%\n\n`
   }
 }
