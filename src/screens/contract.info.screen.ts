@@ -225,7 +225,7 @@ export const contractInfoScreenHandler = async (
     if (switchBtn && !fromPosition) {
       const sentMessage = bot.editMessageReplyMarkup(
         {
-          inline_keyboard: [gaskeyboards, ...inline_keyboards].map((rowItem) =>
+          inline_keyboard: [...inline_keyboards].map((rowItem) =>
             rowItem.map((item) => {
               return {
                 text: item.text,

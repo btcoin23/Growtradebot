@@ -1169,11 +1169,17 @@ export const pnlCardHandler = async (
     });
     if (!msglog) return;
     const { mint } = msglog;
-
+    let tokenSymbol;
     const referrerCode = await GenerateReferralCode(username);
     const { symbol } = await TokenService.fetchSimpleMetaData(
       new PublicKey(mint)
     );
+    tokenSymbol = symbol
+    if(tokenSymbol === ''){
+      const tokeninfo = await TokenService.getMintInfo(mint);
+      tokenSymbol = tokeninfo?.overview.symbol;
+    }
+
     const solPrice = await TokenService.getSOLPrice();
     const metadata = await TokenService.getMintMetadata(
       private_connection,
@@ -1260,7 +1266,7 @@ export const pnlCardHandler = async (
     );
     const req = {
       chatId: chat_id,
-      pairTitle: `${symbol}/SOL`,
+      pairTitle: `${tokenSymbol}/SOL`,
       boughtAmount: Number(boughtInSOL).toFixed(2),
       pnlValue: Number(profitInSOL).toFixed(2),
       worth: Math.abs(Number(profitInUSD)).toFixed(2),
