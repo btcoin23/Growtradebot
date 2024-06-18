@@ -1,6 +1,6 @@
 import { struct, u32, u8 } from '@solana/buffer-layout';
 import { bool, publicKey, u64 } from '@solana/buffer-layout-utils';
-import { Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 
 /** Information about a mint */
 export interface Mint {
@@ -52,39 +52,3 @@ export const TokenAccountLayout = struct<TokenAccount>([
     u64('uiAmount'),
 ]);
 
-export interface MintExtention {
-    extension: string, // transferFeeConfig,
-    state: {
-        newerTransferFee: {
-            epoch: number, // 580,
-            maximumFee: number, //  2328306436538696000,
-            transferFeeBasisPoints: number, // 800
-        },
-        olderTransferFee: {
-            epoch: number, // 580,
-            maximumFee: number, // 2328306436538696000,
-            transferFeeBasisPoints: number, // 800
-        },
-        transferFeeConfigAuthority: string,
-        withdrawWithheldAuthority: string,
-        withheldAmount: number, // 284998271699445
-    }
-}
-
-export interface MintParsedInfo {
-    decimals: number,
-    freezeAuthority: string | null,
-    isInitialized: Boolean,
-    mintAuthority: string | null,
-    supply: string,
-    extension?: MintExtention[],
-}
-export interface MintParsed {
-    info: MintParsedInfo,
-    type: string, // 'mint'
-}
-export interface MintData {
-    program: string; // 'spl-token', 'spl-token-2022'
-    parsed: MintParsed,
-    space: number,
-}

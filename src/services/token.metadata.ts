@@ -1,7 +1,7 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout, ExtensionType, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, getExtensionData, getExtensionTypes, getMetadataPointerState, getMint } from "@solana/spl-token";
 import { COMMITMENT_LEVEL, MAINNET_RPC, connection } from "../config";
 import { Metaplex, Metadata } from "@metaplex-foundation/js";
-import { GetProgramAccountsFilter, PublicKey } from "@solana/web3.js";
+import { Connection, GetProgramAccountsFilter, PublicKey } from "@solana/web3.js";
 import redisClient from "./redis";
 import { formatNumber, getPrice } from "../utils";
 import { BirdEyeAPIService, TokenOverviewDataType, TokenSecurityInfoDataType } from "./birdeye.api.service";
@@ -12,6 +12,48 @@ export interface ITokenAccountInfo {
   name: string,
   symbol: string
 }
+
+export interface MintExtention {
+  extension: string, // transferFeeConfig,
+  state: {
+      newerTransferFee: {
+          epoch: number, // 580,
+          maximumFee: number, //  2328306436538696000,
+          transferFeeBasisPoints: number, // 800
+      },
+      olderTransferFee: {
+          epoch: number, // 580,
+          maximumFee: number, // 2328306436538696000,
+          transferFeeBasisPoints: number, // 800
+      },
+      transferFeeConfigAuthority: string,
+      withdrawWithheldAuthority: string,
+      withheldAmount: number, // 284998271699445
+  }
+}
+
+export interface MintParsedInfo {
+  decimals: number,
+  freezeAuthority: string | null,
+  isInitialized: Boolean,
+  mintAuthority: string | null,
+  supply: string,
+  extension?: MintExtention[],
+}
+
+
+
+export interface MintParsed {
+  info: MintParsedInfo,
+  type: string, // 'mint'
+}
+
+export interface MintData {
+  program: string; // 'spl-token', 'spl-token-2022'
+  parsed: MintParsed,
+  space: number,
+}
+
 const knownMints = [
   {
     mint: "FPymkKgpg1sLFbVao4JMk4ip8xb8C8uKqfMdARMobHaw",
@@ -228,6 +270,29 @@ export const TokenService = {
         name: "",
         symbol: "",
       };
+    }
+  },
+  getMintMetadata: async (
+    connection: Connection,
+    mint: PublicKey
+  ): Promise<MintData | undefined> => {
+    try {
+      const key = `raymintmeta_${mint}`;
+      const res = await redisClient.get(key);
+      if (res) {
+        return JSON.parse(res) as MintData;
+      }
+      const mintdata = await connection.getParsedAccountInfo(mint);
+      if (!mintdata || !mintdata.value) {
+        return;
+      }
+  
+      const data = mintdata.value.data as MintData;
+      await redisClient.set(key, JSON.stringify(data));
+      await redisClient.expire(key, 30);
+      return data;
+    } catch (e) {
+      return undefined;
     }
   },
   getSOLBalance: async (owner: string, isLive: boolean = false) => {

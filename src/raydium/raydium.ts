@@ -15,7 +15,7 @@ import {
   RAYDIUM_LIQUIDITY_PROGRAM_ID_CLMM,
 } from "./liquidity";
 import { MinimalMarketLayoutV3 } from "./market";
-import { MintData, MintLayout, TokenAccountLayout } from "./types";
+import { MintLayout, TokenAccountLayout } from "./types";
 import {
   connection,
   COMMITMENT_LEVEL,
@@ -172,29 +172,6 @@ export async function checkMintable(
   }
 }
 
-export async function getMintMetadata(
-  connection: Connection,
-  mint: PublicKey
-): Promise<MintData | undefined> {
-  try {
-    const key = `raymintmeta_${mint}`;
-    const res = await redisClient.get(key);
-    if (res) {
-      return JSON.parse(res) as MintData;
-    }
-    const mintdata = await connection.getParsedAccountInfo(mint);
-    if (!mintdata || !mintdata.value) {
-      return;
-    }
-
-    const data = mintdata.value.data as MintData;
-    await redisClient.set(key, JSON.stringify(data));
-    await redisClient.expire(key, 30);
-    return data;
-  } catch (e) {
-    return undefined;
-  }
-}
 export async function getTop10HoldersPercent(
   connection: Connection,
   mint: string,

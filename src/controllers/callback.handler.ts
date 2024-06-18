@@ -4,7 +4,7 @@ import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { autoBuyAmountScreenHandler, changeJitoTipFeeHandler, generateNewWalletHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, setCustomJitoFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
+import { autoBuyAmountScreenHandler, changeJitoTipFeeHandler, generateNewWalletHandler, pnlCardHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, setCustomJitoFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
 import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
@@ -259,6 +259,11 @@ export const callbackQueryHandler = async (
     }
     if (data.command === 'refresh') {
       await refreshHandler(bot, callbackMessage);
+      return;
+    }
+
+    if(data.command === 'pnl_card'){
+      await pnlCardHandler(bot, callbackMessage);
       return;
     }
   } catch (e) {

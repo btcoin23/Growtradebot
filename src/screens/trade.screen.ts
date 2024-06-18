@@ -50,8 +50,6 @@ import {
 import { PNLService } from "../services/pnl.service";
 import { RaydiumSwapService, getPriceInSOL } from "../raydium/raydium.service";
 import { RaydiumTokenService } from "../services/raydium.token.service";
-import { getMintMetadata } from "../raydium";
-import { JitoBundleService } from "../services/jito.bundle";
 import { getCoinData } from "../pump/api";
 import { pumpFunSwap } from "../pump/swap";
 import { setFlagForBundleVerify } from "../services/redis.service";
@@ -252,7 +250,7 @@ export const buyHandler = async (
 
     name = coinData["name"];
     symbol = coinData["symbol"];
-    const metadata = await getMintMetadata(
+    const metadata = await TokenService.getMintMetadata(
       private_connection,
       new PublicKey(mint)
     );
@@ -261,7 +259,7 @@ export const buyHandler = async (
     isToken2022 = metadata.program === "spl-token-2022";
   } else if (raydiumPoolInfo && !isJupiterTradable) {
     // Metadata
-    const metadata = await getMintMetadata(
+    const metadata = await TokenService.getMintMetadata(
       private_connection,
       new PublicKey(mint)
     );
@@ -489,7 +487,7 @@ export const autoBuyHandler = async (
 
     name = coinData["name"];
     symbol = coinData["symbol"];
-    const metadata = await getMintMetadata(
+    const metadata = await TokenService.getMintMetadata(
       private_connection,
       new PublicKey(mint)
     );
@@ -497,7 +495,7 @@ export const autoBuyHandler = async (
     decimals = metadata.parsed.info.decimals;
     isToken2022 = metadata.program === "spl-token-2022";
   } else if (raydiumPoolInfo && !isJupiterTradable) {
-    const metadata = await getMintMetadata(
+    const metadata = await TokenService.getMintMetadata(
       private_connection,
       new PublicKey(mint)
     );
@@ -721,7 +719,7 @@ export const sellHandler = async (
 
     name = coinData["name"];
     symbol = coinData["symbol"];
-    const metadata = await getMintMetadata(
+    const metadata = await TokenService.getMintMetadata(
       private_connection,
       new PublicKey(mint)
     );
@@ -729,7 +727,7 @@ export const sellHandler = async (
     decimals = metadata.parsed.info.decimals;
     isToken2022 = metadata.program === "spl-token-2022";
   } else if (raydiumPoolInfo && !isJupiterTradable) {
-    const metadata = await getMintMetadata(
+    const metadata = await TokenService.getMintMetadata(
       private_connection,
       new PublicKey(mint)
     );

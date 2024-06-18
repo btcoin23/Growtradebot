@@ -116,8 +116,7 @@ export class PNLService {
     });
     if (!position) return null;
     
-    const { sol_amount } = position;
-    return sol_amount;
+    return position.sol_amount;
   }
   /**
    * inAmount: SOL amount spent

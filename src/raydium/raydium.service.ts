@@ -27,9 +27,7 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import bs58 from "bs58";
-// import { createPoolKeys, convertDBForPoolStateV4 } from "./liquidity";
-// import { convertDBForMarketV3, getMinimalMarketV3 } from "./market";
-// import { QuoteRes } from "../services/jupiter.service";
+
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createCloseAccountInstruction,
