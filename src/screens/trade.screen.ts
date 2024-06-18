@@ -840,6 +840,7 @@ export const sellHandler = async (
       let profitInSOL = 0;
       let pnlPercent = 0;
       const boughtInSOL = await pnlService.getBoughtAmount() as number;
+      const boughtAmount = Number(boughtInSOL * percent / 100).toFixed(2)
       if (pnldata) {
         const { profitInSOL : profitSol, percent } = pnldata;
         profitInSOL = profitSol;
@@ -848,7 +849,7 @@ export const sellHandler = async (
       const solPrice = await TokenService.getSOLPrice();
       const profitInUSD = profitInSOL * Number(solPrice);
       const referrerCode = await GenerateReferralCode(user.username)
-      const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL.toFixed(2), pnlValue: profitInSOL.toFixed(2), worth: Math.abs(profitInUSD).toFixed(2), profitPercent: pnlPercent.toFixed(2), burnAmount: Number(0).toFixed(2), isBuy: false, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
+      const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount, pnlValue: profitInSOL.toFixed(2), worth: Math.abs(profitInUSD).toFixed(2), profitPercent: pnlPercent.toFixed(2), burnAmount: Number(0).toFixed(2), isBuy: false, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
       const { pnlUrl } = await pnlService.getPNLCard(pnlData);
       await bot.sendPhoto(msg.chat.id, pnlUrl, {
         parse_mode: 'HTML'
