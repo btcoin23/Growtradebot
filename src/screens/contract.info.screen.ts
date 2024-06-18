@@ -581,7 +581,7 @@ const buildCaption = async (
     pnlPercent = percent
   }
   const profitInUSD = profitInSOL * Number(solprice);
-  const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL.toFixed(5), pnlValue: profitInUSD.toFixed(5), worth: Math.abs(profitInSOL).toFixed(5), profitPercent: pnlPercent.toFixed(5), burnAmount: Number(0).toFixed(5), isBuy: splbalance > 0, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
+  const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL.toFixed(2), pnlValue: profitInSOL.toFixed(2), worth: Math.abs(profitInUSD).toFixed(2), profitPercent: pnlPercent.toFixed(2), burnAmount: Number(0).toFixed(2), isBuy: splbalance > 0, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
   const { pnlCard, pnlUrl } = await pnlService.getPNLCard(pnlData);
   caption += `<b>PNL:</b> ${pnlPercent.toFixed(3)}% [${profitInSOL.toFixed(3)} Sol | ${profitInUSD.toFixed(2)}$] ${pnlPercent > 0? '🟩': '🟥'} \n\n`
   caption += `🌳 Mint Disabled: ${mintAuthority ? "🔴" : "🍏"}\n` +
