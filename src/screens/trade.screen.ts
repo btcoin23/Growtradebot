@@ -55,6 +55,7 @@ import { pumpFunSwap } from "../pump/swap";
 import { setFlagForBundleVerify } from "../services/redis.service";
 import { getReplyOptionsForSettings } from "./settings.screen";
 import { GenerateReferralCode } from "./referral.link.handler";
+import { JitoBundleService } from "../services/jito.bundle";
 
 export const buyCustomAmountScreenHandler = async (
   bot: TelegramBot,
@@ -583,39 +584,26 @@ export const autoBuyHandler = async (
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
-    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
-
+  
     // Here, we need to set Flag because of PNL calucation
     // while waiting for bundle verification, "position" collection
     // might be overlapped
     await setFlagForBundleVerify(user.wallet_address);
 
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+
+    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+    const resultCaption = getcaption(status? `🟢 <b>Buy Success</b>\n`: `🔴 <b>Buy Failed</b>\n`, suffix);
     // Just in case
-    try {
-      await bot.editMessageText(successCaption, {
-        message_id: pendingTxMsgId,
-        chat_id,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      });
-    } catch (e) { }
-
-    const status = await getSignatureStatus(signature);
-    // const jitoBundleInstance = new JitoBundleService();
-    // const status = await jitoBundleInstance.getBundleStatus(bundleId);
-
-    if (!status) {
-      await bot.deleteMessage(chat_id, pendingTxMsgId);
-      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
-      await bot.sendMessage(chat_id, failedCaption, {
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      });
-      return;
-    }
+    await bot.editMessageText(resultCaption, {
+      message_id: pendingTxMsgId,
+      chat_id,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+    });
 
     // Buy with SOL.
     const { inAmount, outAmount } = quote;
