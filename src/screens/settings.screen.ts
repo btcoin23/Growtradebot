@@ -611,7 +611,7 @@ export const setCustomFeeHandler = async (
     bot.deleteMessage(chat_id, reply_message_id);
 
     const inline_keyboards = [
-      [{ text: "Gas: 0.000105 SOL", command: null }],
+      [{ text: '🖼 Generate PNL Card', command: 'pnl_card' }],
       // [{ text: "Slippage: 5%", command: 'set_slippage' }],
       [
         { text: "Buy 0.01 SOL", command: "buytoken_0.01" },
@@ -672,13 +672,6 @@ export const setCustomFeeHandler = async (
       ];
     }
     const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
-    const { slippage } = slippageSetting;
-
-    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(
-      GasFeeEnum.CUSTOM
-    );
-    const pnlkeyboard = [{ text: '🖼 Generate PNL Card', command: 'pnl_card' }]
-
     inline_keyboards[0][0] = {
       text: `Gas: ${amount} SOL ⚙️`,
       command: "custom_fee",
@@ -687,7 +680,7 @@ export const setCustomFeeHandler = async (
 
     await bot.editMessageReplyMarkup(
       {
-        inline_keyboard: [pnlkeyboard, gaskeyboards, ...inline_keyboards].map((rowItem) =>
+        inline_keyboard: [...inline_keyboards].map((rowItem) =>
           rowItem.map((item) => {
             return {
               text: item.text,
@@ -872,6 +865,8 @@ export const getReplyOptionsForSettings = async (
   // Slippage
   const slippageSetting = await UserTradeSettingService.getSlippage(username);
 
+  const gasSetting = await UserTradeSettingService.getGas(username);
+  const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
   // JitoFee
   const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
   const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
@@ -943,6 +938,44 @@ export const getReplyOptionsForSettings = async (
             command: `custom_jitofee`,
           }),
         },
+      ],
+      [
+        {
+          text: "--- PRIORITY FEES ---",
+          callback_data: JSON.stringify({
+            command: `dump`,
+          }),
+        },
+      ],
+      [
+        { 
+          text: `${(gasSetting.gas === GasFeeEnum.LOW ? "🟢" : "🔴")} Low Gas`,
+          callback_data: JSON.stringify({
+            command: 'low_gas' 
+          }),
+        },
+        { 
+          text: `${(gasSetting.gas === GasFeeEnum.MEDIUM ? "🟢" : "🔴")} Medium Gas`, 
+          callback_data: JSON.stringify({
+            command: 'medium_gas' 
+          }),
+        },
+        { 
+          text: `${(gasSetting.gas === GasFeeEnum.HIGH ? "🟢" : "🔴")} High Gas`, 
+          callback_data: JSON.stringify({
+          command: 'high_gas' 
+          }),
+        },
+      ],
+      [
+        {
+          text: `${
+            gasSetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""
+          } Gas: ${gasvalue} SOL ⚙️`,
+          callback_data: JSON.stringify({
+            command: "custom_fee",
+          }),
+        }
       ],
       [
         {

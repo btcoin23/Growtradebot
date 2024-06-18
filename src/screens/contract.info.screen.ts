@@ -43,7 +43,7 @@ import { getCoinData } from "../pump/api";
 import { TokenSecurityInfoDataType } from "../services/birdeye.api.service";
 
 export const inline_keyboards = [
-  [ { text: "Gas: 0.000105 SOL", command: null }],
+  [ { text: '🖼 Generate PNL Card', command: 'pnl_card' }],
   [
     { text: "Buy 0.01 SOL", command: "buytoken_0.01" },
     { text: "Buy 1 SOL", command: "buytoken_1" },
@@ -217,20 +217,10 @@ export const contractInfoScreenHandler = async (
     const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
     const gasSetting = await UserTradeSettingService.getGas(username);
     const { slippage } = slippageSetting;
-
+    const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
     const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(
       gasSetting.gas
     );
-    const pnlkeyboard = [{ text: '🖼 Generate PNL Card', command: 'pnl_card' }]
-      
-    const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
-
-    inline_keyboards[0][0] = {
-      text: `${
-        gasSetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""
-      } Gas: ${gasvalue} SOL ⚙️`,
-      command: "custom_fee",
-    };
 
     if (switchBtn && !fromPosition) {
       const sentMessage = bot.editMessageReplyMarkup(
@@ -266,7 +256,7 @@ export const contractInfoScreenHandler = async (
         parse_mode: "HTML",
         disable_web_page_preview: true,
         reply_markup: {
-          inline_keyboard: [pnlkeyboard, gaskeyboards, ...inline_keyboards].map((rowItem) =>
+          inline_keyboard: [...inline_keyboards].map((rowItem) =>
             rowItem.map((item) => {
               return {
                 text: item.text,
