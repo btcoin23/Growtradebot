@@ -358,51 +358,41 @@ export const buyHandler = async (
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
-    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    const successCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
-
     // Here, we need to set Flag because of PNL calucation
     // while waiting for bundle verification, "position" collection
     // might be overlapped
     await setFlagForBundleVerify(wallet_address);
 
-    // Just in case
-    try {
-      await bot.editMessageText(successCaption, {
-        message_id: pendingTxMsgId,
-        chat_id,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      });
-    } catch (e) { }
+    // const status = await getSignatureStatus(signature);
+    let resultCaption
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+    if (status) {
+      resultCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);    
+      // Buy with SOL.
+      const { inAmount, outAmount } = quote;
+      const inAmountNum = fromWeiToValue(inAmount, 9);
+      const outAmountNum = fromWeiToValue(outAmount, decimals);
+      console.log(inAmountNum, outAmountNum);
 
-    const status = await getSignatureStatus(signature);
-    // const jitoBundleInstance = new JitoBundleService();
-    // const status = await jitoBundleInstance.getBundleStatus(bundleId);
-    if (!status) {
+      const pnlservice = new PNLService(user.wallet_address, mint);
+      await pnlservice.afterBuy(inAmountNum, outAmountNum);
+
+      // Update Referral System
+      await checkReferralFeeSent(total_fee_in_sol, username);
+    }else{
       await bot.deleteMessage(chat_id, pendingTxMsgId);
-      const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
-
-      await bot.sendMessage(chat_id, failedCaption, {
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      });
-      return;
+      resultCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
     }
-
-    // Buy with SOL.
-    const { inAmount, outAmount } = quote;
-    const inAmountNum = fromWeiToValue(inAmount, 9);
-    const outAmountNum = fromWeiToValue(outAmount, decimals);
-    console.log(inAmountNum, outAmountNum);
-
-    const pnlservice = new PNLService(user.wallet_address, mint);
-    await pnlservice.afterBuy(inAmountNum, outAmountNum);
-
-    // Update Referral System
-    await checkReferralFeeSent(total_fee_in_sol, username);
+    await bot.editMessageText(resultCaption, {
+      message_id: pendingTxMsgId,
+      chat_id,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
+    });
+    
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     try {
@@ -584,19 +574,35 @@ export const autoBuyHandler = async (
 
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
-  
+    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
+    
     // Here, we need to set Flag because of PNL calucation
     // while waiting for bundle verification, "position" collection
     // might be overlapped
     await setFlagForBundleVerify(user.wallet_address);
-
+    
     // const status = await getSignatureStatus(signature);
     const jitoBundleInstance = new JitoBundleService();
     const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    let resultCaption
+    if (status) {
+      
+      resultCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
+      
+      // Buy with SOL.
+      const { inAmount, outAmount } = quote;
+      const inAmountNum = fromWeiToValue(inAmount, 9);
+      const outAmountNum = fromWeiToValue(outAmount, decimals);
 
-    const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    const resultCaption = getcaption(status? `🟢 <b>Buy Success</b>\n`: `🔴 <b>Buy Failed</b>\n`, suffix);
-    // Just in case
+      const pnlservice = new PNLService(user.wallet_address, mint);
+      await pnlservice.afterBuy(inAmountNum, outAmountNum);
+
+      // Update Referral System
+      await checkReferralFeeSent(total_fee_in_sol, username);
+    }else{
+      resultCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix)
+    }
+
     await bot.editMessageText(resultCaption, {
       message_id: pendingTxMsgId,
       chat_id,
@@ -605,16 +611,6 @@ export const autoBuyHandler = async (
       reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
     });
 
-    // Buy with SOL.
-    const { inAmount, outAmount } = quote;
-    const inAmountNum = fromWeiToValue(inAmount, 9);
-    const outAmountNum = fromWeiToValue(outAmount, decimals);
-
-    const pnlservice = new PNLService(user.wallet_address, mint);
-    await pnlservice.afterBuy(inAmountNum, outAmountNum);
-
-    // Update Referral System
-    await checkReferralFeeSent(total_fee_in_sol, username);
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     await bot.editMessageText(failedCaption, {
@@ -824,62 +820,54 @@ export const sellHandler = async (
     // while waiting for bundle verification, "position" collection
     // might be overlapped
     await setFlagForBundleVerify(user.wallet_address);
+    // const status = await getSignatureStatus(signature);
+    const jitoBundleInstance = new JitoBundleService();
+    const status = await jitoBundleInstance.getBundleStatus(bundleId);
+    let resultCaption
+    if (status) {
+      resultCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+      // Sell token for SOL.
+      const { inAmount, outAmount } = quote;
+      const inAmountNum = fromWeiToValue(inAmount, decimals);
+      const outAmountNum = fromWeiToValue(outAmount, 9);
+      const quoteValue = {inAmount: inAmountNum, outAmount: outAmountNum} as QuoteRes;
 
-    const successCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
+      const pnlService = new PNLService(user.wallet_address, mint, quoteValue);
+      await pnlService.initialize();
+      const pnldata = await pnlService.getPNLInfo();
 
-    await bot.editMessageText(successCaption, {
+      //send pnl Card
+      let profitInSOL = 0;
+      let pnlPercent = 0;
+      const boughtInSOL = await pnlService.getBoughtAmount() as number;
+      if (pnldata) {
+        const { profitInSOL : profitSol, percent } = pnldata;
+        profitInSOL = profitSol;
+        pnlPercent = percent
+      }
+      const solPrice = await TokenService.getSOLPrice();
+      const profitInUSD = profitInSOL * Number(solPrice);
+      const referrerCode = await GenerateReferralCode(user.username)
+      const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL.toFixed(2), pnlValue: profitInSOL.toFixed(2), worth: Math.abs(profitInUSD).toFixed(2), profitPercent: pnlPercent.toFixed(2), burnAmount: Number(0).toFixed(2), isBuy: false, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
+      const { pnlUrl } = await pnlService.getPNLCard(pnlData);
+      await bot.sendPhoto(msg.chat.id, pnlUrl, {
+        parse_mode: 'HTML'
+      });
+      await pnlService.afterSell(outAmountNum, percent);
+      // Update Referral System
+      await checkReferralFeeSent(total_fee_in_sol, username);
+
+    }else{
+      resultCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix)
+    }
+    await bot.editMessageText(resultCaption, {
       message_id: pendingMessage.message_id,
       chat_id,
       parse_mode: "HTML",
       disable_web_page_preview: true,
       reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
     });
-
-    const status = await getSignatureStatus(signature);
-    // const jitoBundleInstance = new JitoBundleService();
-    // const status = await jitoBundleInstance.getBundleStatus(bundleId);
-    if (!status) {
-      const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
-      await bot.editMessageText(failedCaption, {
-        message_id: pendingMessage.message_id,
-        chat_id,
-        parse_mode: "HTML",
-        disable_web_page_preview: true,
-        reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
-      });
-      return;
-    }
-
-    // Sell token for SOL.
-    const { inAmount, outAmount } = quote;
-    const inAmountNum = fromWeiToValue(inAmount, decimals);
-    const outAmountNum = fromWeiToValue(outAmount, 9);
-    const quoteValue = {inAmount: inAmountNum, outAmount: outAmountNum} as QuoteRes;
-
-    const pnlService = new PNLService(user.wallet_address, mint);
-    await pnlService.initialize();
-    const pnldata = await pnlService.getPNLInfo();
-
-    //send pnl Card
-    let profitInSOL = 0;
-    let pnlPercent = 0;
-    const boughtInSOL = await pnlService.getBoughtAmount() as number;
-    if (pnldata) {
-      const { profitInSOL : profitSol, percent } = pnldata;
-      profitInSOL = profitSol;
-      pnlPercent = percent
-    }
-    const solPrice = await TokenService.getSOLPrice();
-    const profitInUSD = profitInSOL * Number(solPrice);
-    const referrerCode = await GenerateReferralCode(user.username)
-    const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount: boughtInSOL.toFixed(2), pnlValue: profitInSOL.toFixed(2), worth: Math.abs(profitInUSD).toFixed(2), profitPercent: pnlPercent.toFixed(2), burnAmount: Number(0).toFixed(2), isBuy: false, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
-    const { pnlUrl } = await pnlService.getPNLCard(pnlData);
-    await bot.sendPhoto(msg.chat.id, pnlUrl, {
-      parse_mode: 'HTML'
-    });
-    await pnlService.afterSell(outAmountNum, percent);
-    // Update Referral System
-    await checkReferralFeeSent(total_fee_in_sol, username);
+    
   } else {
     const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
     try {
