@@ -536,6 +536,54 @@ export const setCustomBuyPresetHandler = async (
   }
 };
 
+export const changeGasFeeHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message,
+  gasfee: GasFeeEnum
+) => {
+  const chat_id = msg.chat.id;
+  const caption = msg.text;
+  const username = msg.chat.username;
+  const reply_markup = msg.reply_markup;
+  if (!caption || !username || !reply_markup) return;
+  const gasSetting = await UserTradeSettingService.getGas(
+    username
+  );
+  const nextFeeOption =
+    UserTradeSettingService.getNextGasFeeOption(gasSetting.gas);
+  const nextValue = UserTradeSettingService.getGasValue({gas: nextFeeOption, value : gasSetting.value});
+
+  await UserTradeSettingService.setGas(username, {gas: nextFeeOption, value : gasSetting.value});
+
+  let inline_keyboard = reply_markup.inline_keyboard;
+  inline_keyboard[6] = [
+    {
+      text: `🔁 ${(nextFeeOption === GasFeeEnum.HIGH ? "high" : nextFeeOption === GasFeeEnum.MEDIUM ? "medium" : nextFeeOption === GasFeeEnum.LOW ? "low" : "custom")}`,
+      callback_data: JSON.stringify({
+        command: `switch_gas`,
+      }),
+    },
+    {
+      text: `⚙️ ${nextValue} SOL`,
+      callback_data: JSON.stringify({
+        command: `custom_gas`,
+      }),
+    },
+  ];
+
+  bot.sendMessage(chat_id, `Gas fee set to ${nextFeeOption}.`);
+
+  await bot.editMessageReplyMarkup(
+    {
+      inline_keyboard,
+    },
+    {
+      message_id: msg.message_id,
+      chat_id,
+    }
+  );
+};
+
 export const setCustomFeeScreenHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message
@@ -584,6 +632,7 @@ export const setCustomFeeHandler = async (
       await sendNoneUserNotification(bot, msg);
       return;
     }
+    const { auto_buy, auto_buy_amount } = user;
 
     const msgLog = await MsgLogService.findOne({
       username,
@@ -610,92 +659,18 @@ export const setCustomFeeHandler = async (
     bot.deleteMessage(chat_id, msg.message_id);
     bot.deleteMessage(chat_id, reply_message_id);
 
-    const inline_keyboards = [
-      [{ text: '🖼 Generate PNL Card', command: 'pnl_card' }],
-      // [{ text: "Slippage: 5%", command: 'set_slippage' }],
-      [
-        { text: "Buy 0.01 SOL", command: "buytoken_0.01" },
-        { text: "Buy 1 SOL", command: "buytoken_1" },
-      ],
-      [
-        { text: "Buy 5 SOL", command: "buytoken_5" },
-        { text: "Buy 10 SOL", command: "buytoken_10" },
-      ],
-      [{ text: "Buy X SOL", command: "buy_custom" }],
-      [{ text: "🔁 Switch To Sell", command: "SS_" }],
-      [
-        { text: "🔄 Refresh", command: "refresh" },
-        { text: "❌ Close", command: "dismiss_message" },
-      ],
-    ];
-
-    let preset_setting = user.preset_setting ?? [0.01, 1, 5, 10];
-
-    if (extra_key == "switch_sell") {
-      inline_keyboards[1] = [
-        {
-          text: `Buy ${preset_setting[0]} SOL`,
-          command: `buytoken_${preset_setting[0]}`,
-        },
-        {
-          text: `Buy ${preset_setting[1]} SOL`,
-          command: `buytoken_${preset_setting[1]}`,
-        },
-      ];
-      inline_keyboards[2] = [
-        {
-          text: `Buy ${preset_setting[2]} SOL`,
-          command: `buytoken_${preset_setting[2]}`,
-        },
-        {
-          text: `Buy ${preset_setting[3]} SOL`,
-          command: `buytoken_${preset_setting[3]}`,
-        },
-      ];
-      inline_keyboards[3] = [{ text: `Buy X SOL`, command: `buy_custom` }];
-      inline_keyboards[4] = [
-        { text: `🔁 Switch To Sell`, command: `BS_${mint}` },
-      ];
-    }
-    if (extra_key == "switch_buy") {
-      inline_keyboards[1] = [
-        { text: "Sell 10%", command: `selltoken_10` },
-        { text: "Sell 50%", command: `selltoken_50` },
-      ];
-      inline_keyboards[2] = [
-        { text: "Sell 75%", command: `selltoken_75` },
-        { text: "Sell 100%", command: `selltoken_100` },
-      ];
-      inline_keyboards[3] = [{ text: "Sell X%", command: `sell_custom` }];
-      inline_keyboards[4] = [
-        { text: "🔁 Switch To Buy", command: `SS_${mint}` },
-      ];
-    }
-    const slippageSetting = await UserTradeSettingService.getSlippage(username); // , mint
-    inline_keyboards[0][0] = {
-      text: `Gas: ${amount} SOL ⚙️`,
-      command: "custom_fee",
-    };
-    // inline_keyboards[1][0].text = `Slippage: ${slippage} %`;
-
-    await bot.editMessageReplyMarkup(
-      {
-        inline_keyboard: [...inline_keyboards].map((rowItem) =>
-          rowItem.map((item) => {
-            return {
-              text: item.text,
-              callback_data: JSON.stringify({
-                command: item.command ?? "dummy_button",
-              }),
-            };
-          })
-        ),
-      },
-      {
-        message_id: parent_msgid,
-        chat_id,
-      }
+    const reply_markup = await getReplyOptionsForSettings(
+      username,
+      auto_buy,
+      auto_buy_amount
     );
+    bot.sendMessage(chat_id, `Gas fee set to ${amount} SOL.`);
+
+    await bot.editMessageReplyMarkup(reply_markup, {
+      message_id: parent_msgid,
+      chat_id,
+    });
+
   } catch (e) {
     console.log("~ setCustomBuyPresetHandler ~", e);
   }
@@ -949,31 +924,15 @@ export const getReplyOptionsForSettings = async (
       ],
       [
         { 
-          text: `${(gasSetting.gas === GasFeeEnum.LOW ? "🟢" : "🔴")} Low Gas`,
+          text: `🔁 ${(gasSetting.gas === GasFeeEnum.HIGH ? "high" : gasSetting.gas === GasFeeEnum.MEDIUM ? "medium" : gasSetting.gas === GasFeeEnum.LOW ? "low" : "custom")}`,
           callback_data: JSON.stringify({
-            command: 'low_gas' 
+            command: 'switch_gas' 
           }),
         },
-        { 
-          text: `${(gasSetting.gas === GasFeeEnum.MEDIUM ? "🟢" : "🔴")} Medium Gas`, 
-          callback_data: JSON.stringify({
-            command: 'medium_gas' 
-          }),
-        },
-        { 
-          text: `${(gasSetting.gas === GasFeeEnum.HIGH ? "🟢" : "🔴")} High Gas`, 
-          callback_data: JSON.stringify({
-          command: 'high_gas' 
-          }),
-        },
-      ],
-      [
         {
-          text: `${
-            gasSetting.gas === GasFeeEnum.CUSTOM ? "🟢" : ""
-          } Gas: ${gasvalue} SOL ⚙️`,
+          text: `⚙️ ${gasvalue} SOL`,
           callback_data: JSON.stringify({
-            command: "custom_fee",
+            command: "custom_gas",
           }),
         }
       ],

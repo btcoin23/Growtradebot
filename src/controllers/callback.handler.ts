@@ -1,10 +1,10 @@
 import TelegramBot from "node-telegram-bot-api";
-import { contractInfoScreenHandler, changeGasFeeHandler, refreshHandler } from "../screens/contract.info.screen";
+import { contractInfoScreenHandler, refreshHandler } from "../screens/contract.info.screen";
 import { GasFeeEnum } from "../services/user.trade.setting.service";
 import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
 import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
 import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { autoBuyAmountScreenHandler, changeJitoTipFeeHandler, generateNewWalletHandler, pnlCardHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, setCustomJitoFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
+import { autoBuyAmountScreenHandler, changeGasFeeHandler, changeJitoTipFeeHandler, generateNewWalletHandler, pnlCardHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, setCustomJitoFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
 import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
@@ -135,20 +135,11 @@ export const callbackQueryHandler = async (
       await welcomeGuideHandler(bot, callbackMessage, replaceId)
     }
 
-    if (data.command === 'low_gas') {
+    if (data.command === 'switch_gas') {
       await changeGasFeeHandler(bot, callbackMessage, GasFeeEnum.LOW);
       return;
     }
-    if (data.command === 'medium_gas') {
-      await changeGasFeeHandler(bot, callbackMessage, GasFeeEnum.MEDIUM);
-      return;
-    }
-    if (data.command === 'high_gas') {
-      await changeGasFeeHandler(bot, callbackMessage, GasFeeEnum.HIGH);
-      return;
-    }
-
-    if (data.command === 'custom_fee') {
+    if (data.command === 'custom_gas') {
       await setCustomFeeScreenHandler(bot, callbackMessage);
       return;
     }

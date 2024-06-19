@@ -72,6 +72,18 @@ export const UserTradeSettingService = {
       value: 0.005
     } as ITradeGasSetting
   },
+  getNextGasFeeOption: (option: GasFeeEnum) => {
+    switch (option) {
+      case GasFeeEnum.CUSTOM:
+        return GasFeeEnum.LOW;
+      case GasFeeEnum.LOW:
+        return GasFeeEnum.MEDIUM;
+      case GasFeeEnum.MEDIUM:
+        return GasFeeEnum.HIGH;
+      case GasFeeEnum.HIGH:
+        return GasFeeEnum.LOW;
+    }
+  },
   getJitoFeeValue: (gasSetting: ITradeJioFeeSetting) => {
     const { jitoOption, value } = gasSetting;
 

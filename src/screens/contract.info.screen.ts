@@ -218,9 +218,7 @@ export const contractInfoScreenHandler = async (
     const gasSetting = await UserTradeSettingService.getGas(username);
     const { slippage } = slippageSetting;
     const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
-    const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(
-      gasSetting.gas
-    );
+
 
     if (switchBtn && !fromPosition) {
       const sentMessage = bot.editMessageReplyMarkup(
@@ -651,62 +649,6 @@ const buildCaption = async (
   return caption;
 };
 
-export const changeBuySellHandler = async (
-  bot: TelegramBot,
-  msg: TelegramBot.Message,
-  command: String
-) => {
-  console.log("🚀 ~ changeBuySellHandler ~ command:", command);
-  const chat_id = msg.chat.id;
-  const username = msg.chat.username;
-};
-
-export const changeGasFeeHandler = async (
-  bot: TelegramBot,
-  msg: TelegramBot.Message,
-  gasfee: GasFeeEnum
-) => {
-  const chat_id = msg.chat.id;
-  const caption = msg.text;
-  const username = msg.chat.username;
-  const reply_markup = msg.reply_markup;
-  if (!caption || !username || !reply_markup) return;
-
-  await UserTradeSettingService.setGas(username, {
-    gas: gasfee,
-  });
-
-  const gaskeyboards = await UserTradeSettingService.getGasInlineKeyboard(
-    gasfee
-  );
-  let inline_keyboard = reply_markup.inline_keyboard;
-  inline_keyboard[0] = gaskeyboards.map((item) => {
-    return {
-      text: item.text,
-      callback_data: JSON.stringify({
-        command: item.command,
-      }),
-    };
-  });
-
-  const gasvalue = UserTradeSettingService.getGasValue({ gas: gasfee });
-  inline_keyboard[1][0] = {
-    text: `${gasfee === GasFeeEnum.CUSTOM ? "🟢" : ""} Gas: ${gasvalue} SOL ⚙️`,
-    callback_data: JSON.stringify({
-      command: "custom_fee",
-    }),
-  };
-
-  await bot.editMessageReplyMarkup(
-    {
-      inline_keyboard,
-    },
-    {
-      message_id: msg.message_id,
-      chat_id,
-    }
-  );
-};
 
 export const refreshHandler = async (
   bot: TelegramBot,
