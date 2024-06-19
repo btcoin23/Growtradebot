@@ -558,7 +558,7 @@ export const changeGasFeeHandler = async (
   let inline_keyboard = reply_markup.inline_keyboard;
   inline_keyboard[6] = [
     {
-      text: `🔁 ${(nextFeeOption === GasFeeEnum.HIGH ? "high" : nextFeeOption === GasFeeEnum.MEDIUM ? "medium" : nextFeeOption === GasFeeEnum.LOW ? "low" : "custom")}`,
+      text: `🔁 ${(nextFeeOption === GasFeeEnum.HIGH ? "High" : nextFeeOption === GasFeeEnum.MEDIUM ? "Medium" : nextFeeOption === GasFeeEnum.LOW ? "Low" : "custom")}`,
       callback_data: JSON.stringify({
         command: `switch_gas`,
       }),
