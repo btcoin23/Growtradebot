@@ -2,15 +2,12 @@ import {
   ApiClmmPoolsItem,
   ApiClmmPoolsItemStatistics,
   PoolInfoLayout,
-  getMultipleAccountsInfoWithCustomFlags
-} from '@raydium-io/raydium-sdk';
-import {
-  AddressLookupTableAccount,
-  PublicKey
-} from '@solana/web3.js';
+  getMultipleAccountsInfoWithCustomFlags,
+} from "@raydium-io/raydium-sdk";
+import { AddressLookupTableAccount, PublicKey } from "@solana/web3.js";
 
-import { private_connection } from '../../config';
-import { formatClmmConfigs } from './formatClmmConfigs';
+import { private_connection } from "../../config";
+import { formatClmmConfigs } from "./formatClmmConfigs";
 
 export function getApiClmmPoolsItemStatisticsDefault(): ApiClmmPoolsItemStatistics {
   return {
@@ -23,7 +20,7 @@ export function getApiClmmPoolsItemStatisticsDefault(): ApiClmmPoolsItemStatisti
     apr: 0,
     priceMin: 0,
     priceMax: 0,
-  }
+  };
 }
 
 export async function formatClmmKeys(

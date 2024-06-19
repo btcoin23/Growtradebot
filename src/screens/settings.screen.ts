@@ -546,19 +546,32 @@ export const changeGasFeeHandler = async (
   const username = msg.chat.username;
   const reply_markup = msg.reply_markup;
   if (!caption || !username || !reply_markup) return;
-  const gasSetting = await UserTradeSettingService.getGas(
-    username
+  const gasSetting = await UserTradeSettingService.getGas(username);
+  const nextFeeOption = UserTradeSettingService.getNextGasFeeOption(
+    gasSetting.gas
   );
-  const nextFeeOption =
-    UserTradeSettingService.getNextGasFeeOption(gasSetting.gas);
-  const nextValue = UserTradeSettingService.getGasValue({gas: nextFeeOption, value : gasSetting.value});
+  const nextValue = UserTradeSettingService.getGasValue({
+    gas: nextFeeOption,
+    value: gasSetting.value,
+  });
 
-  await UserTradeSettingService.setGas(username, {gas: nextFeeOption, value : gasSetting.value});
+  await UserTradeSettingService.setGas(username, {
+    gas: nextFeeOption,
+    value: gasSetting.value,
+  });
 
   let inline_keyboard = reply_markup.inline_keyboard;
   inline_keyboard[6] = [
     {
-      text: `🔁 ${(nextFeeOption === GasFeeEnum.HIGH ? "High" : nextFeeOption === GasFeeEnum.MEDIUM ? "Medium" : nextFeeOption === GasFeeEnum.LOW ? "Low" : "custom")}`,
+      text: `🔁 ${
+        nextFeeOption === GasFeeEnum.HIGH
+          ? "High"
+          : nextFeeOption === GasFeeEnum.MEDIUM
+          ? "Medium"
+          : nextFeeOption === GasFeeEnum.LOW
+          ? "Low"
+          : "custom"
+      }`,
       callback_data: JSON.stringify({
         command: `switch_gas`,
       }),
@@ -670,7 +683,6 @@ export const setCustomFeeHandler = async (
       message_id: parent_msgid,
       chat_id,
     });
-
   } catch (e) {
     console.log("~ setCustomBuyPresetHandler ~", e);
   }
@@ -923,10 +935,18 @@ export const getReplyOptionsForSettings = async (
         },
       ],
       [
-        { 
-          text: `🔁 ${(gasSetting.gas === GasFeeEnum.HIGH ? "high" : gasSetting.gas === GasFeeEnum.MEDIUM ? "medium" : gasSetting.gas === GasFeeEnum.LOW ? "low" : "custom")}`,
+        {
+          text: `🔁 ${
+            gasSetting.gas === GasFeeEnum.HIGH
+              ? "high"
+              : gasSetting.gas === GasFeeEnum.MEDIUM
+              ? "medium"
+              : gasSetting.gas === GasFeeEnum.LOW
+              ? "low"
+              : "custom"
+          }`,
           callback_data: JSON.stringify({
-            command: 'switch_gas' 
+            command: "switch_gas",
           }),
         },
         {
@@ -934,7 +954,7 @@ export const getReplyOptionsForSettings = async (
           callback_data: JSON.stringify({
             command: "custom_gas",
           }),
-        }
+        },
       ],
       [
         {
@@ -1133,8 +1153,8 @@ export const pnlCardHandler = async (
     const { symbol } = await TokenService.fetchSimpleMetaData(
       new PublicKey(mint)
     );
-    tokenSymbol = symbol
-    if(tokenSymbol === ''){
+    tokenSymbol = symbol;
+    if (tokenSymbol === "") {
       const tokeninfo = await TokenService.getMintInfo(mint);
       tokenSymbol = tokeninfo?.overview.symbol;
     }

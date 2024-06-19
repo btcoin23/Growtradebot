@@ -1,4 +1,4 @@
-import { Commitment, Connection, PublicKey } from '@solana/web3.js';
+import { Commitment, Connection, PublicKey } from "@solana/web3.js";
 import {
   Liquidity,
   LiquidityPoolKeys,
@@ -10,24 +10,24 @@ import {
   MAINNET_PROGRAM_ID,
   LiquidityStateV4,
   BNLayout,
-} from '@raydium-io/raydium-sdk';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { MinimalMarketLayoutV3 } from '../market';
+} from "@raydium-io/raydium-sdk";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { MinimalMarketLayoutV3 } from "../market";
 
 export const RAYDIUM_LIQUIDITY_PROGRAM_ID_CLMM = MAINNET_PROGRAM_ID.CLMM;
 export const RAYDIUM_LIQUIDITY_PROGRAM_ID_V4 = MAINNET_PROGRAM_ID.AmmV4;
 export const OPENBOOK_PROGRAM_ID = MAINNET_PROGRAM_ID.OPENBOOK_MARKET;
 
 export const MINIMAL_MARKET_STATE_LAYOUT_V3 = struct([
-  publicKey('eventQueue'),
-  publicKey('bids'),
-  publicKey('asks'),
+  publicKey("eventQueue"),
+  publicKey("bids"),
+  publicKey("asks"),
 ]);
 
 export function createPoolKeys(
   id: PublicKey,
   accountData: LiquidityStateV4,
-  minimalMarketLayoutV3: MinimalMarketLayoutV3,
+  minimalMarketLayoutV3: MinimalMarketLayoutV3
 ): LiquidityPoolKeys {
   return {
     id,
@@ -67,14 +67,14 @@ export function createPoolKeys(
 export async function getTokenAccounts(
   connection: Connection,
   owner: PublicKey,
-  commitment?: Commitment,
+  commitment?: Commitment
 ) {
   const tokenResp = await connection.getTokenAccountsByOwner(
     owner,
     {
       programId: TOKEN_PROGRAM_ID,
     },
-    commitment,
+    commitment
   );
 
   const accounts: TokenAccount[] = [];
@@ -142,5 +142,5 @@ export const convertDBForPoolStateV4 = (poolstate: any) => {
     lpVault: new PublicKey(poolstate.lpVault),
     owner: new PublicKey(poolstate.owner),
     lpReserve: poolstate.lpReserve,
-  } as LiquidityStateV4
-}
+  } as LiquidityStateV4;
+};

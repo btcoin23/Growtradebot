@@ -31,7 +31,9 @@ export const ReferralHistoryControler = {
   findLastOne: async (props: any) => {
     try {
       const filter = props;
-      const result = await ReferralHistorySchema.findOne(filter).sort({ updatedAt: -1 });
+      const result = await ReferralHistorySchema.findOne(filter).sort({
+        updatedAt: -1,
+      });
 
       return result;
     } catch (err: any) {

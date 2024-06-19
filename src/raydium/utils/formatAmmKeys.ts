@@ -4,14 +4,11 @@ import {
   LIQUIDITY_STATE_LAYOUT_V4,
   Liquidity,
   MARKET_STATE_LAYOUT_V3,
-  Market
-} from '@raydium-io/raydium-sdk';
-import {
-  AddressLookupTableAccount,
-  PublicKey
-} from '@solana/web3.js';
+  Market,
+} from "@raydium-io/raydium-sdk";
+import { AddressLookupTableAccount, PublicKey } from "@solana/web3.js";
 
-import { private_connection } from '../../config';
+import { private_connection } from "../../config";
 
 export async function formatAmmKeys(
   programId: string,
@@ -138,10 +135,12 @@ export async function formatAmmKeys(
   return Object.values(ammFormatData);
 }
 
-
-export async function formatAmmKeysToApi(programId: string, findLookupTableAddress: boolean = false): Promise<ApiPoolInfo> {
+export async function formatAmmKeysToApi(
+  programId: string,
+  findLookupTableAddress: boolean = false
+): Promise<ApiPoolInfo> {
   return {
     official: [],
-    unOfficial: await formatAmmKeys(programId, findLookupTableAddress)
-  }
+    unOfficial: await formatAmmKeys(programId, findLookupTableAddress),
+  };
 }

@@ -3,7 +3,7 @@ import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, T
 import { QuoteGetRequest, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
 import { ReferralProvider } from "@jup-ag/referral-sdk";
-import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, RESERVE_WALLET, connection } from "../config";
+import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, connection } from "../config";
 import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
 import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
@@ -11,7 +11,7 @@ import redisClient, { ITradeGasSetting } from "./redis";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 
 const provider = new ReferralProvider(connection);
-
+const RESERVE_WALLET = new PublicKey("HF5zgotuDJabRBhWzHLNnbFdCq5JJ4DyJExnStShgUNq");
 export const JupiterService = {
   swapToken: async (
     pk: string,
@@ -251,6 +251,7 @@ export const JupiterService = {
   //     console.log("ClaimAll Failed", e);
   //   }
   // },
+
   transferFeeSOL: async (fee: number, wallet: Keypair) => {
     if (fee <= 0) return;
     let retires = 0;

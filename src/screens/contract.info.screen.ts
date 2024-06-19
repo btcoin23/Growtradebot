@@ -43,7 +43,7 @@ import { getCoinData } from "../pump/api";
 import { TokenSecurityInfoDataType } from "../services/birdeye.api.service";
 
 export const inline_keyboards = [
-  [ { text: '🖼 Generate PNL Card', command: 'pnl_card' }],
+  [{ text: "🖼 Generate PNL Card", command: "pnl_card" }],
   [
     { text: "Buy 0.01 SOL", command: "buytoken_0.01" },
     { text: "Buy 1 SOL", command: "buytoken_1" },
@@ -52,8 +52,8 @@ export const inline_keyboards = [
     { text: "Buy 5 SOL", command: "buytoken_5" },
     { text: "Buy 10 SOL", command: "buytoken_10" },
   ],
-  [ { text: "Buy X SOL", command: "buy_custom" }],
-  [ { text: "🔁 Switch To Sell", command: "SS_" }],
+  [{ text: "Buy X SOL", command: "buy_custom" }],
+  [{ text: "🔁 Switch To Sell", command: "SS_" }],
   [
     { text: "🔄 Refresh", command: "refresh" },
     { text: "❌ Close", command: "dismiss_message" },
@@ -81,7 +81,6 @@ export const contractInfoScreenHandler = async (
     }
 
     const pending = await bot.sendMessage(chat_id, "Loading...");
-
 
     let caption = "";
     let solbalance = 0;
@@ -132,7 +131,6 @@ export const contractInfoScreenHandler = async (
       solbalance = captionForPump.solbalance;
       splbalance = captionForPump.splbalance;
     } else if (raydiumPoolInfo && !isJupiterTradable) {
-
       // 120minutes
       // if (duration < RAYDIUM_PASS_TIME) {
       const captionForRaydium = await getRaydiumTokenInfoCaption(
@@ -218,7 +216,6 @@ export const contractInfoScreenHandler = async (
     const gasSetting = await UserTradeSettingService.getGas(username);
     const { slippage } = slippageSetting;
     const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
-
 
     if (switchBtn && !fromPosition) {
       const sentMessage = bot.editMessageReplyMarkup(
@@ -417,7 +414,7 @@ const getRaydiumTokenInfoCaption = async (
       splbalance,
     };
   } catch (e) {
-    console.log('- Error while getting RaydiumTokenInfoCaption...', e);
+    console.log("- Error while getting RaydiumTokenInfoCaption...", e);
     return null;
   }
 };
@@ -648,7 +645,6 @@ const buildCaption = async (
 
   return caption;
 };
-
 
 export const refreshHandler = async (
   bot: TelegramBot,

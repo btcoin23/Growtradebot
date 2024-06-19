@@ -1,5 +1,5 @@
-import TelegramBot from "node-telegram-bot-api"
-import { UserService } from "../services/user.service"
+import TelegramBot from "node-telegram-bot-api";
+import { UserService } from "../services/user.service";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 import { GrowTradeVersion } from "../config";
@@ -11,23 +11,32 @@ const MAX_RETRIES = 5;
 export const welcomeKeyboardList = [
   // [{ text: '🏦 Buy/Sell', command: 'buysell' }],
   // snipe_token, my_position
-  [{ text: '🎯 Sniper [Soon]', command: 'dummy_button' }, { text: '📊 Positions', command: 'position' }], // position
+  [
+    { text: "🎯 Sniper [Soon]", command: "dummy_button" },
+    { text: "📊 Positions", command: "position" },
+  ], // position
   // [{ text: '♻️ Withdraw', command: 'transfer_funds' }],
   [{ text: "Burn: Off ♨️", command: `burn_switch` }],
-  [{ text: '⛓ Bridge', command: 'bridge' }, { text: '🛠 Settings & Tools', command: 'settings' }],
-  [{ text: '🎁 Referral Program', command: 'referral' }],
-  [{ text: '❌ Close', command: 'dismiss_message' }],
+  [
+    { text: "⛓ Bridge", command: "bridge" },
+    { text: "🛠 Settings & Tools", command: "settings" },
+  ],
+  [{ text: "🎁 Referral Program", command: "referral" }],
+  [{ text: "❌ Close", command: "dismiss_message" }],
 ];
 
-export const WelcomeScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+export const WelcomeScreenHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message
+) => {
   try {
     const { username, id: chat_id, first_name, last_name } = msg.chat;
     // check if bot
     if (!username) {
       bot.sendMessage(
         chat_id,
-        '⚠️ You have no telegram username. Please take at least one and try it again.'
-      )
+        "⚠️ You have no telegram username. Please take at least one and try it again."
+      );
       return;
     }
     const user = await UserService.findOne({ username });
@@ -42,7 +51,7 @@ export const WelcomeScreenHandler = async (bot: TelegramBot, msg: TelegramBot.Me
   } catch (error) {
     console.log("-WelcomeScreenHandler-", error);
   }
-}
+};
 
 const newUserHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   const { username, id: chat_id, first_name, last_name } = msg.chat;
@@ -69,7 +78,7 @@ const newUserHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
         wallet_address,
         private_key,
       };
-      userdata = await UserService.create(newUser); // true; // 
+      userdata = await UserService.create(newUser); // true; //
     } else {
       retries++;
     }
@@ -79,47 +88,51 @@ const newUserHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
   if (!userdata) {
     await bot.sendMessage(
       chat_id,
-      'Sorry, we cannot create your account. Please contact support team'
-    )
+      "Sorry, we cannot create your account. Please contact support team"
+    );
     return false;
   }
 
   // send private key & wallet address
-  const caption = `👋 Welcome to GrowTradeBot!\n\n` +
+  const caption =
+    `👋 Welcome to GrowTradeBot!\n\n` +
     `A new wallet has been generated for you. This is your wallet address\n\n` +
     `${wallet_address}\n\n` +
     `<b>Save this private key below</b>❗\n\n` +
     `<tg-spoiler>${private_key}</tg-spoiler>\n\n` +
     `<b>To get started, please read our <a href="https://docs.growsol.io">docs</a></b>`;
 
-  await bot.sendMessage(
-    chat_id,
-    caption,
-    {
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-      reply_markup: {
-        inline_keyboard: [
-          [{
-            text: '* Dismiss message',
+  await bot.sendMessage(chat_id, caption, {
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "* Dismiss message",
             callback_data: JSON.stringify({
-              'command': 'dismiss_message'
-            })
-          }]
-        ]
-      }
-    }
-  );
+              command: "dismiss_message",
+            }),
+          },
+        ],
+      ],
+    },
+  });
   return true;
-}
+};
 
-export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Message, replaceId?: number) => {
+export const welcomeGuideHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message,
+  replaceId?: number
+) => {
   const { id: chat_id, username } = msg.chat;
   const user = await UserService.findOne({ username });
 
   if (!user) return;
   const solbalance = await TokenService.getSOLBalance(user.wallet_address);
-  const caption = `<b>Welcome to GrowTrade | Beta Version</b>\n\n` +
+  const caption =
+    `<b>Welcome to GrowTrade | Beta Version</b>\n\n` +
     `The Unique Solana Trading Bot. Snipe, trade and keep track of your positions with GrowTrade.\n\n` +
     `⬩ A never seen unique Burn Mechanism 🔥\n` +
     `⬩ Revenue Share through Buybacks on GrowSol ($GRW)\n\n` +
@@ -154,51 +167,46 @@ export const welcomeGuideHandler = async (bot: TelegramBot, msg: TelegramBot.Mes
 
   const burn_fee = user.burn_fee;
   const reply_markup = {
-    inline_keyboard: welcomeKeyboardList.map((rowItem) => rowItem.map((item) => {
-      if (item.command.includes("bridge")) {
+    inline_keyboard: welcomeKeyboardList.map((rowItem) =>
+      rowItem.map((item) => {
+        if (item.command.includes("bridge")) {
+          return {
+            text: item.text,
+            url: "https://t.me/growbridge_bot",
+          };
+        }
+        if (item.text.includes("Burn")) {
+          const burnText = `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`;
+          return {
+            text: burnText,
+            callback_data: JSON.stringify({
+              command: item.command,
+            }),
+          };
+        }
         return {
           text: item.text,
-          url: 'https://t.me/growbridge_bot'
-        }
-      }
-      if (item.text.includes("Burn")) {
-        const burnText = `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`;
-        return {
-          text: burnText,
           callback_data: JSON.stringify({
-            'command': item.command
-          })
-        }
-      }
-      return {
-        text: item.text,
-        callback_data: JSON.stringify({
-          'command': item.command
-        })
-      }
-    }))
+            command: item.command,
+          }),
+        };
+      })
+    ),
   };
 
   if (replaceId) {
-    bot.editMessageText(
-      caption,
-      {
-        message_id: replaceId,
-        chat_id,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup
-      }
-    )
-  } else {
-    await bot.sendMessage(
+    bot.editMessageText(caption, {
+      message_id: replaceId,
       chat_id,
-      caption,
-      {
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup
-      }
-    );
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup,
+    });
+  } else {
+    await bot.sendMessage(chat_id, caption, {
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup,
+    });
   }
-}
+};

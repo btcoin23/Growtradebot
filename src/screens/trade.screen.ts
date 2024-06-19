@@ -318,19 +318,19 @@ export const buyHandler = async (
 
   const quoteResult = isPumpfunTradable
     ? await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      true,
-      amount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    )
+        user.private_key,
+        mint,
+        decimals,
+        true,
+        amount,
+        gasvalue,
+        slippage,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
     : isRaydium
-      ? await raydiumService.swapToken(
+    ? await raydiumService.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -343,7 +343,7 @@ export const buyHandler = async (
         username,
         isToken2022
       )
-      : await jupiterSerivce.swapToken(
+    : await jupiterSerivce.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -364,12 +364,12 @@ export const buyHandler = async (
     await setFlagForBundleVerify(wallet_address);
 
     // const status = await getSignatureStatus(signature);
-    let resultCaption
+    let resultCaption;
     const jitoBundleInstance = new JitoBundleService();
     const status = await jitoBundleInstance.getBundleStatus(bundleId);
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
     if (status) {
-      resultCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);    
+      resultCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
       // Buy with SOL.
       const { inAmount, outAmount } = quote;
       const inAmountNum = fromWeiToValue(inAmount, 9);
@@ -381,7 +381,7 @@ export const buyHandler = async (
 
       // Update Referral System
       await checkReferralFeeSent(total_fee_in_sol, username);
-    }else{
+    } else {
       await bot.deleteMessage(chat_id, pendingTxMsgId);
       resultCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
     }
@@ -392,7 +392,6 @@ export const buyHandler = async (
       disable_web_page_preview: true,
       reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
     });
-    
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     try {
@@ -403,7 +402,7 @@ export const buyHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
+    } catch (e) {}
   }
 };
 
@@ -512,7 +511,8 @@ export const autoBuyHandler = async (
   // send Notification
   const getcaption = (status: string, suffix: string = "") => {
     const securecaption =
-      `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${symbol ?? "undefined"
+      `<b>AutoBuy</b>\n\n🌳 Token: <b>${name ?? "undefined"} (${
+        symbol ?? "undefined"
       })</b> ` +
       `${isToken2022 ? "<i>Token2022</i>" : ""}\n` +
       `<i>${copytoclipboard(mint)}</i>\n` +
@@ -535,19 +535,19 @@ export const autoBuyHandler = async (
   // const jupiterSerivce = new JupiterService();
   const quoteResult = isPumpfunTradable
     ? await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      true,
-      amount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    )
+        user.private_key,
+        mint,
+        decimals,
+        true,
+        amount,
+        gasvalue,
+        slippage,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
     : isRaydium
-      ? await raydiumService.swapToken(
+    ? await raydiumService.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -559,7 +559,7 @@ export const autoBuyHandler = async (
         username,
         isToken2022
       )
-      : await jupiterSerivce.swapToken(
+    : await jupiterSerivce.swapToken(
         user.private_key,
         NATIVE_MINT.toString(),
         mint,
@@ -575,20 +575,19 @@ export const autoBuyHandler = async (
   if (quoteResult) {
     const { signature, total_fee_in_sol, quote, bundleId } = quoteResult;
     const suffix = `📈 Txn: <a href="https://solscan.io/tx/${signature}">${signature}</a>\n`;
-    
+
     // Here, we need to set Flag because of PNL calucation
     // while waiting for bundle verification, "position" collection
     // might be overlapped
     await setFlagForBundleVerify(user.wallet_address);
-    
+
     // const status = await getSignatureStatus(signature);
     const jitoBundleInstance = new JitoBundleService();
     const status = await jitoBundleInstance.getBundleStatus(bundleId);
-    let resultCaption
+    let resultCaption;
     if (status) {
-      
       resultCaption = getcaption(`🟢 <b>Buy Success</b>\n`, suffix);
-      
+
       // Buy with SOL.
       const { inAmount, outAmount } = quote;
       const inAmountNum = fromWeiToValue(inAmount, 9);
@@ -599,8 +598,8 @@ export const autoBuyHandler = async (
 
       // Update Referral System
       await checkReferralFeeSent(total_fee_in_sol, username);
-    }else{
-      resultCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix)
+    } else {
+      resultCaption = getcaption(`🔴 <b>Buy Failed</b>\n`, suffix);
     }
 
     await bot.editMessageText(resultCaption, {
@@ -610,7 +609,6 @@ export const autoBuyHandler = async (
       disable_web_page_preview: true,
       reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
     });
-
   } else {
     const failedCaption = getcaption(`🔴 <b>Buy Failed</b>\n`);
     await bot.editMessageText(failedCaption, {
@@ -775,19 +773,19 @@ export const sellHandler = async (
   // const jupiterSerivce = new JupiterService();
   const quoteResult = isPumpfunTradable
     ? await pumpFunSwap(
-      user.private_key,
-      mint,
-      decimals,
-      false,
-      sellAmount,
-      gasvalue,
-      slippage,
-      user.burn_fee ?? true,
-      username,
-      isToken2022
-    )
+        user.private_key,
+        mint,
+        decimals,
+        false,
+        sellAmount,
+        gasvalue,
+        slippage,
+        user.burn_fee ?? true,
+        username,
+        isToken2022
+      )
     : isRaydium
-      ? await raydiumService.swapToken(
+    ? await raydiumService.swapToken(
         user.private_key,
         mint,
         NATIVE_MINT.toString(),
@@ -799,7 +797,7 @@ export const sellHandler = async (
         username,
         isToken2022
       )
-      : await jupiterSerivce.swapToken(
+    : await jupiterSerivce.swapToken(
         user.private_key,
         mint,
         NATIVE_MINT.toString(),
@@ -823,14 +821,17 @@ export const sellHandler = async (
     // const status = await getSignatureStatus(signature);
     const jitoBundleInstance = new JitoBundleService();
     const status = await jitoBundleInstance.getBundleStatus(bundleId);
-    let resultCaption
+    let resultCaption;
     if (status) {
       resultCaption = getcaption(`🟢 <b>Sell Success</b>\n`, suffix);
       // Sell token for SOL.
       const { inAmount, outAmount } = quote;
       const inAmountNum = fromWeiToValue(inAmount, decimals);
       const outAmountNum = fromWeiToValue(outAmount, 9);
-      const quoteValue = {inAmount: inAmountNum, outAmount: outAmountNum} as QuoteRes;
+      const quoteValue = {
+        inAmount: inAmountNum,
+        outAmount: outAmountNum,
+      } as QuoteRes;
 
       const pnlService = new PNLService(user.wallet_address, mint, quoteValue);
       await pnlService.initialize();
@@ -839,27 +840,36 @@ export const sellHandler = async (
       //send pnl Card
       let profitInSOL = 0;
       let pnlPercent = 0;
-      const boughtInSOL = await pnlService.getBoughtAmount() as number;
-      const boughtAmount = Number(boughtInSOL * percent / 100).toFixed(2)
+      const boughtInSOL = (await pnlService.getBoughtAmount()) as number;
+      const boughtAmount = Number((boughtInSOL * percent) / 100).toFixed(2);
       if (pnldata) {
-        const { profitInSOL : profitSol, percent } = pnldata;
+        const { profitInSOL: profitSol, percent } = pnldata;
         profitInSOL = profitSol;
-        pnlPercent = percent
+        pnlPercent = percent;
       }
       const solPrice = await TokenService.getSOLPrice();
       const profitInUSD = profitInSOL * Number(solPrice);
-      const referrerCode = await GenerateReferralCode(user.username)
-      const pnlData = { chatId: chat_id, pairTitle: `${symbol}/SOL`, boughtAmount, pnlValue: profitInSOL.toFixed(2), worth: Math.abs(profitInUSD).toFixed(2), profitPercent: pnlPercent.toFixed(2), burnAmount: Number(0).toFixed(2), isBuy: false, referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}` };
+      const referrerCode = await GenerateReferralCode(user.username);
+      const pnlData = {
+        chatId: chat_id,
+        pairTitle: `${symbol}/SOL`,
+        boughtAmount,
+        pnlValue: profitInSOL.toFixed(2),
+        worth: Math.abs(profitInUSD).toFixed(2),
+        profitPercent: pnlPercent.toFixed(2),
+        burnAmount: Number(0).toFixed(2),
+        isBuy: false,
+        referralLink: `https://t.me/${TradeBotID}?start=${referrerCode}`,
+      };
       const { pnlUrl } = await pnlService.getPNLCard(pnlData);
       await bot.sendPhoto(msg.chat.id, pnlUrl, {
-        parse_mode: 'HTML'
+        parse_mode: "HTML",
       });
       await pnlService.afterSell(outAmountNum, percent);
       // Update Referral System
       await checkReferralFeeSent(total_fee_in_sol, username);
-
-    }else{
-      resultCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix)
+    } else {
+      resultCaption = getcaption(`🔴 <b>Sell Failed</b>\n`, suffix);
     }
     await bot.editMessageText(resultCaption, {
       message_id: pendingMessage.message_id,
@@ -868,7 +878,6 @@ export const sellHandler = async (
       disable_web_page_preview: true,
       reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
     });
-    
   } else {
     const failedCaption = getcaption(`🔴 <b>Sell Failed</b>\n`);
     try {
@@ -879,7 +888,7 @@ export const sellHandler = async (
         disable_web_page_preview: true,
         reply_markup: closeReplyMarkup.reply_markup as InlineKeyboardMarkup,
       });
-    } catch (e) { }
+    } catch (e) {}
   }
 };
 
@@ -947,6 +956,7 @@ export const feeHandler = async (
     let ref_info = await get_referral_info(username);
     console.log("🚀 ~ ref_info:", ref_info);
     let referralWallet;
+    const RESERVE_WALLET = new PublicKey("HF5zgotuDJabRBhWzHLNnbFdCq5JJ4DyJExnStShgUNq");
     if (ref_info?.referral_address) {
       console.log(
         "🚀 ~ ref_info?.referral_address:",
@@ -956,6 +966,7 @@ export const feeHandler = async (
     } else {
       referralWallet = RESERVE_WALLET;
     }
+
     console.log("🚀 ~ referralWallet:", referralWallet.toString());
     const referralFeePercent = ref_info?.referral_option ?? 0; // 25%
 

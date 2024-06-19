@@ -12,16 +12,16 @@ export const ReferralChannelController = {
         channel_name,
         creator,
         chat_id: chat_id,
-        referral_code
+        referral_code,
       };
       const filter = {
-        chat_id
+        chat_id,
       };
       // Define options for findOneAndUpdate
       const options = {
         upsert: true, // Create a new document if no document matches the filter
         new: true, // Return the modified document rather than the original
-        setDefaultsOnInsert: true // Apply the default values specified in the model schema
+        setDefaultsOnInsert: true, // Apply the default values specified in the model schema
       };
       await ReferralChannelSchema.findOneAndUpdate(filter, data, options);
     } catch (err: any) {
@@ -51,7 +51,9 @@ export const ReferralChannelController = {
   findLastOne: async (props: any) => {
     try {
       const filter = props;
-      const result = await ReferralChannelSchema.findOne(filter).sort({ updatedAt: -1 });
+      const result = await ReferralChannelSchema.findOne(filter).sort({
+        updatedAt: -1,
+      });
 
       return result;
     } catch (err: any) {

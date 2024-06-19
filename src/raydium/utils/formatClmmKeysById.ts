@@ -1,31 +1,31 @@
 import {
   ApiClmmConfigItem,
   ApiClmmPoolsItem,
-  PoolInfoLayout
-} from '@raydium-io/raydium-sdk';
-import {
-  PublicKey
-} from '@solana/web3.js';
+  PoolInfoLayout,
+} from "@raydium-io/raydium-sdk";
+import { PublicKey } from "@solana/web3.js";
 
-import { private_connection } from '../../config';
-import { formatConfigInfo } from './formatClmmConfigs';
-import { getApiClmmPoolsItemStatisticsDefault } from './formatClmmKeys';
+import { private_connection } from "../../config";
+import { formatConfigInfo } from "./formatClmmConfigs";
+import { getApiClmmPoolsItemStatisticsDefault } from "./formatClmmKeys";
 
 async function getMintProgram(mint: PublicKey) {
-  const account = await private_connection.getAccountInfo(mint)
-  if (account === null) throw Error(' get id info error ')
-  return account.owner
+  const account = await private_connection.getAccountInfo(mint);
+  if (account === null) throw Error(" get id info error ");
+  return account.owner;
 }
 async function getConfigInfo(configId: PublicKey): Promise<ApiClmmConfigItem> {
-  const account = await private_connection.getAccountInfo(configId)
-  if (account === null) throw Error(' get id info error ')
-  return formatConfigInfo(configId, account)
+  const account = await private_connection.getAccountInfo(configId);
+  if (account === null) throw Error(" get id info error ");
+  return formatConfigInfo(configId, account);
 }
 
-export async function formatClmmKeysById(id: string): Promise<ApiClmmPoolsItem> {
-  const account = await private_connection.getAccountInfo(new PublicKey(id))
-  if (account === null) throw Error(' get id info error ')
-  const info = PoolInfoLayout.decode(account.data)
+export async function formatClmmKeysById(
+  id: string
+): Promise<ApiClmmPoolsItem> {
+  const account = await private_connection.getAccountInfo(new PublicKey(id));
+  if (account === null) throw Error(" get id info error ");
+  const info = PoolInfoLayout.decode(account.data);
 
   return {
     id,
@@ -51,5 +51,5 @@ export async function formatClmmKeysById(id: string): Promise<ApiClmmPoolsItem> 
     week: getApiClmmPoolsItemStatisticsDefault(),
     month: getApiClmmPoolsItemStatisticsDefault(),
     lookupTableAccount: PublicKey.default.toString(),
-  }
+  };
 }

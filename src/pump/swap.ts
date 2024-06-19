@@ -1,16 +1,49 @@
-import { ComputeBudgetProgram, Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction, clusterApiUrl } from '@solana/web3.js';
-import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, createSyncNativeInstruction, NATIVE_MINT, getAssociatedTokenAddressSync, createCloseAccountInstruction } from '@solana/spl-token';
-import { getKeyPairFromPrivateKey, createTransaction, sendAndConfirmTransactionWrapper, bufferFromUInt64 } from './utils';
-import { getCoinData } from './api';
-import { GLOBAL, FEE_RECIPIENT, SYSTEM_PROGRAM_ID, RENT, PUMP_FUN_ACCOUNT, PUMP_FUN_PROGRAM, ASSOC_TOKEN_ACC_PROG } from './constants';
-import { JitoBundleService, tipAccounts } from '../services/jito.bundle';
-import { calculateMicroLamports } from '../raydium/raydium.service';
-import { FeeService } from '../services/fee.service';
-import { getSignature } from '../utils/get.signature';
-import base58 from 'bs58';
-import { private_connection } from '../config';
-import { UserTradeSettingService } from '../services/user.trade.setting.service';
-
+import {
+  ComputeBudgetProgram,
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+  clusterApiUrl,
+} from "@solana/web3.js";
+import {
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
+  createSyncNativeInstruction,
+  NATIVE_MINT,
+  getAssociatedTokenAddressSync,
+  createCloseAccountInstruction,
+} from "@solana/spl-token";
+import {
+  getKeyPairFromPrivateKey,
+  createTransaction,
+  sendAndConfirmTransactionWrapper,
+  bufferFromUInt64,
+} from "./utils";
+import { getCoinData } from "./api";
+import {
+  GLOBAL,
+  FEE_RECIPIENT,
+  SYSTEM_PROGRAM_ID,
+  RENT,
+  PUMP_FUN_ACCOUNT,
+  PUMP_FUN_PROGRAM,
+  ASSOC_TOKEN_ACC_PROG,
+} from "./constants";
+import { JitoBundleService, tipAccounts } from "../services/jito.bundle";
+import { calculateMicroLamports } from "../raydium/raydium.service";
+import { FeeService } from "../services/fee.service";
+import { getSignature } from "../utils/get.signature";
+import base58 from "bs58";
+import { private_connection } from "../config";
+import { UserTradeSettingService } from "../services/user.trade.setting.service";
 
 export async function pumpFunSwap(
   payerPrivateKey: string,
@@ -27,13 +60,14 @@ export async function pumpFunSwap(
   try {
     const coinData = await getCoinData(mintStr);
     if (!coinData) {
-      console.error('Failed to retrieve coin data...');
+      console.error("Failed to retrieve coin data...");
       return;
     }
 
     // JitoFee
     const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
-    const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
+    const jitoFeeValue =
+      UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
     const jitoFeeValueWei = BigInt((jitoFeeValue * 10 ** 9).toFixed());
 
     const txBuilder = new Transaction();
@@ -49,8 +83,7 @@ export async function pumpFunSwap(
     let total_fee_percent_in_token = 0;
     if (isFeeBurn) {
       total_fee_percent_in_sol = 0.0075;
-      total_fee_percent_in_token =
-        total_fee_percent - total_fee_percent_in_sol;
+      total_fee_percent_in_token = total_fee_percent - total_fee_percent_in_sol;
     }
     const fee =
       _amount *
@@ -70,49 +103,75 @@ export async function pumpFunSwap(
       true
     );
 
-    const tokenAccountAddress = await getAssociatedTokenAddress(mint, owner, false);
+    const tokenAccountAddress = await getAssociatedTokenAddress(
+      mint,
+      owner,
+      false
+    );
     const keys = [
       { pubkey: GLOBAL, isSigner: false, isWritable: false },
       { pubkey: FEE_RECIPIENT, isSigner: false, isWritable: true },
       { pubkey: mint, isSigner: false, isWritable: false },
-      { pubkey: new PublicKey(coinData['bonding_curve']), isSigner: false, isWritable: true },
-      { pubkey: new PublicKey(coinData['associated_bonding_curve']), isSigner: false, isWritable: true },
+      {
+        pubkey: new PublicKey(coinData["bonding_curve"]),
+        isSigner: false,
+        isWritable: true,
+      },
+      {
+        pubkey: new PublicKey(coinData["associated_bonding_curve"]),
+        isSigner: false,
+        isWritable: true,
+      },
       { pubkey: tokenAccountAddress, isSigner: false, isWritable: true },
       { pubkey: owner, isSigner: false, isWritable: true },
       { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
-      { pubkey: is_buy ? TOKEN_PROGRAM_ID : ASSOC_TOKEN_ACC_PROG, isSigner: false, isWritable: false },
-      { pubkey: is_buy ? RENT : TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      {
+        pubkey: is_buy ? TOKEN_PROGRAM_ID : ASSOC_TOKEN_ACC_PROG,
+        isSigner: false,
+        isWritable: false,
+      },
+      {
+        pubkey: is_buy ? RENT : TOKEN_PROGRAM_ID,
+        isSigner: false,
+        isWritable: false,
+      },
       { pubkey: PUMP_FUN_ACCOUNT, isSigner: false, isWritable: false },
-      { pubkey: PUMP_FUN_PROGRAM, isSigner: false, isWritable: false }
+      { pubkey: PUMP_FUN_PROGRAM, isSigner: false, isWritable: false },
     ];
 
     let data: Buffer;
-    let quoteAmount = 0
+    let quoteAmount = 0;
 
     if (is_buy) {
-      const tokenOut = Math.floor(amount * coinData["virtual_token_reserves"] / coinData["virtual_sol_reserves"]);
+      const tokenOut = Math.floor(
+        (amount * coinData["virtual_token_reserves"]) /
+          coinData["virtual_sol_reserves"]
+      );
       const solInWithSlippage = amount * (1 + slippage);
       const maxSolCost = Math.floor(solInWithSlippage * LAMPORTS_PER_SOL);
 
       data = Buffer.concat([
         bufferFromUInt64("16927863322537952870"),
         bufferFromUInt64(tokenOut),
-        bufferFromUInt64(maxSolCost)
+        bufferFromUInt64(maxSolCost),
       ]);
 
-      quoteAmount = tokenOut
+      quoteAmount = tokenOut;
       total_fee_in_sol = Number((fee * 10 ** inDecimal).toFixed(0));
       total_fee_in_token = Number(
         (quoteAmount * total_fee_percent_in_token).toFixed(0)
       );
     } else {
-      const minSolOutput = Math.floor(amount! * (1 - slippage) * coinData["virtual_sol_reserves"] / coinData["virtual_token_reserves"]);
+      const minSolOutput = Math.floor(
+        (amount! * (1 - slippage) * coinData["virtual_sol_reserves"]) /
+          coinData["virtual_token_reserves"]
+      );
       data = Buffer.concat([
         bufferFromUInt64("12502976635542562355"),
         bufferFromUInt64(amount),
-        bufferFromUInt64(minSolOutput)
+        bufferFromUInt64(minSolOutput),
       ]);
-      quoteAmount = minSolOutput
+      quoteAmount = minSolOutput;
       total_fee_in_token = Number((fee * 10 ** inDecimal).toFixed(0));
       total_fee_in_sol = Number(
         (Number(quoteAmount) * total_fee_percent_in_sol).toFixed(0)
@@ -122,12 +181,12 @@ export async function pumpFunSwap(
     const instruction = new TransactionInstruction({
       keys: keys,
       programId: PUMP_FUN_PROGRAM,
-      data: data
+      data: data,
     });
     txBuilder.add(instruction);
 
     // const jitoInstruction = await createTransaction(private_connection, txBuilder.instructions, payer.publicKey);
-    const jitoInstruction = txBuilder.instructions
+    const jitoInstruction = txBuilder.instructions;
     // console.log(instruction)
 
     const cu = 1_000_000;
@@ -135,63 +194,55 @@ export async function pumpFunSwap(
     console.log("Is_BUY", is_buy);
     const instructions: TransactionInstruction[] = is_buy
       ? [
-        ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: microLamports,
-        }),
-        ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
-        SystemProgram.transfer({
-          fromPubkey: owner,
-          toPubkey: new PublicKey(tipAccounts[0]),
-          lamports: jitoFeeValueWei,
-        }),
-        createAssociatedTokenAccountIdempotentInstruction(
-          owner,
-          tokenAccountIn,
-          owner,
-          NATIVE_MINT
-        ),
-        SystemProgram.transfer({
-          fromPubkey: owner,
-          toPubkey: tokenAccountIn,
-          lamports: amount,
-        }),
-        createSyncNativeInstruction(tokenAccountIn, TOKEN_PROGRAM_ID),
-        createAssociatedTokenAccountIdempotentInstruction(
-          owner,
-          tokenAccountOut,
-          owner,
-          new PublicKey(mint)
-        ),
-        ...jitoInstruction,
-        // Unwrap WSOL for SOL
-        createCloseAccountInstruction(
-          tokenAccountIn,
-          owner,
-          owner
-        )
-      ]
+          ComputeBudgetProgram.setComputeUnitPrice({
+            microLamports: microLamports,
+          }),
+          ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
+          SystemProgram.transfer({
+            fromPubkey: owner,
+            toPubkey: new PublicKey(tipAccounts[0]),
+            lamports: jitoFeeValueWei,
+          }),
+          createAssociatedTokenAccountIdempotentInstruction(
+            owner,
+            tokenAccountIn,
+            owner,
+            NATIVE_MINT
+          ),
+          SystemProgram.transfer({
+            fromPubkey: owner,
+            toPubkey: tokenAccountIn,
+            lamports: amount,
+          }),
+          createSyncNativeInstruction(tokenAccountIn, TOKEN_PROGRAM_ID),
+          createAssociatedTokenAccountIdempotentInstruction(
+            owner,
+            tokenAccountOut,
+            owner,
+            new PublicKey(mint)
+          ),
+          ...jitoInstruction,
+          // Unwrap WSOL for SOL
+          createCloseAccountInstruction(tokenAccountIn, owner, owner),
+        ]
       : [
-        ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
-        ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
-        SystemProgram.transfer({
-          fromPubkey: owner,
-          toPubkey: new PublicKey(tipAccounts[0]),
-          lamports: jitoFeeValueWei,
-        }),
-        createAssociatedTokenAccountIdempotentInstruction(
-          owner,
-          tokenAccountOut,
-          owner,
-          NATIVE_MINT
-        ),
-        ...jitoInstruction,
-        // Unwrap WSOL for SOL
-        createCloseAccountInstruction(
-          tokenAccountOut,
-          owner,
-          owner
-        )
-      ];
+          ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
+          ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
+          SystemProgram.transfer({
+            fromPubkey: owner,
+            toPubkey: new PublicKey(tipAccounts[0]),
+            lamports: jitoFeeValueWei,
+          }),
+          createAssociatedTokenAccountIdempotentInstruction(
+            owner,
+            tokenAccountOut,
+            owner,
+            NATIVE_MINT
+          ),
+          ...jitoInstruction,
+          // Unwrap WSOL for SOL
+          createCloseAccountInstruction(tokenAccountOut, owner, owner),
+        ];
 
     // Referral Fee, ReserverStaking Fee, Burn Token
     console.log("Before Fee: ", Date.now());
@@ -250,15 +301,14 @@ export async function pumpFunSwap(
     if (!bundleId) return;
     console.log("BundleID", bundleId);
     console.log(`https://solscan.io/tx/${signature}`);
-    const quote = { inAmount: amount, outAmount: quoteAmount }
+    const quote = { inAmount: amount, outAmount: quoteAmount };
     return {
       quote,
       signature,
       total_fee_in_sol,
       total_fee_in_token,
-      bundleId
+      bundleId,
     };
-
 
     // txBuilder.add(instruction);
 
@@ -272,6 +322,6 @@ export async function pumpFunSwap(
     //     console.log(simulatedResult);
     // }
   } catch (error) {
-    console.log(' - Swap pump token is failed', error);
+    console.log(" - Swap pump token is failed", error);
   }
 }

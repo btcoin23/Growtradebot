@@ -1,4 +1,4 @@
-import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api"
+import TelegramBot, { InlineKeyboardButton } from "node-telegram-bot-api";
 import { TokenService } from "../services/token.metadata";
 import { copytoclipboard } from "../utils";
 import { UserService } from "../services/user.service";
@@ -15,7 +15,7 @@ export const positionScreenHandler = async (
   replaceId?: number
 ) => {
   try {
-    const { chat, } = msg;
+    const { chat } = msg;
     const { id: chat_id, username } = chat;
     if (!username) {
       await sendUsernameRequiredNotification(bot, msg);
@@ -25,51 +25,50 @@ export const positionScreenHandler = async (
     const user = await UserService.findOne({ username });
     if (!user) return;
 
-
-    const temp = `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
+    const temp =
+      `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
       `<b>Loading...</b>\n`;
 
     const reply_markup = {
       inline_keyboard: [
-        [{
-          text: '❌ Close', callback_data: JSON.stringify({
-            'command': 'dismiss_message'
-          })
-        }]
-      ]
-    }
+        [
+          {
+            text: "❌ Close",
+            callback_data: JSON.stringify({
+              command: "dismiss_message",
+            }),
+          },
+        ],
+      ],
+    };
 
     let replaceIdtemp = replaceId;
     if (replaceId) {
-      await bot.editMessageText(
-        temp,
-        {
-          message_id: replaceId,
-          chat_id,
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-          reply_markup
-        }
-      );
-    } else {
-      const sentMessage = await bot.sendMessage(
+      await bot.editMessageText(temp, {
+        message_id: replaceId,
         chat_id,
-        temp,
-        {
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-          reply_markup
-        }
-      )
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup,
+      });
+    } else {
+      const sentMessage = await bot.sendMessage(chat_id, temp, {
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        reply_markup,
+      });
       replaceIdtemp = sentMessage.message_id;
     }
 
-    const tokenaccounts = await TokenService.getTokenAccounts(user.wallet_address);
+    const tokenaccounts = await TokenService.getTokenAccounts(
+      user.wallet_address
+    );
     // const solprice = await TokenService.getSOLPrice();
     const solbalance = await TokenService.getSOLBalance(user.wallet_address);
 
-    let caption = `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
+    let caption =
+      `<b>GrowTrade ${GrowTradeVersion}</b>\n💳 <b>Your wallet address</b>\n` +
       `<i>${copytoclipboard(user.wallet_address)}</i>\n\n` +
       `💳 Balance: <b>${solbalance} SOL</b>\n\n` +
       `<b>Please choose a token to buy/sell.</b>\n`;
@@ -149,8 +148,8 @@ export const positionScreenHandler = async (
       transferInlineKeyboards[Math.floor(idx / 3)].push({
         text: `${symbol ? symbol : mintAddress}`,
         callback_data: JSON.stringify({
-          'command': `SPS_${mintAddress}`
-        })
+          command: `SPS_${mintAddress}`,
+        }),
       });
 
       idx++;
@@ -161,33 +160,36 @@ export const positionScreenHandler = async (
       caption += `\n<i>You don't hold any tokens in this wallet</i>`;
     }
     transferInlineKeyboards.push([]);
-    transferInlineKeyboards[Math.ceil((tokenaccounts.length + discount) / 3)].push(...[
-      {
-        text: '🔄 Refresh', callback_data: JSON.stringify({
-          'command': 'pos_ref'
-        })
-      },
-      {
-        text: '❌ Close', callback_data: JSON.stringify({
-          'command': 'dismiss_message'
-        })
-      }
-    ]);
+    transferInlineKeyboards[
+      Math.ceil((tokenaccounts.length + discount) / 3)
+    ].push(
+      ...[
+        {
+          text: "🔄 Refresh",
+          callback_data: JSON.stringify({
+            command: "pos_ref",
+          }),
+        },
+        {
+          text: "❌ Close",
+          callback_data: JSON.stringify({
+            command: "dismiss_message",
+          }),
+        },
+      ]
+    );
 
     const new_reply_markup = {
-      inline_keyboard: transferInlineKeyboards
-    }
-    const sentmessage = await bot.editMessageText(
-      caption,
-      {
-        message_id: replaceIdtemp,
-        chat_id,
-        parse_mode: 'HTML',
-        disable_web_page_preview: true,
-        reply_markup: new_reply_markup
-      }
-    )
+      inline_keyboard: transferInlineKeyboards,
+    };
+    const sentmessage = await bot.editMessageText(caption, {
+      message_id: replaceIdtemp,
+      chat_id,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: new_reply_markup,
+    });
   } catch (e) {
     console.log("~ positionScreenHandler~", e);
   }
-}
+};

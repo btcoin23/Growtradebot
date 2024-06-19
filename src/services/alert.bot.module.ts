@@ -1,22 +1,35 @@
 import TelegramBot from "node-telegram-bot-api";
 import redisClient from "./redis";
-import { ALERT_GB_IMAGE, ALERT_GT_IMAGE, AlertBotID, BridgeBotID, TradeBotID } from "../bot.opts";
+import {
+  ALERT_GB_IMAGE,
+  ALERT_GT_IMAGE,
+  AlertBotID,
+  BridgeBotID,
+  TradeBotID,
+} from "../bot.opts";
 // import { ReferralChannelController } from "../controllers/referral.channel";
-import { getReferralList, get_referrer_info, update_channel_id } from "./referral.service";
+import {
+  getReferralList,
+  get_referrer_info,
+  update_channel_id,
+} from "./referral.service";
 import { ReferralIdenticalType } from "../main";
-import { ReferralChannelService, ReferralPlatform } from "./referral.channel.service";
+import {
+  ReferralChannelService,
+  ReferralPlatform,
+} from "./referral.channel.service";
 
 type ReferralChannel = {
-  chat_id: string, // channel id
-  channel_name: string,
-}
+  chat_id: string; // channel id
+  channel_name: string;
+};
 export type ReferralData = {
-  channels: ReferralChannel[],
-  referral_code: string,
-  creator: string,
-  platform: ReferralPlatform, // TradeBot, BridgeBot 
-  schedule: string
-}
+  channels: ReferralChannel[];
+  referral_code: string;
+  creator: string;
+  platform: ReferralPlatform; // TradeBot, BridgeBot
+  schedule: string;
+};
 
 export const alertbotModule = async (bot: TelegramBot) => {
   try {
@@ -29,13 +42,13 @@ export const alertbotModule = async (bot: TelegramBot) => {
   } catch (e) {
     console.log("alertbotModule", e);
   }
-}
+};
 
 const processReferral = async (referral: ReferralData, bot: TelegramBot) => {
   try {
     const { creator, referral_code, channels, platform, schedule } = referral;
     const scheduleInseconds = parseInt(schedule) * 60;
-    const isValid = await validateSchedule(referral_code, scheduleInseconds)
+    const isValid = await validateSchedule(referral_code, scheduleInseconds);
     if (!isValid) return;
 
     const isTradeBot = Number(platform) === ReferralPlatform.TradeBot;
@@ -47,13 +60,19 @@ const processReferral = async (referral: ReferralData, bot: TelegramBot) => {
   } catch (e) {
     console.log("processReferral", e);
   }
-}
+};
 
-const sendAlert = async (bot: TelegramBot, channelChatId: string, referral_code: string, creator: string, idx: number, isTradeBot: boolean) => {
+const sendAlert = async (
+  bot: TelegramBot,
+  channelChatId: string,
+  referral_code: string,
+  creator: string,
+  idx: number,
+  isTradeBot: boolean
+) => {
   try {
     if (!channelChatId || channelChatId === "") return;
     await bot.getChat(channelChatId);
-
 
     const botId = isTradeBot ? TradeBotID : BridgeBotID;
     const botImg = isTradeBot ? ALERT_GT_IMAGE : ALERT_GB_IMAGE;
@@ -61,37 +80,40 @@ const sendAlert = async (bot: TelegramBot, channelChatId: string, referral_code:
     const referralLink = `https://t.me/${botId}?start=${referral_code}`;
 
     const inline_keyboard = [
-      [{
-        text: txt,
-        url: referralLink
-      }],
-    ]
+      [
+        {
+          text: txt,
+          url: referralLink,
+        },
+      ],
+    ];
     if (isTradeBot) {
-      inline_keyboard.push(
-        [{
+      inline_keyboard.push([
+        {
           text: "Trade with us 📈",
-          url: "https://t.me/GrowTradeOfficial"
-        }],
-      )
+          url: "https://t.me/GrowTradeOfficial",
+        },
+      ]);
     }
 
-    bot.sendPhoto(
-      channelChatId,
-      botImg,
-      {
-        caption: '',
-        reply_markup: {
-          inline_keyboard
-        },
-        parse_mode: 'HTML',
-      }
-    )
+    bot.sendPhoto(channelChatId, botImg, {
+      caption: "",
+      reply_markup: {
+        inline_keyboard,
+      },
+      parse_mode: "HTML",
+    });
   } catch (error) {
     console.log("sendAlert Error:", channelChatId, referral_code);
     await handleError(error, creator, idx, channelChatId);
   }
-}
-const handleError = async (error: any, creator: string, idx: number, channelChatId: string) => {
+};
+const handleError = async (
+  error: any,
+  creator: string,
+  idx: number,
+  channelChatId: string
+) => {
   try {
     const errMsg = error.response.body.description;
     if (errMsg.includes("chat not found")) {
@@ -107,11 +129,7 @@ const handleError = async (error: any, creator: string, idx: number, channelChat
       }
       await redisClient.del(channelChatId);
 
-      const res = await update_channel_id(
-        creator,
-        idx,
-        'delete',
-      )
+      const res = await update_channel_id(creator, idx, "delete");
       if (!res) {
         console.log("ServerError: cannot remove channel", creator, idx);
       }
@@ -119,7 +137,7 @@ const handleError = async (error: any, creator: string, idx: number, channelChat
   } catch (e) {
     return;
   }
-}
+};
 const validateSchedule = async (referral_code: string, schedule: number) => {
   try {
     const last_ts: string | null = await redisClient.get(referral_code);
@@ -138,7 +156,7 @@ const validateSchedule = async (referral_code: string, schedule: number) => {
     console.log("validateSchedule", e);
     return false;
   }
-}
+};
 
 export const newReferralChannelHandler = async (msg: TelegramBot.Message) => {
   try {
@@ -146,8 +164,10 @@ export const newReferralChannelHandler = async (msg: TelegramBot.Message) => {
     if (from && new_chat_members && from.username) {
       // if bot added me, return
       if (from.is_bot) return;
-      // if me is bot??, 
-      const alertbotInfo = new_chat_members.find(member => member.username === AlertBotID);
+      // if me is bot??,
+      const alertbotInfo = new_chat_members.find(
+        (member) => member.username === AlertBotID
+      );
       if (!alertbotInfo) return;
 
       const creator = from.username;
@@ -161,8 +181,8 @@ export const newReferralChannelHandler = async (msg: TelegramBot.Message) => {
         chatId: chat_id.toString(),
         referrer: creator,
         channelName: channel_name,
-        messageId: msg.message_id.toString()
-      } as ReferralIdenticalType
+        messageId: msg.message_id.toString(),
+      } as ReferralIdenticalType;
       // await ReferralChannelController.create(
       //   creator,
       //   channel_name,
@@ -175,17 +195,18 @@ export const newReferralChannelHandler = async (msg: TelegramBot.Message) => {
     console.log("newReferralChannelHandler", e);
     return null;
   }
-}
+};
 
-
-export const removeReferralChannelHandler = async (msg: TelegramBot.Message) => {
+export const removeReferralChannelHandler = async (
+  msg: TelegramBot.Message
+) => {
   try {
     const { chat, from, left_chat_member } = msg;
     if (from && left_chat_member && from.username) {
       // if bot added me, return
       if (from.is_bot) return;
 
-      // if me is bot??, 
+      // if me is bot??,
       const alertbotInfo = left_chat_member.username === AlertBotID;
       if (!alertbotInfo) return;
 
@@ -200,8 +221,8 @@ export const removeReferralChannelHandler = async (msg: TelegramBot.Message) => 
         creator,
         // platform: ReferralPlatform.TradeBot,
         chat_id: chat_id.toString(),
-        channel_name: chat.title
-      })
+        channel_name: chat.title,
+      });
       // await ReferralChannelController.deleteOne({
       //   chat_id,
       //   referral_code
@@ -210,33 +231,31 @@ export const removeReferralChannelHandler = async (msg: TelegramBot.Message) => 
   } catch (e) {
     console.log("newReferralChannelHandler", e);
   }
-}
+};
 
 export const sendAlertForOurChannel = async (alertBot: TelegramBot) => {
   try {
     const chat_id = "-1002138253167";
     await alertBot.getChat(chat_id);
-    await alertBot.sendPhoto(
-      chat_id,
-      ALERT_GT_IMAGE,
-      {
-        caption: '',
-        reply_markup: {
-          inline_keyboard: [
-            [{
-              text: 'Try GrowBridge now!',
-              url: `https://t.me/${TradeBotID}`
-            }],
-            // [{
-            //   text: 'Start Trading With GrowTrade',
-            //   url: "https://t.me/growtradeapp_bot"
-            // }],
-          ]
-        },
-        parse_mode: 'HTML',
-      }
-    )
+    await alertBot.sendPhoto(chat_id, ALERT_GT_IMAGE, {
+      caption: "",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Try GrowBridge now!",
+              url: `https://t.me/${TradeBotID}`,
+            },
+          ],
+          // [{
+          //   text: 'Start Trading With GrowTrade',
+          //   url: "https://t.me/growtradeapp_bot"
+          // }],
+        ],
+      },
+      parse_mode: "HTML",
+    });
   } catch (e) {
-    console.log("Channel Error", e)
+    console.log("Channel Error", e);
   }
-}
+};

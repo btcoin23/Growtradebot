@@ -11,21 +11,24 @@ export const runOpenmarketCronSchedule = () => {
       })
       .start();
   } catch (error) {
-    console.error(`Error running the Schedule Job for fetching the chat data: ${error}`);
+    console.error(
+      `Error running the Schedule Job for fetching the chat data: ${error}`
+    );
   }
 };
 
 const removeOldDatas = async () => {
   try {
-
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
     try {
-      const result = await OpenMarketSchema.deleteMany({ createdAt: { $lt: threeHoursAgo } });
+      const result = await OpenMarketSchema.deleteMany({
+        createdAt: { $lt: threeHoursAgo },
+      });
       console.log(`Deleted ${result.deletedCount} old documents.`);
     } catch (error) {
-      console.error('Error deleting old documents:', error);
+      console.error("Error deleting old documents:", error);
     }
   } catch (e) {
-    console.log("🚀 ~ SOL price cron job ~ Failed", e)
+    console.log("🚀 ~ SOL price cron job ~ Failed", e);
   }
-}
+};

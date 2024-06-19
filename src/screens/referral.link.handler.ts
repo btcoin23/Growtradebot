@@ -4,7 +4,10 @@ import { generateReferralCode } from "../utils";
 import { UserService } from "../services/user.service";
 import { ReferralChannelService } from "../services/referral.channel.service";
 
-export const OpenReferralWindowHandler = async (bot: TelegramBot, msg: TelegramBot.Message) => {
+export const OpenReferralWindowHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message
+) => {
   const chat = msg.chat;
   const username = chat.username;
   if (!username) {
@@ -19,10 +22,9 @@ export const OpenReferralWindowHandler = async (bot: TelegramBot, msg: TelegramB
   // // if already created a link, we show link
   // const { uniquecode } = data;
 
-
-  const referrerCode = await GenerateReferralCode(username)
+  const referrerCode = await GenerateReferralCode(username);
   showWelcomeReferralProgramMessage(bot, chat, referrerCode);
-}
+};
 
 export const GenerateReferralCode = async (username: string) => {
   const userInfo = await UserService.findOne({ username: username });
@@ -32,8 +34,7 @@ export const GenerateReferralCode = async (username: string) => {
   let referrerCode = "";
   if (referrer_code && referrer_code !== "") {
     referrerCode = referrer_code;
-  }
-  else {
+  } else {
     let uniquecode = generateReferralCode(10);
     referrerCode = uniquecode;
     const referralChannelService = new ReferralChannelService();
@@ -41,10 +42,13 @@ export const GenerateReferralCode = async (username: string) => {
       username,
       uniquecode
     );
-    console.log(res)
+    console.log(res);
     if (!res) return;
-    await UserService.updateMany({ username: username }, { referrer_code: uniquecode })
+    await UserService.updateMany(
+      { username: username },
+      { referrer_code: uniquecode }
+    );
   }
 
   return referrerCode;
-}
+};

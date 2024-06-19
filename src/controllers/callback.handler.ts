@@ -1,14 +1,58 @@
 import TelegramBot from "node-telegram-bot-api";
-import { contractInfoScreenHandler, refreshHandler } from "../screens/contract.info.screen";
+import {
+  contractInfoScreenHandler,
+  refreshHandler,
+} from "../screens/contract.info.screen";
 import { GasFeeEnum } from "../services/user.trade.setting.service";
-import { buyCustomAmountScreenHandler, buyHandler, sellCustomAmountScreenHandler, sellHandler, setSlippageScreenHandler } from "../screens/trade.screen";
-import { cancelWithdrawHandler, transferFundScreenHandler, withdrawButtonHandler, withdrawCustomAmountScreenHandler, withdrawHandler } from "../screens/transfer.funds";
-import { WelcomeScreenHandler, welcomeGuideHandler } from "../screens/welcome.screen";
-import { autoBuyAmountScreenHandler, changeGasFeeHandler, changeJitoTipFeeHandler, generateNewWalletHandler, pnlCardHandler, presetBuyAmountScreenHandler, presetBuyBtnHandler, revealWalletPrivatekyHandler, setCustomAutoBuyAmountHandler, setCustomFeeScreenHandler, setCustomJitoFeeScreenHandler, settingScreenHandler, switchAutoBuyOptsHandler, switchBurnOptsHandler, switchWalletHandler, walletViewHandler } from "../screens/settings.screen";
+import {
+  buyCustomAmountScreenHandler,
+  buyHandler,
+  sellCustomAmountScreenHandler,
+  sellHandler,
+  setSlippageScreenHandler,
+} from "../screens/trade.screen";
+import {
+  cancelWithdrawHandler,
+  transferFundScreenHandler,
+  withdrawButtonHandler,
+  withdrawCustomAmountScreenHandler,
+  withdrawHandler,
+} from "../screens/transfer.funds";
+import {
+  WelcomeScreenHandler,
+  welcomeGuideHandler,
+} from "../screens/welcome.screen";
+import {
+  autoBuyAmountScreenHandler,
+  changeGasFeeHandler,
+  changeJitoTipFeeHandler,
+  generateNewWalletHandler,
+  pnlCardHandler,
+  presetBuyAmountScreenHandler,
+  presetBuyBtnHandler,
+  revealWalletPrivatekyHandler,
+  setCustomAutoBuyAmountHandler,
+  setCustomFeeScreenHandler,
+  setCustomJitoFeeScreenHandler,
+  settingScreenHandler,
+  switchAutoBuyOptsHandler,
+  switchBurnOptsHandler,
+  switchWalletHandler,
+  walletViewHandler,
+} from "../screens/settings.screen";
 import { positionScreenHandler } from "../screens/position.screen";
 import { OpenReferralWindowHandler } from "../screens/referral.link.handler";
-import { openAlertBotDashboard, sendMsgForAlertScheduleHandler, updateSchedule } from "../screens/bot.dashboard"
-import { backToReferralHomeScreenHandler, refreshPayoutHandler, sendPayoutAddressManageScreen, setSOLPayoutAddressHandler } from "../screens/payout.screen";
+import {
+  openAlertBotDashboard,
+  sendMsgForAlertScheduleHandler,
+  updateSchedule,
+} from "../screens/bot.dashboard";
+import {
+  backToReferralHomeScreenHandler,
+  refreshPayoutHandler,
+  sendPayoutAddressManageScreen,
+  setSOLPayoutAddressHandler,
+} from "../screens/payout.screen";
 
 export const callbackQueryHandler = async (
   bot: TelegramBot,
@@ -23,144 +67,155 @@ export const callbackQueryHandler = async (
       chat_id: callbackMessage.chat.id,
       message_id: callbackMessage.message_id,
     };
-    if (data.command.includes('dismiss_message')) {
+    if (data.command.includes("dismiss_message")) {
       bot.deleteMessage(opts.chat_id, opts.message_id);
       return;
     }
 
-    if (data.command.includes('cancel_withdraw')) {
+    if (data.command.includes("cancel_withdraw")) {
       await cancelWithdrawHandler(bot, callbackMessage);
       return;
     }
 
-    if (data.command.includes('dummy_button')) {
+    if (data.command.includes("dummy_button")) {
       return;
     }
 
-    if (data.command.includes('position')) {
+    if (data.command.includes("position")) {
       // const replaceId = callbackMessage.message_id;
       await positionScreenHandler(bot, callbackMessage);
       return;
     }
 
-    if (data.command.includes('burn_switch')) {
+    if (data.command.includes("burn_switch")) {
       await switchBurnOptsHandler(bot, callbackMessage);
       return;
     }
 
-    if (data.command.includes('autobuy_switch')) {
+    if (data.command.includes("autobuy_switch")) {
       await switchAutoBuyOptsHandler(bot, callbackMessage);
       return;
     }
 
-    if (data.command.includes('autobuy_amount')) {
+    if (data.command.includes("autobuy_amount")) {
       const replaceId = callbackMessage.message_id;
       await autoBuyAmountScreenHandler(bot, callbackMessage, replaceId);
       return;
     }
 
-    if (data.command === 'pos_ref') {
+    if (data.command === "pos_ref") {
       const replaceId = callbackMessage.message_id;
       await positionScreenHandler(bot, callbackMessage, replaceId);
       return;
     }
 
     // click on mint symbol from position
-    if (data.command.includes('SPS_')) {
+    if (data.command.includes("SPS_")) {
       const mint = data.command.slice(4);
-      await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_buy", true);
+      await contractInfoScreenHandler(
+        bot,
+        callbackMessage,
+        mint,
+        "switch_buy",
+        true
+      );
       return;
     }
 
-    if (data.command.includes('BS_')) {
+    if (data.command.includes("BS_")) {
       const mint = data.command.slice(3);
       await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_buy");
       return;
     }
 
-    if (data.command.includes('SS_')) {
+    if (data.command.includes("SS_")) {
       const mint = data.command.slice(3);
-      await contractInfoScreenHandler(bot, callbackMessage, mint, "switch_sell");
+      await contractInfoScreenHandler(
+        bot,
+        callbackMessage,
+        mint,
+        "switch_sell"
+      );
       return;
     }
 
-    if (data.command.includes('transfer_funds')) {
+    if (data.command.includes("transfer_funds")) {
       const replaceId = callbackMessage.message_id;
       await transferFundScreenHandler(bot, callbackMessage, replaceId);
       return;
     }
 
-    if (data.command.includes('TF_')) {
+    if (data.command.includes("TF_")) {
       const mint = data.command.slice(3);
       await withdrawButtonHandler(bot, callbackMessage, mint);
       return;
     }
 
-    if (data.command.includes('withdrawtoken_custom')) {
+    if (data.command.includes("withdrawtoken_custom")) {
       await withdrawCustomAmountScreenHandler(bot, callbackMessage);
       return;
     }
 
-    const withdrawstr = 'withdraw_';
+    const withdrawstr = "withdraw_";
     if (data.command.includes(withdrawstr)) {
       const percent = data.command.slice(withdrawstr.length);
       await withdrawHandler(bot, callbackMessage, percent);
       return;
     }
 
-    if (data.command.includes('settings')) {
+    if (data.command.includes("settings")) {
       console.log("Settings");
       const replaceId = callbackMessage.message_id;
-      await settingScreenHandler(bot, callbackMessage, replaceId)
+      await settingScreenHandler(bot, callbackMessage, replaceId);
     }
 
-    if (data.command.includes('generate_wallet')) {
-      await generateNewWalletHandler(bot, callbackMessage)
+    if (data.command.includes("generate_wallet")) {
+      await generateNewWalletHandler(bot, callbackMessage);
     }
 
-    const pkstr = 'revealpk_';
+    const pkstr = "revealpk_";
     if (data.command.includes(pkstr)) {
       const nonce = Number(data.command.slice(pkstr.length));
       await revealWalletPrivatekyHandler(bot, callbackMessage, nonce);
     }
 
-    const usewalletstr = 'usewallet_';
+    const usewalletstr = "usewallet_";
     if (data.command.includes(usewalletstr)) {
       const nonce = Number(data.command.slice(usewalletstr.length));
       await switchWalletHandler(bot, callbackMessage, nonce);
     }
 
-    if (data.command.includes('back_home')) {
+    if (data.command.includes("back_home")) {
       const replaceId = callbackMessage.message_id;
-      await welcomeGuideHandler(bot, callbackMessage, replaceId)
+      await welcomeGuideHandler(bot, callbackMessage, replaceId);
     }
 
-    if (data.command === 'switch_gas') {
+    if (data.command === "switch_gas") {
       await changeGasFeeHandler(bot, callbackMessage, GasFeeEnum.LOW);
       return;
     }
-    if (data.command === 'custom_gas') {
+    if (data.command === "custom_gas") {
       await setCustomFeeScreenHandler(bot, callbackMessage);
       return;
     }
 
-    if (data.command === 'switch_mev') {
+    if (data.command === "switch_mev") {
       await changeJitoTipFeeHandler(bot, callbackMessage);
       return;
     }
 
-    if (data.command === 'custom_jitofee') {
+    if (data.command === "custom_jitofee") {
       await setCustomJitoFeeScreenHandler(bot, callbackMessage);
       return;
     }
 
-    const buyTokenStr = 'buytoken_';
+    const buyTokenStr = "buytoken_";
     if (data.command.includes(buyTokenStr)) {
       const buyAmount = Number(data.command.slice(buyTokenStr.length));
       await buyHandler(bot, callbackMessage, buyAmount);
       return;
     }
-    const sellTokenStr = 'selltoken_';
+    const sellTokenStr = "selltoken_";
     if (data.command.includes(sellTokenStr)) {
       const sellPercent = Number(data.command.slice(sellTokenStr.length));
       await sellHandler(bot, callbackMessage, sellPercent);
@@ -186,11 +241,11 @@ export const callbackQueryHandler = async (
       await walletViewHandler(bot, callbackMessage);
       return;
     }
-    if (data.command === 'referral') {
-      await OpenReferralWindowHandler(bot, callbackMessage)
+    if (data.command === "referral") {
+      await OpenReferralWindowHandler(bot, callbackMessage);
     }
     // Open payout dashboard
-    if (data.command === 'payout_address') {
+    if (data.command === "payout_address") {
       await sendPayoutAddressManageScreen(
         bot,
         callbackMessage.chat,
@@ -198,66 +253,48 @@ export const callbackQueryHandler = async (
       );
     }
     // Update SOL address
-    if (data.command === 'set_sol_address') {
-      await setSOLPayoutAddressHandler(
-        bot,
-        callbackMessage.chat,
-      );
-    }
-    else if (data.command === 'refresh_payout') {
-      await refreshPayoutHandler(
-        bot,
-        callbackMessage,
-      );
+    if (data.command === "set_sol_address") {
+      await setSOLPayoutAddressHandler(bot, callbackMessage.chat);
+    } else if (data.command === "refresh_payout") {
+      await refreshPayoutHandler(bot, callbackMessage);
     }
     // Alert Bot
-    if (data.command === 'alert_bot' || data.command === 'refresh_alert_bot') {
+    if (data.command === "alert_bot" || data.command === "refresh_alert_bot") {
       bot.deleteMessage(callbackMessage.chat.id, callbackMessage.message_id);
-      await openAlertBotDashboard(
-        bot,
-        callbackMessage.chat,
-      );
+      await openAlertBotDashboard(bot, callbackMessage.chat);
     }
     // Schedule
-    else if (data.command.includes('alert_schedule')) {
-      await sendMsgForAlertScheduleHandler(
-        bot,
-        callbackMessage.chat,
-      );
+    else if (data.command.includes("alert_schedule")) {
+      await sendMsgForAlertScheduleHandler(bot, callbackMessage.chat);
     }
     // Back home
-    else if (data.command === 'back_from_ref') {
+    else if (data.command === "back_from_ref") {
       await backToReferralHomeScreenHandler(
         bot,
         callbackMessage.chat,
         callbackMessage
       );
-    }
-    else if (data.command.includes('schedule_time_')) {
-      const scheduleTime = data.command.slice(14)
+    } else if (data.command.includes("schedule_time_")) {
+      const scheduleTime = data.command.slice(14);
 
-      await updateSchedule(
-        bot,
-        callbackMessage.chat,
-        scheduleTime,
-      );
+      await updateSchedule(bot, callbackMessage.chat, scheduleTime);
     }
-    const presetBuyStr = 'preset_buy_';
+    const presetBuyStr = "preset_buy_";
     if (data.command.includes(presetBuyStr)) {
       const preset_index = parseInt(data.command.slice(presetBuyStr.length));
       await presetBuyAmountScreenHandler(bot, callbackMessage, preset_index);
       return;
     }
-    if (data.command === 'refresh') {
+    if (data.command === "refresh") {
       await refreshHandler(bot, callbackMessage);
       return;
     }
 
-    if(data.command === 'pnl_card'){
+    if (data.command === "pnl_card") {
       await pnlCardHandler(bot, callbackMessage);
       return;
     }
   } catch (e) {
     console.log(e);
   }
-}
+};

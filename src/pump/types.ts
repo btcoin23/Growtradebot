@@ -1,4 +1,4 @@
-export enum TransactionMode{
-    Simulation,
-    Execution
+export enum TransactionMode {
+  Simulation,
+  Execution,
 }

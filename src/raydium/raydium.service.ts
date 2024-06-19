@@ -71,28 +71,22 @@ export const calcAmountOut = async (
   rawAmountIn: number,
   isAmm: boolean,
   ammKeys?: any,
-  clmmKeys?: any,
+  clmmKeys?: any
 ) => {
   let inAmount = rawAmountIn > 0 ? rawAmountIn : 10000;
   let outAmount = 0;
-  let priceImpactPct = 0;;
+  let priceImpactPct = 0;
   let priceInSol = 0;
 
   const slippage = new Percent(100); // 100% slippage
-  const currencyIn = new Token(
-    TOKEN_PROGRAM_ID,
-    inMint,
-    inDecimal
-  );
+  const currencyIn = new Token(TOKEN_PROGRAM_ID, inMint, inDecimal);
   const amountIn = new TokenAmount(currencyIn, inAmount, false);
-  const currencyOut = new Token(
-    TOKEN_PROGRAM_ID,
-    outMint,
-    outDecimal
-  );
+  const currencyOut = new Token(TOKEN_PROGRAM_ID, outMint, outDecimal);
   console.log("AMM", isAmm, Date.now());
   if (isAmm) {
-    const targetPoolInfo = ammKeys ? JSON.parse(JSON.stringify(ammKeys)) : await syncAmmPoolKeys(poolId);
+    const targetPoolInfo = ammKeys
+      ? JSON.parse(JSON.stringify(ammKeys))
+      : await syncAmmPoolKeys(poolId);
     if (!targetPoolInfo) {
       console.log("🚀 cannot find the target pool", poolId);
       return;
@@ -100,8 +94,12 @@ export const calcAmountOut = async (
     const poolKeys = jsonInfo2PoolKeys(targetPoolInfo) as LiquidityPoolKeys;
     // const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys });
 
-    const baseReserve = await connection.getTokenAccountBalance(new PublicKey(targetPoolInfo.baseVault));
-    const quoteReserve = await connection.getTokenAccountBalance(new PublicKey(targetPoolInfo.quoteVault));
+    const baseReserve = await connection.getTokenAccountBalance(
+      new PublicKey(targetPoolInfo.baseVault)
+    );
+    const quoteReserve = await connection.getTokenAccountBalance(
+      new PublicKey(targetPoolInfo.quoteVault)
+    );
     const poolInfo: LiquidityPoolInfo = {
       status: new BN(LiquidityPoolStatus.Swap),
       baseDecimals: targetPoolInfo.baseDecimals,
@@ -110,44 +108,59 @@ export const calcAmountOut = async (
       baseReserve: new BN(baseReserve.value.amount),
       quoteReserve: new BN(quoteReserve.value.amount),
       lpSupply: new BN("0"),
-      startTime: new BN("0")
-    }
+      startTime: new BN("0"),
+    };
 
-    const {
-      amountOut,
-      priceImpact,
-      currentPrice
-    } = Liquidity.computeAmountOut({
-      poolKeys,
-      poolInfo,
-      amountIn,
-      currencyOut,
-      slippage,
-    });
+    const { amountOut, priceImpact, currentPrice } = Liquidity.computeAmountOut(
+      {
+        poolKeys,
+        poolInfo,
+        amountIn,
+        currencyOut,
+        slippage,
+      }
+    );
 
-    const decimalsDiff = currentPrice.baseCurrency.decimals - currentPrice.quoteCurrency.decimals;
-    if ((currentPrice.baseCurrency as Token).mint.toBase58() === NATIVE_MINT.toBase58()) {
-      priceInSol = Number(currentPrice.denominator) / Number(currentPrice.numerator) / (10 ** decimalsDiff);
-      console.log("F=>PriceInSOL & OutAmount", currentPrice.numerator.toString(), currentPrice.denominator.toString());
+    const decimalsDiff =
+      currentPrice.baseCurrency.decimals - currentPrice.quoteCurrency.decimals;
+    if (
+      (currentPrice.baseCurrency as Token).mint.toBase58() ===
+      NATIVE_MINT.toBase58()
+    ) {
+      priceInSol =
+        Number(currentPrice.denominator) /
+        Number(currentPrice.numerator) /
+        10 ** decimalsDiff;
+      console.log(
+        "F=>PriceInSOL & OutAmount",
+        currentPrice.numerator.toString(),
+        currentPrice.denominator.toString()
+      );
     } else {
-      priceInSol = Number(currentPrice.numerator) / Number(currentPrice.denominator) * (10 ** decimalsDiff);
-      console.log("S=>PriceInSOL & OutAmount", currentPrice.numerator.toString(), currentPrice.denominator.toString());
+      priceInSol =
+        (Number(currentPrice.numerator) / Number(currentPrice.denominator)) *
+        10 ** decimalsDiff;
+      console.log(
+        "S=>PriceInSOL & OutAmount",
+        currentPrice.numerator.toString(),
+        currentPrice.denominator.toString()
+      );
     }
 
     outAmount = Number(amountOut.numerator) / Number(amountOut.denominator);
-    priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
-  }
-  else {
-
+    priceImpactPct =
+      (100 * Number(priceImpact.numerator)) / Number(priceImpact.denominator);
+  } else {
     const clmmPools: ApiClmmPoolsItem[] = [
-      clmmKeys ? JSON.parse(JSON.stringify(clmmKeys)) : await syncClmmPoolKeys(poolId)
+      clmmKeys
+        ? JSON.parse(JSON.stringify(clmmKeys))
+        : await syncClmmPoolKeys(poolId),
     ];
-    const { [poolId]: clmmPoolInfo } =
-      await Clmm.fetchMultiplePoolInfos({
-        connection,
-        poolKeys: clmmPools,
-        chainTime: new Date().getTime() / 1000,
-      });
+    const { [poolId]: clmmPoolInfo } = await Clmm.fetchMultiplePoolInfos({
+      connection,
+      poolKeys: clmmPools,
+      chainTime: new Date().getTime() / 1000,
+    });
 
     const tickCache = await Clmm.fetchMultiplePoolTickArrays({
       connection,
@@ -155,8 +168,8 @@ export const calcAmountOut = async (
       batchRequest: true,
     });
 
-    const { amountOut, priceImpact, currentPrice } = Clmm.computeAmountOutFormat(
-      {
+    const { amountOut, priceImpact, currentPrice } =
+      Clmm.computeAmountOutFormat({
         poolInfo: clmmPoolInfo.state,
         tickArrayCache: tickCache[poolId],
         amountIn,
@@ -177,19 +190,37 @@ export const calcAmountOut = async (
           ],
         }),
         catchLiquidityInsufficient: true,
-      }
-    );
-    const decimalsDiff = currentPrice.baseCurrency.decimals - currentPrice.quoteCurrency.decimals;
-    if ((currentPrice.baseCurrency as Token).mint.toBase58() === NATIVE_MINT.toBase58()) {
-      priceInSol = Number(currentPrice.denominator) / Number(currentPrice.numerator) / 10 ** decimalsDiff;
-      console.log("FF=>PriceInSOL & OutAmount", currentPrice.numerator.toString(), currentPrice.denominator.toString());
+      });
+    const decimalsDiff =
+      currentPrice.baseCurrency.decimals - currentPrice.quoteCurrency.decimals;
+    if (
+      (currentPrice.baseCurrency as Token).mint.toBase58() ===
+      NATIVE_MINT.toBase58()
+    ) {
+      priceInSol =
+        Number(currentPrice.denominator) /
+        Number(currentPrice.numerator) /
+        10 ** decimalsDiff;
+      console.log(
+        "FF=>PriceInSOL & OutAmount",
+        currentPrice.numerator.toString(),
+        currentPrice.denominator.toString()
+      );
     } else {
-      priceInSol = Number(currentPrice.numerator) / Number(currentPrice.denominator) * 10 ** decimalsDiff;
-      console.log("SS=>PriceInSOL & OutAmount", currentPrice.numerator.toString(), currentPrice.denominator.toString());
+      priceInSol =
+        (Number(currentPrice.numerator) / Number(currentPrice.denominator)) *
+        10 ** decimalsDiff;
+      console.log(
+        "SS=>PriceInSOL & OutAmount",
+        currentPrice.numerator.toString(),
+        currentPrice.denominator.toString()
+      );
     }
 
-    outAmount = Number(amountOut.amount.numerator) / Number(amountOut.amount.denominator);
-    priceImpactPct = 100 * Number(priceImpact.numerator) / Number(priceImpact.denominator);
+    outAmount =
+      Number(amountOut.amount.numerator) / Number(amountOut.amount.denominator);
+    priceImpactPct =
+      (100 * Number(priceImpact.numerator)) / Number(priceImpact.denominator);
   }
   console.log("1PriceInSOL & OutAmount", priceInSol, outAmount);
   return {
@@ -198,13 +229,12 @@ export const calcAmountOut = async (
     outputMint: outMint.toString(),
     outAmount,
     priceImpactPct,
-    priceInSol
+    priceInSol,
   };
 };
 
-
 export class RaydiumSwapService {
-  constructor() { }
+  constructor() {}
 
   async swapToken(
     pk: string,
@@ -221,8 +251,8 @@ export class RaydiumSwapService {
     try {
       // JitoFee
       const jitoFeeSetting = await UserTradeSettingService.getJitoFee(username);
-      const jitoFeeValue = UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
-
+      const jitoFeeValue =
+        UserTradeSettingService.getJitoFeeValue(jitoFeeSetting);
 
       let total_fee_in_sol = 0;
       let total_fee_in_token = 0;
@@ -258,7 +288,7 @@ export class RaydiumSwapService {
       //   ? (amount * 10 ** (outDecimal - inDecimal)) / tokenPrice
       //   : amount * tokenPrice * 10 ** (outDecimal - inDecimal);
 
-      const quote = await calcAmountOut(
+      const quote = (await calcAmountOut(
         connection,
         new PublicKey(inputMint),
         inDecimal,
@@ -269,7 +299,7 @@ export class RaydiumSwapService {
         isAmm,
         ammKeys,
         clmmKeys
-      ) as QuoteRes;
+      )) as QuoteRes;
 
       if (!quote) {
         console.error("unable to quote");
@@ -320,7 +350,9 @@ export class RaydiumSwapService {
       let raydiumSwapInnerInstruction;
       if (isAmm) {
         // -------- pre-action: get pool info --------
-        const targetPoolInfo = ammKeys ? JSON.parse(JSON.stringify(ammKeys)) : await syncAmmPoolKeys(poolId); // await formatAmmKeysById(targetPool);
+        const targetPoolInfo = ammKeys
+          ? JSON.parse(JSON.stringify(ammKeys))
+          : await syncAmmPoolKeys(poolId); // await formatAmmKeysById(targetPool);
         if (!targetPoolInfo) {
           console.log("🚀 cannot find the target pool", 11);
           return;
@@ -341,12 +373,14 @@ export class RaydiumSwapService {
           },
           poolKeys.version
         );
-        console.log("SELL", amount, tokenAccountIn, tokenAccountOut)
+        console.log("SELL", amount, tokenAccountIn, tokenAccountOut);
         raydiumSwapInnerInstruction = innerTransaction;
       } else {
         // -------- pre-action: get pool info --------
         const clmmPools: ApiClmmPoolsItem[] = [
-          clmmKeys ? JSON.parse(JSON.stringify(clmmKeys)) : await syncClmmPoolKeys(poolId)
+          clmmKeys
+            ? JSON.parse(JSON.stringify(clmmKeys))
+            : await syncClmmPoolKeys(poolId),
           // await formatClmmKeysById(targetPool),
         ];
         const { [targetPool]: clmmPoolInfo } =
@@ -426,67 +460,74 @@ export class RaydiumSwapService {
       console.log("Is_BUY", is_buy);
       const instructions: TransactionInstruction[] = is_buy
         ? [
-          ComputeBudgetProgram.setComputeUnitPrice({
-            microLamports: microLamports,
-          }),
-          ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
-          // JitoTipOption
-          SystemProgram.transfer({
-            fromPubkey: wallet.publicKey,
-            toPubkey: new PublicKey(tipAccounts[0]),
-            lamports: jitoFeeValueWei,
-          }),
-          createAssociatedTokenAccountIdempotentInstruction(
-            wallet.publicKey,
-            tokenAccountIn,
-            wallet.publicKey,
-            NATIVE_MINT
-          ),
-          SystemProgram.transfer({
-            fromPubkey: wallet.publicKey,
-            toPubkey: tokenAccountIn,
-            lamports: amount,
-          }),
-          createSyncNativeInstruction(tokenAccountIn, TOKEN_PROGRAM_ID),
-          createAssociatedTokenAccountIdempotentInstruction(
-            wallet.publicKey,
-            tokenAccountOut,
-            wallet.publicKey,
-            new PublicKey(mint)
-          ),
-          ...raydiumSwapInnerInstruction.instructions,
-          // Unwrap WSOL for SOL
-          createCloseAccountInstruction(
-            tokenAccountIn,
-            wallet.publicKey,
-            wallet.publicKey
-          )
-        ]
+            ComputeBudgetProgram.setComputeUnitPrice({
+              microLamports: microLamports,
+            }),
+            ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
+            // JitoTipOption
+            SystemProgram.transfer({
+              fromPubkey: wallet.publicKey,
+              toPubkey: new PublicKey(tipAccounts[0]),
+              lamports: jitoFeeValueWei,
+            }),
+            createAssociatedTokenAccountIdempotentInstruction(
+              wallet.publicKey,
+              tokenAccountIn,
+              wallet.publicKey,
+              NATIVE_MINT
+            ),
+            SystemProgram.transfer({
+              fromPubkey: wallet.publicKey,
+              toPubkey: tokenAccountIn,
+              lamports: amount,
+            }),
+            createSyncNativeInstruction(tokenAccountIn, TOKEN_PROGRAM_ID),
+            createAssociatedTokenAccountIdempotentInstruction(
+              wallet.publicKey,
+              tokenAccountOut,
+              wallet.publicKey,
+              new PublicKey(mint)
+            ),
+            ...raydiumSwapInnerInstruction.instructions,
+            // Unwrap WSOL for SOL
+            createCloseAccountInstruction(
+              tokenAccountIn,
+              wallet.publicKey,
+              wallet.publicKey
+            ),
+          ]
         : [
-          ComputeBudgetProgram.setComputeUnitPrice({ microLamports: microLamports }),
-          ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
-          // JitoTipOption
-          SystemProgram.transfer({
-            fromPubkey: wallet.publicKey,
-            toPubkey: new PublicKey(tipAccounts[0]),
-            lamports: jitoFeeValueWei,
-          }),
-          createAssociatedTokenAccountIdempotentInstruction(
-            wallet.publicKey,
-            tokenAccountOut,
-            wallet.publicKey,
-            NATIVE_MINT
-          ),
-          ...raydiumSwapInnerInstruction.instructions,
-          // Unwrap WSOL for SOL
-          createCloseAccountInstruction(
-            tokenAccountOut,
-            wallet.publicKey,
-            wallet.publicKey
-          )
-        ];
+            ComputeBudgetProgram.setComputeUnitPrice({
+              microLamports: microLamports,
+            }),
+            ComputeBudgetProgram.setComputeUnitLimit({ units: cu }),
+            // JitoTipOption
+            SystemProgram.transfer({
+              fromPubkey: wallet.publicKey,
+              toPubkey: new PublicKey(tipAccounts[0]),
+              lamports: jitoFeeValueWei,
+            }),
+            createAssociatedTokenAccountIdempotentInstruction(
+              wallet.publicKey,
+              tokenAccountOut,
+              wallet.publicKey,
+              NATIVE_MINT
+            ),
+            ...raydiumSwapInnerInstruction.instructions,
+            // Unwrap WSOL for SOL
+            createCloseAccountInstruction(
+              tokenAccountOut,
+              wallet.publicKey,
+              wallet.publicKey
+            ),
+          ];
 
-      console.log("🚀 Quote ~", quoteAmount, total_fee_in_sol, total_fee_in_token);
+      console.log(
+        "🚀 Quote ~",
+        quoteAmount,
+        total_fee_in_sol,
+        total_fee_in_token
+      );
 
       // Referral Fee, ReserverStaking Fee, Burn Token
       console.log("Before Fee: ", Date.now());
@@ -551,14 +592,13 @@ export class RaydiumSwapService {
         signature,
         total_fee_in_sol,
         total_fee_in_token,
-        bundleId
+        bundleId,
       };
     } catch (e) {
       console.log("SwapToken Failed", e);
       return null;
     }
   }
-
 }
 
 export async function getWalletTokenAccount(
@@ -576,13 +616,12 @@ export async function getWalletTokenAccount(
 }
 
 export const calculateMicroLamports = (gasvalue: number, cu: number) => {
-  const microlamports = ((gasvalue - 0.000005) * ((10 ** 15) / cu)).toFixed(0);
+  const microlamports = ((gasvalue - 0.000005) * (10 ** 15 / cu)).toFixed(0);
   return Number(microlamports);
 };
 
-
 export const syncAmmPoolKeys = async (poolId: string) => {
-  console.log("syncAmmPoolKeys")
+  console.log("syncAmmPoolKeys");
   // const tokenInfo = await RaydiumTokenService.findLastOne({
   //   poolId: poolId
   // });
@@ -594,10 +633,10 @@ export const syncAmmPoolKeys = async (poolId: string) => {
   await RaydiumTokenService.findOneAndUpdate({ filter, data });
   return poolKeys;
   // }
-}
+};
 
 export const syncClmmPoolKeys = async (poolId: string) => {
-  console.log("syncClmmPoolKeys")
+  console.log("syncClmmPoolKeys");
 
   // const tokenInfo = await RaydiumTokenService.findLastOne({
   //   poolId: poolId
@@ -610,4 +649,4 @@ export const syncClmmPoolKeys = async (poolId: string) => {
   await RaydiumTokenService.findOneAndUpdate({ filter, data });
   return poolKeys;
   // }
-}
+};
