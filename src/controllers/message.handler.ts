@@ -56,7 +56,7 @@ export const messageHandler = async (
         } else if (text === SET_GAS_FEE.replace(/<[^>]*>/g, '')) {
           await setCustomFeeHandler(bot, msg, amount, reply_message_id);
         } else if (text === SET_JITO_FEE.replace(/<[^>]*>/g, '')) {
-          if (amount < 0.000005) {
+          if (amount > 0.0001) {
             await setCustomJitoFeeHandler(bot, msg, amount, reply_message_id);
           } else {
             await setCustomJitoFeeHandler(bot, msg, 0.0001, reply_message_id);
