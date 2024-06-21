@@ -7,6 +7,16 @@
 - PNL Card generation
 - Provide a security by creating new GT wallet, not requires user wallet private key
 
+## Tech stack
+- Typescript
+- Telegram API
+- Solana/web3
+- Raydium SDK
+- Jupiter API
+- Pump.fun
+- MongoDB
+- Redis
+
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
