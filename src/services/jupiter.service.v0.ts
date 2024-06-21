@@ -1,17 +1,12 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, Account, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, TokenAccountNotFoundError, TokenInvalidAccountOwnerError, closeAccount, createAssociatedTokenAccountInstruction, createCloseAccountInstruction, createTransferCheckedInstruction, createTransferInstruction, getAccount, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
-import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, TransactionInstruction, VersionedTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
 import { QuoteGetRequest, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
-import { ReferralProvider } from "@jup-ag/referral-sdk";
-import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, connection } from "../config";
+import { COMMITMENT_LEVEL, RESERVE_WALLET, connection } from "../config";
 import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
-import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
-import redisClient, { ITradeGasSetting } from "./redis";
 import { sendTransactionV0 } from "../utils/v0.transaction";
 
-const provider = new ReferralProvider(connection);
-const RESERVE_WALLET = new PublicKey("HF5zgotuDJabRBhWzHLNnbFdCq5JJ4DyJExnStShgUNq");
 export const JupiterService = {
   swapToken: async (
     pk: string,

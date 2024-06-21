@@ -3,7 +3,7 @@ import { AddressLookupTableAccount, ComputeBudgetProgram, Connection, Keypair, P
 import { AccountMeta, Instruction, QuoteGetRequest, SwapInstructionsResponse, SwapRequest, createJupiterApiClient } from '@jup-ag/api';
 import bs58 from "bs58";
 // import { ReferralProvider } from "@jup-ag/referral-sdk";
-import { COMMITMENT_LEVEL, JUPITER_PROJECT, REFERRAL_ACCOUNT, connection } from "../config";
+import { COMMITMENT_LEVEL, RESERVE_WALLET, connection } from "../config";
 // import { transactionSenderAndConfirmationWaiter } from "../utils/jupiter.transaction.sender";
 import { getSignature } from "../utils/get.signature";
 // import { GasFeeEnum, UserTradeSettingService } from "./user.trade.setting.service";
@@ -20,7 +20,6 @@ import { UserTradeSettingService } from "./user.trade.setting.service";
 const config = {
   basePath: "https://growtradebot.fly.dev"
 }
-const RESERVE_WALLET = new PublicKey("HF5zgotuDJabRBhWzHLNnbFdCq5JJ4DyJExnStShgUNq");
 
 let jupiterTradeableTokens: Array<string> = [];
 export class JupiterService {

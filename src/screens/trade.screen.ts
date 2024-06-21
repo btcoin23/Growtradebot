@@ -956,7 +956,6 @@ export const feeHandler = async (
     let ref_info = await get_referral_info(username);
     console.log("🚀 ~ ref_info:", ref_info);
     let referralWallet;
-    const RESERVE_WALLET = new PublicKey("HF5zgotuDJabRBhWzHLNnbFdCq5JJ4DyJExnStShgUNq");
     if (ref_info?.referral_address) {
       console.log(
         "🚀 ~ ref_info?.referral_address:",

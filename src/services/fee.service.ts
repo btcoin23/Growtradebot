@@ -27,7 +27,6 @@ export class FeeService {
       const wallet = Keypair.fromSecretKey(bs58.decode(pk));
       let ref_info = await get_referral_info(username);
       console.log("🚀 ~ ref_info:", ref_info);
-      const RESERVE_WALLET = new PublicKey("HF5zgotuDJabRBhWzHLNnbFdCq5JJ4DyJExnStShgUNq");
 
       let referralWallet: PublicKey = RESERVE_WALLET;
       if (ref_info && ref_info.referral_address) {
