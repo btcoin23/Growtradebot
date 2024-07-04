@@ -15,6 +15,7 @@
 - Jupiter API
 - Pump.fun
 - JITO
+- Birdeye API
 - MongoDB
 - Redis
 
