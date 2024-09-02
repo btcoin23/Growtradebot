@@ -3,7 +3,7 @@
 
 - Track All tokens, All Pools on Raydium(AMM, CLMM), Jupiter, Pump.fun 
 - Buy and sell all SPL tokens using JITO on Raydium, Jupiter, Pump.fun
-- Auto-but/sell according to the user setting
+- Auto-buy/sell according to the user setting
 - PNL Card generation
 - Provide a security by creating new GT wallet, not requires user wallet private key
 

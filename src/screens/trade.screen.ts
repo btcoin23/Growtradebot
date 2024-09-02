@@ -3,13 +3,10 @@ import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
 import {
   closeReplyMarkup,
-  deleteDelayMessage,
-  sendNoneExistTokenNotification,
 } from "./common.screen";
 import { UserService } from "../services/user.service";
 import {
   BUY_XSOL_TEXT,
-  PRESET_BUY_TEXT,
   SELL_XPRO_TEXT,
   SET_SLIPPAGE_TEXT,
   TradeBotID,
@@ -29,11 +26,9 @@ import {
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import {
-  GasFeeEnum,
   UserTradeSettingService,
 } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
-// import { inline_keyboards } from "./contract.info.screen";
 import { copytoclipboard, fromWeiToValue } from "../utils";
 import bs58 from "bs58";
 import {
@@ -42,7 +37,6 @@ import {
   connection,
   private_connection,
 } from "../config";
-import { getSignatureStatus, sendTransactionV0 } from "../utils/v0.transaction";
 import {
   checkReferralFeeSent,
   get_referral_info,
