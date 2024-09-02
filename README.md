@@ -33,8 +33,7 @@ Before you begin, ensure you have met the following requirements:
 Create a new `.env` file and add your Private key, Rpc URL
 
 `.env` file
-```
-
+```sh
 MONGODB_URL=
 REDIS_URI=
 
@@ -70,3 +69,8 @@ npm run serve
 
 
 ## Version 1.0,   21/6/2024
+
+## Contact me
+- [Telegram](https://t.me/BTC0in23)
+
+- [Github](https://github.com/btcoin23)
