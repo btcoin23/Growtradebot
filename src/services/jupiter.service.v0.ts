@@ -85,7 +85,7 @@ export const JupiterService = {
       const swapResult = await jupiterQuoteApi.swapPost({ swapRequest: swapReqOpts });
       console.log("🚀 Got Swap Result ~", Date.now())
       // Serialize the transaction
-      const swapTransactionBuf = Buffer.from(swapResult.swapTransaction, "base64");
+      const swapTransactionBuf = Uint8Array.from(Buffer.from(swapResult.swapTransaction, "base64"));
       var transaction = VersionedTransaction.deserialize(swapTransactionBuf);
 
       // Sign the transaction

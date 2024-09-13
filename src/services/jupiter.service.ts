@@ -51,7 +51,7 @@ export class JupiterService {
       if (accountInfo) {
         const addressLookupTableAccount = new AddressLookupTableAccount({
           key: new PublicKey(addressLookupTableAddress),
-          state: AddressLookupTableAccount.deserialize(accountInfo.data),
+          state: AddressLookupTableAccount.deserialize(Uint8Array.from(accountInfo.data)),
         });
         acc.push(addressLookupTableAccount);
       }
