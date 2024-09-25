@@ -1,5 +1,4 @@
 # Telegram Solana Bot (Raydium, Jupiter, Pump.fun)
-
 ## Main Features
 
 - Track All tokens, All Pools on Raydium(AMM, CLMM), Jupiter, Pump.fun 
